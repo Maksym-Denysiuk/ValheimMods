@@ -1,0 +1,72 @@
+---
+description: HomeCheat BepInEx plugin for our own Valheim (2026-10-24) - overview, file command channel, install, build, uninstall, and the index of every command with its syntax and where it is documented; core ops (repair, refill, plant, field, cultivate, place, scale and others), heal/cleanse/bless, and the source archive
+---
+# HomeCheat plugin (overview and command index)
+
+HomeCheat is a BepInEx 5 client plugin for Maksym's own Valheim game and world (Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, test world `ClaudeTest`). It does not use the console, god mode or any cheat flag, and it opens no network port. Written in C# 5 because the only compiler on the machine is csc 4.0 (no `?.`, no `$""`).
+
+## How it works
+
+- **Command channel.** Write a file `<unique-name>.cmd` into `BepInEx/config/homecheat/inbox/` holding a form body, for example `op=give&prefab=Wood&amount=50`. The plugin polls every 0.5 s, runs the command on the Unity main thread and writes the answer to `outbox/<unique-name>.out`. Up to 20 files per poll.
+- **Command DLLs.** Extra commands are DLLs in `BepInEx/homecheat-commands/` with classes that implement `IHomeCommand` (`Name`, `Help`, `Run`), see [HomeApi.cs.txt](HomeApi.cs.txt). `op=reload` loads new files without a game restart; a file name is loaded once, so every build gets a new name (`HomeCheat.Cmd.<name>.v<hhmmss>.dll`). `op=commands` lists what is loaded. Core ops are in the plugin itself ([HomeCheat.cs.txt](HomeCheat.cs.txt)).
+- **Parameters.** `key=value` pairs joined with `&` (or new lines), URL-decoded, keys case-insensitive. Flags accept `1`, `true`, `yes` (and `aim`); any other word is false even when the default is true.
+- **Defaults** are chosen so a command works with only its essential parameter. Parameters with no safe default (a prefab name, a tree filter) are required and return an error when missing.
+
+## Install
+
+BepInEx 5 in the Valheim folder, `HomeCheat.dll` in `BepInEx/plugins/`. Built and installed in the CheatResearch session on 2026-10-24 on a throwaway copy of the world first.
+
+## Build
+
+Run `bash build-cmd.sh <name>` ([build-cmd.sh.txt](build-cmd.sh.txt), rename to `.sh`) from the folder that holds `HomeCheat.dll` and `Cmd_<name>.cs`. It compiles with csc 4.0 against the game's `Managed` assemblies and the core DLL into `HomeCheat.Cmd.<name>.v<time>.dll` and copies it into `BepInEx/homecheat-commands/`; then `op=reload`. The core plugin is compiled the same way into `HomeCheat.dll`. The working copies live in the (gitignored) run folder `LocalOutputs/2026-10-24--00-48/`; the `.txt` files here are the archive.
+
+## Undo and uninstall
+
+- One command DLL: delete its `HomeCheat.Cmd.<name>.*.dll` from `BepInEx/homecheat-commands/` and restart the game (a reload only adds commands).
+- The whole plugin: delete `BepInEx/plugins/HomeCheat.dll`, the DLLs in `BepInEx/homecheat-commands/` and the folder `BepInEx/config/homecheat/`. BepInEx itself stays until its files are removed from the Valheim folder. Nothing in the game's own files is changed.
+- Changes made in the world (planted, placed, resized objects) are normal world data: see the undo section of each page, or restore a world backup.
+
+## Command index
+
+Syntax in short; defaults and details on the linked pages. Status: V = run in game and recorded, B = built, no run recorded, ? = not checked in the audit.
+
+| Command | Syntax | Status | Documented in |
+|---|---|---|---|
+| repair | `op=repair[&aim=1][&radius=10][&amount=0]` | B | [repair-refill.md](repair-refill.md) |
+| refill | `op=refill[&aim=1][&radius=10][&amount=0]` | B | [repair-refill.md](repair-refill.md) |
+| plant | `op=plant&prefab=<Sapling>[&rows][&perrow][&spacing][&aimcol][&scale][&clear]` | B | [plant-field-place.md](plant-field-place.md) |
+| field | `op=field&prefab=<Pickable_*>\|crops=<a:n,b:n>[&rows][&perrow][&spacing][&scale][&clear]` | V (carrots) | [plant-field-place.md](plant-field-place.md) |
+| cultivate | `op=cultivate[&rows][&perrow][&spacing]` | V (with field) | [plant-field-place.md](plant-field-place.md) |
+| place | `op=place&prefab=<name>[&rows][&perrow][&spacing][&aimcol][&scale][&amount][&level][&lift][&clear]` | B | [plant-field-place.md](plant-field-place.md) |
+| scale (tree resize) | `op=scale&filter=<tree name>[&factor=2][&radius=50]` | V (oak, beech, birch) | [tree-scale.md](tree-scale.md) |
+| heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | B | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [../Spells/Cmd_heal.cs.txt](../Spells/Cmd_heal.cs.txt) |
+| earthquake, slime | `op=earthquake`, `op=slime` (also `op=harmeffect&kind=<name>`) | V | [../Spells/earthquake.md](../Spells/earthquake.md), [../Spells/slime.md](../Spells/slime.md) |
+| spellshot | `op=spellshot&type=...` | V | [../Spells/spellshot.md](../Spells/spellshot.md) |
+| transform, hidebody | `op=transform&type=...`, `op=hidebody&on=1` | V | [../Transform/transform.md](../Transform/transform.md), [../Transform/hidebody.md](../Transform/hidebody.md) |
+| visualeffect | `op=visualeffect&name=<prefab>` (`list=1`, `name=reset`, `duration`, `scale`; see the FX README) | V | [../FX/README.md](../FX/README.md), [../FX/Cmd_visualeffect.cs.txt](../FX/Cmd_visualeffect.cs.txt) |
+| give | `op=give&prefab=<item>[&amount=1][&quality=1]` | V (50 wood) | this page only |
+| spawn | `op=spawn&prefab=<name>[&count=1][&dist=4][&level=0]` | V (Greyling) | this page only |
+| list | `op=list[&filter=<text>]` (prefab names, max 200) | V | this page only |
+| groundlevel, path | `op=groundlevel[&delta=0][&radius=4][&tool=raise]`, `op=path[&type=dirt][&length=5][&width=2][&tool]` | ? | this page only |
+| inspect, status, ping, reload, commands | `op=inspect&prefab=<name>`, `op=status`, `op=ping`, `op=reload`, `op=commands` | V for reload and commands (used by every build), ? for the rest | this page only |
+| cheatstate, cheatinfo | discovery helpers that read the world's real cheat flags and game members containing "heat" (code review: delete cheatinfo) | ? | this page only |
+| killmobs | `op=killmobs[&radius=30][&boss=1][&tamed=1]`: hits every creature within the radius with 100000 normal damage (attacker = the local player); skips players, tamed animals and bosses unless asked; test helper, answer lists the kills per prefab | ? | [../Transform/Cmd_killmobs.cs.txt](../Transform/Cmd_killmobs.cs.txt) |
+| fxdump | `op=fxdump[&out=<folder>]`: read-only inventory of every fx_/vfx_/sfx_ prefab (components, particles, clips, lifetime, used-by) into `fxdump.csv` and `fxdump-usedby.csv`; basis of the FX description files | ? | [../FX/Cmd_fxdump.cs.txt](../FX/Cmd_fxdump.cs.txt), [../FX/README.md](../FX/README.md) |
+| spells (spell bar) | `op=spells&enabled=1`; G opens the radial with spell groups, action bar with 10 cells | V in placeholder mode (real casts through the bar not verified) | [../Spells/spellbar.md](../Spells/spellbar.md), [../Spells/spellbar-design.md](../Spells/spellbar-design.md) |
+| keybinds | `op=keybinds`: stats window F2 to F6, console to backquote, F9 saves the world | V | [../Keybinds/keybinds.md](../Keybinds/keybinds.md) |
+
+The status column is taken from the session transcripts of 2026-10-24: V means an answer line or a user confirmation exists, B means compiled but no run recorded. Ask Maksym for a run and update the page when a B command is tried.
+
+## Contents
+
+<!-- folder:start -->
+| Item | What it's about | Last modified |
+|---|---|---|
+| [build-cmd.sh.txt](build-cmd.sh.txt) | !/bin/bash | 2026-10-24 |
+| [heal-cleanse-bless.md](heal-cleanse-bless.md) | heal, cleanse and bless commands of the HomeCheat Valheim plugin (2026-10-24) - restore the local player's health, stamina and eitr, remove status effects, apply a boss guardian power or its status effect; parameters, defaults, how they work through plain game methods, limits, undo; built in the spells-design session, not yet run in game | 2026-10-24 |
+| [HomeApi.cs.txt](HomeApi.cs.txt) | HomeCheat command API: what an extra command DLL (BepInEx/homecheat-commands/*.dll) compiles against. | 2026-10-24 |
+| [HomeCheat.cs.txt](HomeCheat.cs.txt) | HomeCheat v0.1 - BepInEx client plugin for Maksym's own Valheim game and world. | 2026-10-24 |
+| [plant-field-place.md](plant-field-place.md) | plant, field, cultivate and place commands of the HomeCheat Valheim plugin (2026-10-24) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run | 2026-10-24 |
+| [repair-refill.md](repair-refill.md) | repair and refill commands of the HomeCheat Valheim plugin (2026-10-24) - restore building pieces to full health and top up fuel in fireplaces and smelters, at the crosshair or in a radius; parameters and defaults, what they write, limits, undo; built in CheatResearch, not yet run in game | 2026-10-24 |
+| [tree-scale.md](tree-scale.md) | scale command of the HomeCheat Valheim plugin (2026-10-24) - change the size of trees near the player (oak, beech, birch tested) with matching hit points and drops, saved with the world and re-applied on load by a Harmony patch; parameters, how it works, tests, limits, undo | 2026-10-24 |
+<!-- folder:end -->

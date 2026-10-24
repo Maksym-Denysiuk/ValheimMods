@@ -1,0 +1,52 @@
+# HomeCheat spell bar. One spell per line:  slot.entry | label | command | flags
+#   slot alone + 2 fields = group title;  slot alone + 3 fields = the slot is itself a spell;  slot.entry = a spell inside the group (entry 1-8)
+#   command = the form of an inbox file (op=...&k=v); chain calls with ;;   special: @radial opens the vanilla radial
+#   flags (space separated): sticky (bar stays open)  pin=F1|F2|F3|F4|F5|F6|S1..S5 (S = Shift+digit)  shift=<form added when Shift is held while casting>
+# F5 is the game console key: pins on F5 also open the console.
+1 | Radial | @radial
+2 | Attack
+2.1 | Arrow | op=spellshot&type=arrow | pin=F1 shift=perrow=3&rows=3
+2.2 | Arrow 3x3 | op=spellshot&type=arrow&perrow=3&rows=3
+2.3 | Balista | op=spellshot&type=balistashot
+2.4 | Thunderbolt | op=spellshot&type=thunderbolt
+2.5 | Quake (damage) | op=earthquake&damage=1&noStones=1
+2.6 | Slime ring | op=slime
+3 | Protect
+3.1 | Push away | op=earthquake&noStones=1 | pin=F2 shift=mode=strong
+3.2 | Stone circle | op=earthquake | pin=S2
+3.3 | Strong push | op=earthquake&mode=strong&noStones=1
+3.4 | Slime moat | op=slime&gap=3
+4 | Fun
+4.1 | Raven 60 s | op=transform&type=raven&duration=60 | pin=S4
+4.2 | Serpent 60 s | op=transform&type=serpent&duration=60
+4.3 | Fish 60 s | op=transform&type=fish&duration=60
+4.4 | Human | op=transform&type=human | pin=S5
+4.5 | Oaks x2 | op=scale&filter=Oak&factor=2&radius=30
+4.6 | Reset sky | op=visualeffect&name=reset
+5 | Heal and bless
+5.1 | Heal | op=heal | pin=F3
+5.2 | Cleanse | op=cleanse
+5.3 | Bonemass | op=bless&name=bonemass | pin=S3
+5.4 | Eikthyr | op=bless&name=eikthyr
+5.5 | The Elder | op=bless&name=elder
+5.6 | Moder | op=bless&name=moder
+5.7 | Yagluth | op=bless&name=yagluth
+5.8 | The Queen | op=bless&name=queen
+6 | Build
+6.1 | Flatten | op=groundlevel&delta=0
+6.2 | Raise 1 m | op=groundlevel&delta=1
+6.3 | Lower 1 m | op=groundlevel&delta=-1
+6.4 | Dirt path 5 m | op=path&type=dirt&length=5
+6.5 | Stone path 5 m | op=path&type=stone&length=5
+7 | Field
+7.1 | Cultivate 3x5 | op=cultivate&rows=3&perrow=5 | pin=S1
+7.2 | Carrots 3x5 | op=field&prefab=Pickable_Carrot&rows=3&perrow=5
+7.3 | Oak grove | op=plant&prefab=Oak_Sapling&rows=3&perrow=5&scale=3
+7.4 | Place wall | op=place&prefab=wood_wall&perrow=3
+7.5 | Place campfire | op=place&prefab=fire_pit
+8 | Repair
+8.1 | Repair (aim) | op=repair | sticky
+8.2 | Repair r10 | op=repair&aim=0&radius=10 | sticky pin=F4
+8.3 | Refill (aim) | op=refill | sticky
+8.4 | Refill r10 | op=refill&aim=0&radius=10 | sticky
+8.5 | Repair + refill r10 | op=repair&aim=0&radius=10 ;; op=refill&aim=0&radius=10 | sticky

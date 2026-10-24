@@ -1,0 +1,52 @@
+# HomeCheat spell bar UI test. Placeholder spells only: a cast shows 'placeholder: <label> (<slot.entry>)' and logs it, nothing is executed.
+# Format as in spells.txt:  slot.entry | label | command | flags   (command @dummy; flags: sticky  pin=F1..F5|S1..S5  shift=<text>)
+2 | Attack
+2.1 | Arrow | @dummy | pin=F1 shift=perrow=3&rows=3
+2.2 | Arrow 3x3 | @dummy
+2.3 | Balista | @dummy | shift=perrow=3
+2.4 | Thunderbolt | @dummy
+2.5 | Quake (damage) | @dummy | shift=mode=strong
+2.6 | Slime ring | @dummy
+3 | Protect
+3.1 | Push away | @dummy | pin=F2 shift=mode=strong
+3.2 | Stone circle | @dummy | pin=S2
+3.3 | Strong push | @dummy
+3.4 | Slime moat | @dummy
+3.5 | Ward | @dummy | sticky
+4 | Fun
+4.1 | Raven 60 s | @dummy | pin=S4
+4.2 | Serpent 60 s | @dummy
+4.3 | Fish 60 s | @dummy
+4.4 | Human | @dummy | pin=S5
+4.5 | Oaks x2 | @dummy | shift=factor=4
+4.6 | Reset sky | @dummy
+4.7 | Rain | @dummy | sticky
+4.8 | Night | @dummy | sticky
+5 | Heal and bless
+5.1 | Heal | @dummy | pin=F3
+5.2 | Cleanse | @dummy
+5.3 | Bonemass | @dummy | pin=S3
+5.4 | Eikthyr | @dummy
+5.5 | The Elder | @dummy
+5.6 | Moder | @dummy
+5.7 | Yagluth | @dummy
+5.8 | The Queen | @dummy
+6 | Build
+6.1 | Flatten | @dummy | sticky
+6.2 | Raise 1 m | @dummy | sticky shift=delta=3
+6.3 | Lower 1 m | @dummy | sticky shift=delta=-3
+6.4 | Dirt path 5 m | @dummy
+6.5 | Stone path 5 m | @dummy
+7 | Field
+7.1 | Cultivate 3x5 | @dummy | pin=S1
+7.2 | Carrots 3x5 | @dummy
+7.3 | Oak grove | @dummy
+7.4 | Place wall | @dummy | shift=perrow=5
+7.5 | Place campfire | @dummy
+7.6 | Place torch | @dummy
+8 | Repair
+8.1 | Repair (aim) | @dummy | sticky
+8.2 | Repair r10 | @dummy | sticky pin=F4 shift=radius=30
+8.3 | Refill (aim) | @dummy | sticky
+8.4 | Refill r10 | @dummy | sticky pin=F5
+8.5 | Repair + refill r10 | @dummy | sticky
