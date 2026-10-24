@@ -10,6 +10,30 @@ namespace HomeCheat.Features.WorldCommands
     //   amount HP to set, default 0 = full
     public sealed class RepairCommand : CommandBase
     {
+        public RepairCommand()
+        {
+            SubFlag("report", "report=1 [radius=10] (health of every piece around you, changes nothing)", delegate (Args a) { return Report(a.Float("radius", 10f)); });
+        }
+
+        // health / max of the pieces within 'radius' m, read from the ZDO like the repair itself
+        static string Report(float radius)
+        {
+            Player p = Players.Local;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            int n = 0;
+            foreach (WearNTear w in UnityEngine.Object.FindObjectsOfType<WearNTear>())
+            {
+                float d = Vector3.Distance(w.transform.position, p.transform.position);
+                if (d > radius) continue;
+                ZNetView nv = w.GetComponent<ZNetView>();
+                if (nv == null || !nv.IsValid()) continue;
+                sb.Append(Prefabs.BaseName(w.gameObject)).Append(" at ").Append(d.ToString("F1")).Append(" m: ")
+                  .Append(nv.GetZDO().GetFloat("health", w.m_health).ToString("F1")).Append(" / ").Append(w.m_health.ToString("F0")).Append('\n');
+                n++;
+            }
+            return n == 0 ? "no pieces within " + radius.ToString("F0") + " m" : sb.ToString();
+        }
+
         public override string Name { get { return "repair"; } }
         protected override string Usage { get { return "repair [aim=1] [radius=10 (with aim=0)] [amount=0 (= full)] - building pieces back to full health"; } }
 
