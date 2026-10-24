@@ -57,6 +57,10 @@ The spell bar starts in placeholder mode (casts only show a toast); `op=spells&p
 
 `src\` holds every `.cs` file and `build-cmd.sh`. With Git Bash, from `src\` with `HomeCheat.dll` copied next to it: `bash build-cmd.sh <name>` (set `VALHEIM_DIR=/c/...` when the game is not in `D:\Steam`), then `op=reload` in game. It needs only the .NET Framework 4 compiler that ships with Windows (C# 5).
 
+## Claude skill: spell effects
+
+`skills\valheim-spell-fx\` is a Claude Code skill: describe a spell ("a frost nova that roots enemies") and it proposes five effect combinations from the real prefabs in `docs\FX\`, with timing, preview commands and what is still needed to make the spell work. It fires nothing without a yes. To use it outside HomeOS, open this folder in Claude Code and ask Claude to follow `skills\valheim-spell-fx\SKILL.md`, or install it as a skill: copy the folder to `%USERPROFILE%\.claude\skills\` and set `VALHEIM_FX_DIR` to this package's `docs\FX`. It is a copy; the original is kept in HomeOS.
+
 ## Uninstall
 
 ```
@@ -75,5 +79,6 @@ Moves `HomeCheat.dll`, the command DLLs and `config\homecheat\` to `<BackupRoot>
 | `payload\BepInEx\homecheat-commands\HomeCheat.Cmd.<name>.v<time>.dll` | the newest build of each command |
 | `payload\BepInEx\config\homecheat\spells.txt`, `spells-ui-test.txt` | default spell files |
 | `src\` | sources of the plugin and every command, `build-cmd.sh` |
+| `skills\valheim-spell-fx\` | the spell-effects Claude skill (`SKILL.md`, `evals.md`, `scripts\find-fx.js`, security record) |
 | `docs\` | the documentation folders, same layout as in HomeOS so their links work (`.cs.txt` files there are the same sources) |
 | `MANIFEST.md` | every file with size and sha256 |

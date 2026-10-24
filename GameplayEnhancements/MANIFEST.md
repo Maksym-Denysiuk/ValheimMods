@@ -1,12 +1,12 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-24 22:08 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-24 22:14 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Commands (newest build each): HomeCheat.Cmd.earthquake.v212810.dll, HomeCheat.Cmd.fxdump.v165009.dll, HomeCheat.Cmd.heal.v162951.dll, HomeCheat.Cmd.hidebody.v211251.dll, HomeCheat.Cmd.keybinds.v221027.dll, HomeCheat.Cmd.killmobs.v164022.dll, HomeCheat.Cmd.slime.v213831.dll, HomeCheat.Cmd.spells.v221149.dll, HomeCheat.Cmd.spellshot.v154006.dll, HomeCheat.Cmd.transform.v213409.dll, HomeCheat.Cmd.visualeffect.v162323.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
-| README.md | 5281 | 92952e37bb9f6cde |
+| README.md | 6031 | 7af216c8b407d348 |
 | check.ps1 | 2271 | ef377005b0ad1b74 |
 | common.ps1 | 6198 | e01932f7436ce07e |
 | docs/FX/Cmd_fxdump.cs.txt | 15894 | 2e0fa4df1ac5e419 |
@@ -25,21 +25,21 @@ Commands (newest build each): HomeCheat.Cmd.earthquake.v212810.dll, HomeCheat.Cm
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
 | docs/HomeCheat-plugin/HomeApi.cs.txt | 4660 | f6290c96ad967e34 |
 | docs/HomeCheat-plugin/HomeCheat.cs.txt | 48615 | f2e3f57edcab81c5 |
-| docs/HomeCheat-plugin/README.md | 9309 | 9d33d431c0737e44 |
+| docs/HomeCheat-plugin/README.md | 9381 | fda78d3022919917 |
 | docs/HomeCheat-plugin/build-cmd.sh.txt | 1208 | 5f9415483607b251 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3540 | 5a79515d9b1f35be |
 | docs/HomeCheat-plugin/plant-field-place.md | 5174 | d9a8a6aa63b2a2ef |
 | docs/HomeCheat-plugin/repair-refill.md | 3610 | 749c4c434c5b1dda |
 | docs/HomeCheat-plugin/tree-scale.md | 3605 | 0dc26ccded78d8c1 |
 | docs/Keybinds/Cmd_keybinds.cs.txt | 6641 | 0fb8d032a9a99b10 |
-| docs/Keybinds/README.md | 984 | f0f20eb5675da839 |
+| docs/Keybinds/README.md | 999 | ca088b42f130ee06 |
 | docs/Keybinds/keybinds.md | 6200 | 534fb515761b9630 |
 | docs/Spells/Cmd_earthquake.cs.txt | 37684 | 2896ad020114b4ea |
 | docs/Spells/Cmd_heal.cs.txt | 9347 | ff7ac8c5c8e79e71 |
 | docs/Spells/Cmd_slime.cs.txt | 25052 | 1ac035f9541a537d |
 | docs/Spells/Cmd_spells.cs.txt | 59515 | 2fa1a315bc525f78 |
 | docs/Spells/Cmd_spellshot.cs.txt | 25306 | 64cf84667d64f912 |
-| docs/Spells/README.md | 2886 | 421416f3cf5ff18f |
+| docs/Spells/README.md | 2909 | f4f8b068d527a9c6 |
 | docs/Spells/earthquake.md | 8376 | eb70cf08c0abec84 |
 | docs/Spells/slime.md | 8916 | 1628a3b3e07a5823 |
 | docs/Spells/spellbar-design.md | 35477 | 80a7b7064203ba8e |
@@ -48,7 +48,7 @@ Commands (newest build each): HomeCheat.Cmd.earthquake.v212810.dll, HomeCheat.Cm
 | docs/Transform/Cmd_hidebody.cs.txt | 8284 | a2893a03f6485da6 |
 | docs/Transform/Cmd_killmobs.cs.txt | 2205 | 6bdaad7171daacaa |
 | docs/Transform/Cmd_transform.cs.txt | 53890 | a0f2ab8c77a58c17 |
-| docs/Transform/README.md | 2144 | ff55cf875c079136 |
+| docs/Transform/README.md | 2163 | bc168a0c8bbbd181 |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
 | docs/Transform/hidebody.md | 3118 | a8302618a04368fd |
 | docs/Transform/transform.md | 7989 | c0f3f5e015e1a720 |
@@ -89,6 +89,10 @@ Commands (newest build each): HomeCheat.Cmd.earthquake.v212810.dll, HomeCheat.Cm
 | payload/doorstop_config.ini | 1460 | 4d5c6dfa0f771c6a |
 | payload/winhttp.dll | 26112 | 93406d0a02e7c164 |
 | send-command.ps1 | 1587 | 58fc65dbc9e0a1a5 |
+| skills/valheim-spell-fx/SKILL.md | 9503 | aab47af074542288 |
+| skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
+| skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
+| skills/valheim-spell-fx/skill-meta-data.md | 1330 | 57e6d05d32c2c277 |
 | src/Cmd_earthquake.cs | 37684 | 2896ad020114b4ea |
 | src/Cmd_fxdump.cs | 15894 | 2e0fa4df1ac5e419 |
 | src/Cmd_heal.cs | 9347 | ff7ac8c5c8e79e71 |

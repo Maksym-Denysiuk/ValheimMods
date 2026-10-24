@@ -32,4 +32,4 @@ Nothing is deleted: every file or setting a script replaces goes to a dated back
 
 ## Generated parts
 
-`MANIFEST.md`, `src/`, `payload/`, `kickban/` and the `*.ps1` scripts in each package are written by the HomeOS build (`scripts/valheim/packages/build.js`); edit the docs here, the scripts in HomeOS. How the build works: [docs/packaging.md](docs/packaging.md).
+`MANIFEST.md`, `src/`, `payload/`, `kickban/`, `skills/` and the `*.ps1` scripts in each package are written by the HomeOS build (`scripts/valheim/packages/build.js`); edit the docs here, the scripts in HomeOS. How the build works: [docs/packaging.md](docs/packaging.md).

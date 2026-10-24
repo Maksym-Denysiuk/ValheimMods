@@ -21,6 +21,7 @@ Done 2026-10-24, Valheim 1.0.20 (network version 41), BepInEx 5.4.2351. The pack
 | `AdminPanelEnchancements/kickban/` | HomeOS `scripts/valheim/kick-ban-patch.js`, `scripts/valheim/lib/il-reader.js` | HomeOS |
 | `GameplayEnhancements/payload/` | the game folder of the PC that builds: `BepInEx/plugins/HomeCheat.dll`, the BepInEx core, and for each command the highest `HomeCheat.Cmd.<name>.v<time>.dll` (the plugin's own load order: the last one wins) | rebuilt, never by hand |
 | `GameplayEnhancements/src/` | the docs' `.cs.txt` files, as `.cs`, plus `build-cmd.sh` | rebuilt |
+| `GameplayEnhancements/skills/valheim-spell-fx/` | HomeOS `.claude/skills/valheim-spell-fx/` (spell effect composer: finds the FX docs from either place) | HomeOS |
 | `MANIFEST.md` | size and sha256 of every file | rebuilt |
 
 ## Build
