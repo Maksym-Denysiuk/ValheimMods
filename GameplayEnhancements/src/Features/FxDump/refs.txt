@@ -1,0 +1,4 @@
+# ParticleSystem, ParticleSystemRenderer
+UnityEngine.ParticleSystemModule.dll
+# AudioSource, AudioClip
+UnityEngine.AudioModule.dll
