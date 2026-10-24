@@ -1,24 +1,26 @@
 // op=fxdump: inventory of every fx_/vfx_/sfx_ prefab for the effect description files.
 // Writes fxdump.csv (one row per effect prefab: components, particles, light, audio clips, lifetime, ZNetView, used-by)
 // and fxdump-usedby.csv (effect, owner, field path) next to it. Read only: nothing is spawned, nothing is changed.
-// C# 5 (csc 4.0). Build: bash build-cmd.sh fxdump ; load in game: op=reload ; run: op=fxdump [out=<folder>]
+// C# 5 (csc 4.0). Build: bash build.sh fxdump ; load in game: op=reload ; run: op=fxdump [out=<folder>]
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using BepInEx;
 using HomeCheat.Kit;
 using UnityEngine;
 
 namespace HomeCheat.Features.FxDump
 {
-    public class FxDumpCommand : CommandBase
+    public sealed class FxDumpCommand : CommandBase
     {
         public override string Name { get { return "fxdump"; } }
         protected override string Usage { get { return "fxdump [out=<folder>] : writes fxdump.csv and fxdump-usedby.csv (all fx_/vfx_/sfx_ prefabs, components, clips, used-by). Read only."; } }
 
-        const string DefaultOut = @"D:\Claude\Personal\HomeOS\LocalOutputs\2026-10-24--00-48";
+        // default next to the other HomeCheat files, so the package works on any PC
+        static string DefaultOut { get { return Path.Combine(Path.Combine(Paths.ConfigPath, "homecheat"), "fxdump"); } }
         const BindingFlags F = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         HashSet<string> effectNames;

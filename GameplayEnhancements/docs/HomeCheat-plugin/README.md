@@ -39,19 +39,19 @@ Syntax in short; defaults and details on the linked pages. Status: V = run in ga
 | cultivate | `op=cultivate[&rows][&perrow][&spacing]` | V (with field) | [plant-field-place.md](plant-field-place.md) |
 | place | `op=place&prefab=<name>[&rows][&perrow][&spacing][&aimcol][&scale][&amount][&level][&lift][&clear]` | B | [plant-field-place.md](plant-field-place.md) |
 | scale (tree resize) | `op=scale&filter=<tree name>[&factor=2][&radius=50]` | V (oak, beech, birch) | [tree-scale.md](tree-scale.md) |
-| heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | B | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [../Spells/Cmd_heal.cs.txt](../Spells/Cmd_heal.cs.txt) |
+| heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | B | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [src/Features/Heal](../../src/Features/Heal/) |
 | earthquake, slime | `op=earthquake`, `op=slime` (also `op=harmeffect&kind=<name>`) | V | [../Spells/earthquake.md](../Spells/earthquake.md), [../Spells/slime.md](../Spells/slime.md) |
 | spellshot | `op=spellshot&type=...` | V | [../Spells/spellshot.md](../Spells/spellshot.md) |
 | transform, hidebody | `op=transform&type=...`, `op=hidebody&on=1` | V | [../Transform/transform.md](../Transform/transform.md), [../Transform/hidebody.md](../Transform/hidebody.md) |
-| visualeffect | `op=visualeffect&name=<prefab>` (`list=1`, `name=reset`, `duration`, `scale`; see the FX README) | V | [../FX/README.md](../FX/README.md), [../FX/Cmd_visualeffect.cs.txt](../FX/Cmd_visualeffect.cs.txt) |
+| visualeffect | `op=visualeffect&name=<prefab>` (`list=1`, `name=reset`, `duration`, `scale`; see the FX README) | V | [../FX/README.md](../FX/README.md), [src/Features/VisualEffect](../../src/Features/VisualEffect/) |
 | give | `op=give&prefab=<item>[&amount=1][&quality=1]` | V (50 wood) | this page only |
 | spawn | `op=spawn&prefab=<name>[&count=1][&dist=4][&level=0]` | V (Greyling) | this page only |
 | list | `op=list[&filter=<text>]` (prefab names, max 200) | V | this page only |
 | groundlevel, path | `op=groundlevel[&delta=0][&radius=4][&tool=raise]`, `op=path[&type=dirt][&length=5][&width=2][&tool]` | ? | this page only |
 | inspect, status, ping, reload, commands | `op=inspect&prefab=<name>`, `op=status`, `op=ping`, `op=reload`, `op=commands` | V for reload and commands (used by every build), ? for the rest | this page only |
 | cheatstate, cheatinfo | discovery helpers that read the world's real cheat flags and game members containing "heat" (code review: delete cheatinfo) | ? | this page only |
-| killmobs | `op=killmobs[&radius=30][&boss=1][&tamed=1]`: hits every creature within the radius with 100000 normal damage (attacker = the local player); skips players, tamed animals and bosses unless asked; test helper, answer lists the kills per prefab | ? | [../Transform/Cmd_killmobs.cs.txt](../Transform/Cmd_killmobs.cs.txt) |
-| fxdump | `op=fxdump[&out=<folder>]`: read-only inventory of every fx_/vfx_/sfx_ prefab (components, particles, clips, lifetime, used-by) into `fxdump.csv` and `fxdump-usedby.csv`; basis of the FX description files | ? | [../FX/Cmd_fxdump.cs.txt](../FX/Cmd_fxdump.cs.txt), [../FX/README.md](../FX/README.md) |
+| killmobs | `op=killmobs[&radius=30][&boss=1][&tamed=1]`: hits every creature within the radius with 100000 normal damage (attacker = the local player); skips players, tamed animals and bosses unless asked; test helper, answer lists the kills per prefab | ? | [src/Features/KillMobs](../../src/Features/KillMobs/) |
+| fxdump | `op=fxdump[&out=<folder>]`: read-only inventory of every fx_/vfx_/sfx_ prefab (components, particles, clips, lifetime, used-by) into `fxdump.csv` and `fxdump-usedby.csv`; basis of the FX description files | ? | [src/Features/FxDump](../../src/Features/FxDump/), [../FX/README.md](../FX/README.md) |
 | spells (spell bar) | `op=spells&enabled=1`; G opens the radial with spell groups, action bar with 10 cells | V in placeholder mode (real casts through the bar not verified) | [../Spells/spellbar.md](../Spells/spellbar.md), [../Spells/spellbar-design.md](../Spells/spellbar-design.md) |
 | keybinds | `op=keybinds`: stats window F2 to F6, console to backquote, F9 saves the world | V | [../Keybinds/keybinds.md](../Keybinds/keybinds.md) |
 
@@ -62,10 +62,7 @@ The status column is taken from the session transcripts of 2026-10-24: V means a
 <!-- folder:start -->
 | Item | What it's about | Last modified |
 |---|---|---|
-| [build-cmd.sh.txt](build-cmd.sh.txt) | !/bin/bash | 2026-10-24 |
 | [heal-cleanse-bless.md](heal-cleanse-bless.md) | heal, cleanse and bless commands of the HomeCheat Valheim plugin (2026-10-24) - restore the local player's health, stamina and eitr, remove status effects, apply a boss guardian power or its status effect; parameters, defaults, how they work through plain game methods, limits, undo; built in the spells-design session, not yet run in game | 2026-10-24 |
-| [HomeApi.cs.txt](HomeApi.cs.txt) | HomeCheat command API: what an extra command DLL (BepInEx/homecheat-commands/*.dll) compiles against. | 2026-10-24 |
-| [HomeCheat.cs.txt](HomeCheat.cs.txt) | HomeCheat v0.1 - BepInEx client plugin for Maksym's own Valheim game and world. | 2026-10-24 |
 | [plant-field-place.md](plant-field-place.md) | plant, field, cultivate and place commands of the HomeCheat Valheim plugin (2026-10-24) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run | 2026-10-24 |
 | [repair-refill.md](repair-refill.md) | repair and refill commands of the HomeCheat Valheim plugin (2026-10-24) - restore building pieces to full health and top up fuel in fireplaces and smelters, at the crosshair or in a radius; parameters and defaults, what they write, limits, undo; built in CheatResearch, not yet run in game | 2026-10-24 |
 | [tree-scale.md](tree-scale.md) | scale command of the HomeCheat Valheim plugin (2026-10-24) - change the size of trees near the player (oak, beech, birch tested) with matching hit points and drops, saved with the world and re-applied on load by a Harmony patch; parameters, how it works, tests, limits, undo | 2026-10-24 |

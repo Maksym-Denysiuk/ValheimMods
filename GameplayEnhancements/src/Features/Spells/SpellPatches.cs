@@ -1,0 +1,59 @@
+using System;
+using System.Reflection;
+using UnityEngine;
+using Valheim.UI;
+
+namespace HomeCheat.Features.Spells
+{
+    // The two Harmony prefixes, applied through the command's PatchSet (id com.homeos.homecheat.spells).
+    public static class SpellPatches
+    {
+        // RadialBase.Open(config, backConfig): the vanilla main radial (ValheimRadialConfig) is replaced by ours. Everything else
+        // (T = emote radial, hover menus, the Hotbar group inside ours, Back) opens exactly as before. Shift held = vanilla.
+        public static bool OpenPrefix(ref IRadialConfig config)
+        {
+            try
+            {
+                SpellBar bar = SpellsSettings.ActiveBar;
+                if (!SpellsSettings.On || bar == null || config == null) return true;
+                if (config.GetType().Name != "ValheimRadialConfig") return true;
+                if (SpellsSettings.ShiftHeld()) return true;
+                config = bar.Root();
+            }
+            catch (Exception e) { HomeApi.Log("spells: OpenPrefix: " + e.Message); }
+            return true;
+        }
+
+        // Player.UseHotbarItem(int): no weapon switch in the frame a Shift+digit pin was fired by the bar
+        public static bool HotbarPrefix(int index)
+        {
+            SpellsSettings s = SpellsSettings.Current;
+            if (s == null || !s.Enabled) return true;
+            return Time.frameCount != s.ConsumedFrame;
+        }
+
+        // a radial that still holds a config from a replaced build (op=reload while it was open): show the vanilla radial, change no settings
+        internal static void OpenVanilla(RadialBase radial)
+        {
+            HomeApi.Log("spells: stale radial config of a replaced build, vanilla radial opened");
+            try { radial.Open(RadialData.SO.MainGroupConfig, null); } catch (Exception e) { HomeApi.Log("spells: vanilla fallback failed: " + e.Message); }
+        }
+
+        internal static string Apply(bool on)
+        {
+            SpellsSettings s = SpellsSettings.Current;
+            if (s == null || s.Patches == null) return "ERROR: spells not loaded";
+            s.Patches.RemoveAll();
+            if (!on) return "patches removed";
+            const BindingFlags all = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            MethodInfo m1 = null;
+            foreach (MethodInfo m in typeof(RadialBase).GetMethods(all))
+                if (m.Name == "Open" && m.GetParameters().Length == 2) { m1 = m; break; }
+            MethodInfo m2 = typeof(Player).GetMethod("UseHotbarItem", all);
+            if (m1 == null || m2 == null) return "ERROR: target methods not found (game version changed?)";
+            s.Patches.Patch(m1, typeof(SpellPatches).GetMethod("OpenPrefix"), null);
+            s.Patches.Patch(m2, typeof(SpellPatches).GetMethod("HotbarPrefix"), null);
+            return "patches applied (RadialBase.Open, UseHotbarItem)";
+        }
+    }
+}

@@ -3,7 +3,7 @@ description: scale command of the HomeCheat Valheim plugin (2026-10-24) - change
 ---
 # scale (tree resize, HomeCheat core op)
 
-Built in the CheatResearch session (first version 2026-10-23/24) on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, tested 2026-10-24 in our own world. Own game and own world only. Source: core `HomeCheat.cs` (`ScaleTrees`, `ApplyTreeScale`, `ZNetViewAwakePatch`), archived as [HomeCheat.cs.txt](HomeCheat.cs.txt).
+Built in the CheatResearch session (first version 2026-10-23/24) on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, tested 2026-10-24 in our own world. Own game and own world only. Source: the command in [src/Features/World/ScaleCommand.cs](../../src/Features/World/ScaleCommand.cs); size, hit points and drops in the core [Kit/Trees.cs](../../src/Core/Kit/Trees.cs), the reload patch in the core [Builtins/TreeScalePatch.cs](../../src/Core/Builtins/TreeScalePatch.cs) (until 2026-10-25 `ScaleTrees`, `ApplyTreeScale`, `ZNetViewAwakePatch` in `HomeCheat.cs`).
 
 ## What it does
 

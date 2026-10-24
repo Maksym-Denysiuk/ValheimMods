@@ -1,5 +1,5 @@
 // op=visualeffect: spawn visual/sound effects, force weather or time of day (auto-reverting), add a light, shake the camera.
-// C# 5 (csc 4.0). Build: bash build-cmd.sh visualeffect ; load in game: op=reload.
+// C# 5 (csc 4.0). Build: bash build.sh visualeffect ; load in game: op=reload.
 // Only the local client is affected (weather/time/light/shake are client side; prefab VFX are local instances).
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace HomeCheat.Features.VisualEffect
 {
-    public class VisualEffectCommand : CommandBase
+    public sealed class VisualEffectCommand : CommandBase
     {
         public override string Name { get { return "visualeffect"; } }
         protected override string Usage
@@ -23,28 +23,28 @@ namespace HomeCheat.Features.VisualEffect
 
         // kind: prefab (vfx/fx/sfx prefab), env (forced weather), time (forced day fraction), light, shake
         // arg: prefab name / environment name / day fraction / "r,g,b" colour. dur: default seconds (0 = prefab's own life)
-        class Fx
+        sealed class CatalogEntry
         {
-            public override string Name, Kind, Arg, Note;
+            public string Name, Kind, Arg, Note;
             public float Scale, Dur;
-            public Fx(string n, string k, string a, float scale, float dur, string note)
+            public CatalogEntry(string n, string k, string a, float scale, float dur, string note)
             { Name = n; Kind = k; Arg = a; Scale = scale; Dur = dur; Note = note; }
         }
 
         
         // verified in game 2026-10-24 (screenshots from Maksym), spawned on the ground at the crosshair
-        static readonly List<Fx> Catalog = new List<Fx>
+        static readonly List<CatalogEntry> Catalog = new List<CatalogEntry>
         {
-            new Fx("lightning", "prefab", "fx_Lightning", 1f, 6f, "small blue lightning bolt with thunder"),
-            new Fx("lightningred", "prefab", "fx_Lightning_red", 1f, 6f, "red sparks / red lightning"),
-            new Fx("explosion", "prefab", "fx_dynamite_explosion", 1f, 0f, "fire burst"),
-            new Fx("fireball", "prefab", "fx_fireball_staff_explosion", 1f, 0f, "fireball blast with smoke and camera shake"),
-            new Fx("nova", "prefab", "fx_DvergerMage_Nova_ring", 1f, 6f, "big cyan expanding ring"),
-            new Fx("thunderstomp", "prefab", "fx_eikthyr_stomp", 1f, 0f, "huge lightning shockwave with flying rocks, camera shake")
+            new CatalogEntry("lightning", "prefab", "fx_Lightning", 1f, 6f, "small blue lightning bolt with thunder"),
+            new CatalogEntry("lightningred", "prefab", "fx_Lightning_red", 1f, 6f, "red sparks / red lightning"),
+            new CatalogEntry("explosion", "prefab", "fx_dynamite_explosion", 1f, 0f, "fire burst"),
+            new CatalogEntry("fireball", "prefab", "fx_fireball_staff_explosion", 1f, 0f, "fireball blast with smoke and camera shake"),
+            new CatalogEntry("nova", "prefab", "fx_DvergerMage_Nova_ring", 1f, 6f, "big cyan expanding ring"),
+            new CatalogEntry("thunderstomp", "prefab", "fx_eikthyr_stomp", 1f, 0f, "huge lightning shockwave with flying rocks, camera shake")
         };
 
         // revert tokens: a newer weather/time request cancels the pending revert of the older one
-        static int envToken, timeToken;
+        int envToken, timeToken;
 
         protected override string Execute(Args a)
         {
@@ -59,8 +59,8 @@ namespace HomeCheat.Features.VisualEffect
             if (lname == "_probe") return Probe(a);
             if (lname == "_count") return CountPrefabs(a);
 
-            Fx fx = null;
-            foreach (Fx f in Catalog) if (f.Name.ToLowerInvariant() == lname) { fx = f; break; }
+            CatalogEntry fx = null;
+            foreach (CatalogEntry f in Catalog) if (f.Name.ToLowerInvariant() == lname) { fx = f; break; }
             if (fx == null) return "ERROR: unknown effect '" + name + "' (visualeffect list=1)";
 
             float scale = a.Float("scale", fx.Scale);
@@ -78,11 +78,11 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- catalog -------------------------------------------------------------------
 
-        static string ListCatalog()
+        string ListCatalog()
         {
             if (Catalog.Count == 0) return "catalog empty: nothing verified yet. Use name=_probe&prefab=<vfx prefab> to test, name=_envs for weather.";
             StringBuilder sb = new StringBuilder();
-            foreach (Fx f in Catalog)
+            foreach (CatalogEntry f in Catalog)
                 sb.Append(f.Name).Append(" [").Append(f.Kind).Append("] ").Append(f.Note).Append('\n');
             sb.Append("revert: name=reset");
             return sb.ToString();
@@ -91,10 +91,9 @@ namespace HomeCheat.Features.VisualEffect
         // ---- prefab VFX / SFX ----------------------------------------------------------
 
         // target point, never below the terrain: y = max(point, ground) + lift (lift=0.2 default; ground=0 keeps the raw y)
-        static Vector3 Where(Args a, out string error)
+        Vector3 Where(Args a)
         {
-            Vector3 p = RawWhere(a, out error);
-            if (error != null) return p;
+            Vector3 p = RawWhere(a);
             if (a.Flag("ground", true))
                 p.y = Mathf.Max(p.y, Ground.Height(p));
             p.y += a.Float("lift", 0.2f);
@@ -116,7 +115,7 @@ namespace HomeCheat.Features.VisualEffect
 
         // share=1: ask every connected client (including this one) to spawn the prefab through the game's own
         // "SpawnObject" routed RPC, so other players see and hear it. Scale and duration are not carried by that RPC.
-        static bool Share(string prefab, Vector3 pos)
+        bool Share(string prefab, Vector3 pos)
         {
             if (ZRoutedRpc.instance == null) return false;
             int hash = StableHash(prefab);
@@ -125,9 +124,8 @@ namespace HomeCheat.Features.VisualEffect
             return true;
         }
 
-        static Vector3 RawWhere(Args a, out string error)
+        Vector3 RawWhere(Args a)
         {
-            error = null;
             Player p = Players.Local;
             string at = a.Str("at", "aim").ToLowerInvariant();
             if (at == "self") return p.transform.position;
@@ -140,12 +138,11 @@ namespace HomeCheat.Features.VisualEffect
                 && float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out y)
                 && float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out z))
                 return new Vector3(x, y, z);
-            error = "ERROR: at must be aim, self or x,y,z";
-            return Vector3.zero;
+            throw new CommandException("at must be aim, self or x,y,z");
         }
 
         // one effect at one point: networked prefab -> local Instantiate (replicates), plain vfx -> RPC to everybody (share=1) or local
-        static bool Emit(string prefab, Vector3 pos, float scale, float dur, bool netted, bool share)
+        bool Emit(string prefab, Vector3 pos, float scale, float dur, bool netted, bool share)
         {
             if (share) return Share(prefab, pos);
             GameObject go = Prefabs.Spawn(prefab, pos, Quaternion.identity);
@@ -155,11 +152,9 @@ namespace HomeCheat.Features.VisualEffect
             return true;
         }
 
-        static string SpawnPrefab(string prefab, Args a, float scale, float dur, string label)
+        string SpawnPrefab(string prefab, Args a, float scale, float dur, string label)
         {
-            string err;
-            Vector3 centre = Where(a, out err);
-            if (err != null) return err;
+            Vector3 centre = Where(a);
             if (Prefabs.Get(prefab) == null) return "ERROR: no prefab '" + prefab + "' (op=list&filter=" + prefab.Substring(0, Math.Min(4, prefab.Length)) + ")";
             // prefabs with a ZNetView are networked objects: a plain local Instantiate already replicates to every player,
             // so the RPC (which would duplicate them on each client) is only for ZNetView-less prefabs (pure vfx/sfx)
@@ -213,27 +208,19 @@ namespace HomeCheat.Features.VisualEffect
                 + (share ? "" : (dur > 0f ? ", removed after " + dur.ToString("F0") + " s" : ", lives as long as the prefab itself"));
         }
 
-        static void Kill(GameObject go, float seconds)
+        void Kill(GameObject go, float seconds)
         {
-            Later(seconds, delegate
-            {
-                if (go == null) return;
-                ZNetView nv = go.GetComponent<ZNetView>();
-                if (nv != null && nv.IsValid()) ZNetScene.instance.Destroy(go);
-                else UnityEngine.Object.Destroy(go);
-            });
+            Later(seconds, delegate { Fx.Destroy(go); });
         }
 
         // discovery helper: spawn any prefab, report what it is made of
-        static string Probe(Args a)
+        string Probe(Args a)
         {
             string prefab = a.Str("prefab", "");
             if (prefab.Length == 0) return "ERROR: prefab required, e.g. name=_probe&prefab=fx_Lightning (op=list&filter=vfx_)";
             GameObject src = Prefabs.Get(prefab);
             if (src == null) return "ERROR: no prefab '" + prefab + "'";
-            string err;
-            Vector3 pos = Where(a, out err);
-            if (err != null) return err;
+            Vector3 pos = Where(a);
             float dur = a.Float("duration", 8f);
             float scale = a.Float("scale", 1f);
             Dictionary<string, int> comps = new Dictionary<string, int>();
@@ -256,17 +243,14 @@ namespace HomeCheat.Features.VisualEffect
         }
 
         // name=_count: how many prefabs start with vfx_ / fx_ / sfx_; with filter=<text> also lists every matching name
-        static string CountPrefabs(Args a)
+        string CountPrefabs(Args a)
         {
-            System.Reflection.FieldInfo f = typeof(ZNetScene).GetField("m_namedPrefabs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            Dictionary<int, GameObject> d = f.GetValue(ZNetScene.instance) as Dictionary<int, GameObject>;
             string filter = a.Str("filter", "");
             int v = 0, fx = 0, s = 0;
             List<string> names = new List<string>();
-            foreach (KeyValuePair<int, GameObject> kv in d)
+            foreach (GameObject g in Prefabs.All())
             {
-                if (kv.Value == null) continue;
-                string n = kv.Value.name;
+                string n = g.name;
                 if (n.StartsWith("vfx_", StringComparison.OrdinalIgnoreCase)) v++;
                 else if (n.StartsWith("fx_", StringComparison.OrdinalIgnoreCase)) fx++;
                 else if (n.StartsWith("sfx_", StringComparison.OrdinalIgnoreCase)) s++;
@@ -278,7 +262,7 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- weather -------------------------------------------------------------------
 
-        static string ListEnvs()
+        string ListEnvs()
         {
             if (EnvMan.instance == null) return "ERROR: EnvMan not ready (load a world)";
             StringBuilder sb = new StringBuilder();
@@ -289,14 +273,14 @@ namespace HomeCheat.Features.VisualEffect
             return sb.ToString();
         }
 
-        static string CurrentEnvName()
+        string CurrentEnvName()
         {
             EnvMan em = EnvMan.instance;
             if (em == null) return "?";
             return (em.GetCurrentEnvironment() != null ? em.GetCurrentEnvironment().m_name : "?");
         }
 
-        static string ForceEnv(string env, float seconds, string label)
+        string ForceEnv(string env, float seconds, string label)
         {
             EnvMan em = EnvMan.instance;
             if (em == null) return "ERROR: EnvMan not ready (load a world)";
@@ -316,7 +300,7 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- time of day ---------------------------------------------------------------
 
-        static string ForceTime(float fraction, float seconds, string label)
+        string ForceTime(float fraction, float seconds, string label)
         {
             EnvMan em = EnvMan.instance;
             if (em == null) return "ERROR: EnvMan not ready (load a world)";
@@ -334,11 +318,9 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- light ---------------------------------------------------------------------
 
-        static string AddLight(string rgb, Args a, float scale, float seconds, string label)
+        string AddLight(string rgb, Args a, float scale, float seconds, string label)
         {
-            string err;
-            Vector3 pos = Where(a, out err);
-            if (err != null) return err;
+            Vector3 pos = Where(a);
             string[] c = rgb.Split(',');
             Color col = new Color(
                 float.Parse(c[0], System.Globalization.CultureInfo.InvariantCulture),
@@ -357,7 +339,7 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- camera --------------------------------------------------------------------
 
-        static string Shake(float strength, float seconds)
+        string Shake(float strength, float seconds)
         {
             if (GameCamera.instance == null) return "ERROR: no game camera";
             Vector3 p = GameCamera.instance.transform.position;
@@ -367,7 +349,7 @@ namespace HomeCheat.Features.VisualEffect
 
         // ---- reset / state ---------------------------------------------------------------
 
-        static string Reset()
+        string Reset()
         {
             envToken++; timeToken++;
             EnvMan em = EnvMan.instance;
@@ -377,13 +359,13 @@ namespace HomeCheat.Features.VisualEffect
             return "reset: forced environment cleared, forced time cleared";
         }
 
-        static string ForcedEnvName(EnvMan em)
+        string ForcedEnvName(EnvMan em)
         {
-            System.Reflection.FieldInfo f = typeof(EnvMan).GetField("m_forceEnv", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            return f == null ? "?" : (string)f.GetValue(em);
+            object v = Refl.Get(em, "m_forceEnv");
+            return v == null ? "?" : (string)v;
         }
 
-        static string State()
+        string State()
         {
             EnvMan em = EnvMan.instance;
             if (em == null) return "EnvMan not ready";

@@ -1,5 +1,5 @@
 // slime: even ring of slime (blob/ooze) area clouds around a player, with a free gap in the middle.
-// Own game / own world only. C# 5 (csc 4.0). Build: bash build-cmd.sh slime
+// Own game / own world only. C# 5 (csc 4.0). Build: bash build.sh slime
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -9,14 +9,14 @@ using UnityEngine;
 
 namespace HomeCheat.Features.Slime
 {
-    public class SlimeEffect : HarmEffect
+    public sealed class SlimeEffect : HarmEffect
     {
         public override string Name { get { return "slime"; } }
         protected override string Usage
         {
             get
             {
-                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=1 (cast effects, set 1..5 of the spell-fx list, 0 = off)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] | test aids, not part of the effect: keephealed=<nick>&seconds=N (keeps a player at full health), heal=1 (full health for the local player) | near=<r> (list characters and hp) | weapon=<character prefab> | dump=<prefab> (print Aoe/collider facts, spawns nothing) | find=<text> (prefabs that carry an Aoe)";
+                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=1 (cast effects, set 1..5 of the spell-fx list, 0 = off)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] | near=<r> (list characters and hp)";
             }
         }
 
@@ -25,40 +25,43 @@ namespace HomeCheat.Features.Slime
 
         const BindingFlags AllF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        protected override string Execute(Args a)
+        // test-aid state and the clouds of the last cast
+        int healCount;
+        float healMin = 999f;
+        readonly List<GameObject> last = new List<GameObject>();
+        Character cloudOwner; // owner of the clouds: Aoe does not hit its owner (m_hitOwner=False)
+
+        public SlimeEffect()
         {
-            string find = a.Str("find", "");
-            if (find.Length > 0) return Find(find);
-            string weapon = a.Str("weapon", "");
-            if (weapon.Length > 0) return WeaponDump(weapon);
-            if (a.Flag("healstats", false)) return "heal ticks that found a player below full health: " + HealCount + ", lowest hp seen " + HealMin.ToString("F1");
-            string keep = a.Str("keephealed", "");
-            if (keep.Length > 0) return KeepHealed(keep, a.Float("seconds", 30f));
-            if (a.Flag("probe", false)) return Probe();
-            if (a.Flag("onself", false))
+            SubAction("find", "find=<text> (prefabs that carry an Aoe)", delegate (Args a) { return Prefabs.Find(a.Str("find", ""), 150, delegate (GameObject g) { return AoeOf(g) != null ? "  [Aoe]" : ""; }); });
+            SubAction("weapon", "weapon=<character prefab>", delegate (Args a) { return WeaponDump(a.Str("weapon", "")); });
+            SubFlag("healstats", "healstats=1", delegate (Args a) { return "heal ticks that found a player below full health: " + healCount + ", lowest hp seen " + healMin.ToString("F1"); });
+            SubAction("keephealed", "test aids, not part of the effect: keephealed=<nick>&seconds=N (keeps a player at full health)", delegate (Args a) { return KeepHealed(a.Str("keephealed", ""), a.Float("seconds", 30f)); });
+            SubFlag("probe", "probe=1 (particle state of the live clouds)", delegate (Args a) { return Probe(); });
+            SubFlag("onself", "onself=1 [damage=0.05] [owner=1] (one cloud on yourself)", delegate (Args a)
             {
-                // test aid: ONE cloud on the local player (use a small damage=, e.g. 0.05) to see whether the player is hit
+                // ONE cloud on the local player (use a small damage=, e.g. 0.05) to see whether the player is hit
                 string dn;
                 object d1 = BlobDamage(a.Float("damage", 0.05f), out dn);
                 Player me = Players.Local;
-                CloudOwner = a.Flag("owner", false) ? me : null;
+                cloudOwner = a.Flag("owner", false) ? me : null;
                 SpawnOne("blob_aoe", me.transform.position + Vector3.up * 1f, -1f, d1);
                 return "one blob_aoe on the player, " + dn + "; hp now " + me.GetHealth().ToString("F1") + "/" + me.GetMaxHealth().ToString("F0");
-            }
-            if (a.Flag("heal", false))
+            });
+            SubFlag("heal", "heal=1 (full health for the local player)", delegate (Args a)
             {
                 Player me = Players.Local;
                 me.Heal(me.GetMaxHealth(), true);
                 return "healed: player hp " + me.GetHealth().ToString("F1") + "/" + me.GetMaxHealth().ToString("F0");
-            }
+            });
+            SubAction("dump", "dump=<prefab> (print Aoe/collider facts, spawns nothing)", delegate (Args a) { return Prefabs.Dump(a.Str("dump", ""), "Aoe", "TimedDestruction"); });
+        }
+
+        protected override string Execute(Args a)
+        {
             float near = a.Float("near", 0f);
             if (near > 0f) return Near(near);
-            string dump = a.Str("dump", "");
-            if (dump.Length > 0) return Dump(dump);
-
-            string err;
-            Player target = Target(a, out err);
-            if (target == null) return err;
+            Player target = Target(a);
             if (target != Players.Local && !ZNet.instance.IsServer()) return "ERROR: effects on other players need this game to be the host";
 
             float gap = a.Float("gap", 2f);
@@ -67,7 +70,7 @@ namespace HomeCheat.Features.Slime
             float delay = Mathf.Max(0f, a.Float("delay", 0f));
             float life = a.Float("lifetime", -1f);
             float lift = a.Float("lift", 1f);
-            CloudOwner = a.Flag("hurtself", true) ? null : target;
+            cloudOwner = a.Flag("hurtself", true) ? null : target;
             // Blob's own attack damage (Poison from its blob_attack_aoe item) x 'damage'; the poison damage type brings the game's
             // own Poison status effect. damage=0 leaves the prefab as it is (blob_aoe alone does no damage).
             float dmgMul = a.Float("damage", 3f);
@@ -147,7 +150,7 @@ namespace HomeCheat.Features.Slime
         }
 
         // effects of a broken stone, per set (to be fired by the earthquake command when a Rock_7 breaks)
-        static void StoneFx(int set, Vector3 pos, float wait)
+        void StoneFx(int set, Vector3 pos, float wait)
         {
             switch (set)
             {
@@ -160,27 +163,25 @@ namespace HomeCheat.Features.Slime
         }
 
         // spawn an effect prefab after 'wait' seconds and remove it after 8 s (effects of unknown length, loops)
-        static void FxAt(string prefab, Vector3 pos, float wait)
+        void FxAt(string prefab, Vector3 pos, float wait)
         {
             Later(wait, delegate
             {
-                GameObject go = Prefabs.Spawn(prefab, pos, Quaternion.identity);
-                if (go == null) { HomeApi.Log("slime fx: no prefab " + prefab); return; }
-                Later(8f, delegate { if (go != null) UnityEngine.Object.Destroy(go); });
+                if (Fx.Spawn(this, prefab, pos, 8f) == null) HomeApi.Log("slime fx: no prefab " + prefab);
             });
         }
 
-        static void SpawnOne(string prefab, Vector3 pos, float life, object dmg)
+        void SpawnOne(string prefab, Vector3 pos, float life, object dmg)
         {
             GameObject go = Prefabs.Spawn(prefab, pos, Quaternion.identity);
             if (go == null) return;
-            Last.Add(go);
-            if (life > 0f) SetField(go, "Aoe", "m_ttl", life);
-            if (CloudOwner != null)
+            last.Add(go);
+            if (life > 0f) Refl.SetFloat(AoeOf(go), "m_ttl", life);
+            if (cloudOwner != null)
             {
                 Component ao = AoeOf(go);
                 FieldInfo fo = ao == null ? null : ao.GetType().GetField("m_owner", AllF);
-                if (fo != null) fo.SetValue(ao, CloudOwner);
+                if (fo != null) fo.SetValue(ao, cloudOwner);
             }
             if (dmg != null)
             {
@@ -194,7 +195,7 @@ namespace HomeCheat.Features.Slime
         }
 
         // DamageTypes (boxed) of the Blob attack item, scaled by mul
-        static object BlobDamage(float mul, out string note)
+        object BlobDamage(float mul, out string note)
         {
             note = "Blob default item";
             GameObject item = null;
@@ -225,28 +226,14 @@ namespace HomeCheat.Features.Slime
             return null;
         }
 
-        static object GetField(Component c, string name)
-        {
-            FieldInfo f = c.GetType().GetField(name, AllF);
-            return f == null ? null : f.GetValue(c);
-        }
-
-        static void SetField(GameObject go, string typeName, string field, float v)
-        {
-            Component c = AoeOf(go);
-            if (c == null) return;
-            FieldInfo f = c.GetType().GetField(field, AllF);
-            if (f != null && f.FieldType == typeof(float)) f.SetValue(c, v);
-        }
-
         // effective cloud radius in metres: Aoe.m_radius times the scale of the object that carries it
         // (not verified in game until dump has been compared with a spawned cloud; see plan-slime.md)
-        static float CloudRadius(GameObject pf, out string src)
+        float CloudRadius(GameObject pf, out string src)
         {
             Component aoe = AoeOf(pf);
             if (aoe != null)
             {
-                object r = GetField(aoe, "m_radius");
+                object r = Refl.Get(aoe, "m_radius");
                 if (r is float && (float)r > 0f)
                 {
                     Vector3 s = aoe.transform.lossyScale;
@@ -268,41 +255,37 @@ namespace HomeCheat.Features.Slime
 
         // test aid, not part of the effect: top a player up to full health every 0.2 s for N seconds (Character.Heal reaches
         // remote players through the Heal rpc of the game), so a poison test cannot kill them
-        static string KeepHealed(string nick, float seconds)
+        string KeepHealed(string nick, float seconds)
         {
             Player p = Players.Find(nick);
-            if (p == null) return "ERROR: no player named '" + nick + "' is online";
+            if (p == null) throw new CommandException("no player named '" + nick + "' is online");
             float end = Time.time + seconds;
-            HealCount = 0; HealMin = 999f;
+            healCount = 0; healMin = 999f;
             HealTick(nick, end);
             return "keeping " + nick + " healed for " + seconds.ToString("F0") + " s; hp now " + p.GetHealth().ToString("F1") + "/" + p.GetMaxHealth().ToString("F0");
         }
 
-        static int HealCount;
-        static float HealMin = 999f;
 
-        static void HealTick(string nick, float end)
+        void HealTick(string nick, float end)
         {
             Player p = Players.Find(nick);
             if (p == null || Time.time > end) return;
             if (p.GetHealth() < p.GetMaxHealth())
             {
-                HealCount++;
-                if (p.GetHealth() < HealMin) HealMin = p.GetHealth();
+                healCount++;
+                if (p.GetHealth() < healMin) healMin = p.GetHealth();
                 p.Heal(p.GetMaxHealth(), false);
             }
             Later(0.2f, delegate { HealTick(nick, end); });
         }
 
-        static readonly List<GameObject> Last = new List<GameObject>();
-        static Character CloudOwner; // owner of the clouds: Aoe does not hit its owner (m_hitOwner=False)
 
         // test aid: state of the particle systems of the clouds still alive (is anything actually emitting?)
-        static string Probe()
+        string Probe()
         {
             StringBuilder sb = new StringBuilder();
             int alive = 0;
-            foreach (GameObject go in Last)
+            foreach (GameObject go in last)
             {
                 if (go == null) continue;
                 alive++;
@@ -322,17 +305,17 @@ namespace HomeCheat.Features.Slime
                       .Append(RendererOn(c.gameObject)).Append('\n');
                 }
             }
-            if (alive == 0) { Last.Clear(); return "no slime clouds alive (they live 3 s)"; }
+            if (alive == 0) { last.Clear(); return "no slime clouds alive (they live 3 s)"; }
             return alive + " clouds alive (first 2 shown)\n" + sb.ToString();
         }
 
-        static string RendererOn(GameObject g)
+        string RendererOn(GameObject g)
         {
             Renderer r = g.GetComponent<Renderer>();
             return r == null ? "none" : (r.enabled + " layer=" + g.layer);
         }
 
-        static string Flat(object v)
+        string Flat(object v)
         {
             if (v == null) return "null";
             if (v is GameObject) return "GO:" + ((GameObject)v).name;
@@ -342,7 +325,7 @@ namespace HomeCheat.Features.Slime
         }
 
         // what a character attacks with: default items of its Humanoid, with damage, status effect and attack settings
-        static string WeaponDump(string charPrefab)
+        string WeaponDump(string charPrefab)
         {
             GameObject pf = Prefabs.Get(charPrefab);
             if (pf == null) return "ERROR: no prefab '" + charPrefab + "'";
@@ -384,7 +367,7 @@ namespace HomeCheat.Features.Slime
         }
 
         // test aid: every character within r m of the local player with distance, health, and the player's own health
-        static string Near(float r)
+        string Near(float r)
         {
             Player me = Players.Local;
             StringBuilder sb = new StringBuilder();
@@ -396,52 +379,6 @@ namespace HomeCheat.Features.Slime
                 if (d > r) continue;
                 sb.Append(c.name.Replace("(Clone)", "")).Append(" dist ").Append(d.ToString("F1")).Append(" hp ")
                   .Append(c.GetHealth().ToString("F1")).Append('/').Append(c.GetMaxHealth().ToString("F0")).Append('\n');
-            }
-            return sb.ToString();
-        }
-
-        static string Find(string text)
-        {
-            StringBuilder sb = new StringBuilder();
-            FieldInfo f = typeof(ZNetScene).GetField("m_namedPrefabs", AllF);
-            Dictionary<int, GameObject> d = f.GetValue(ZNetScene.instance) as Dictionary<int, GameObject>;
-            List<string> names = new List<string>();
-            foreach (KeyValuePair<int, GameObject> kv in d)
-                if (kv.Value != null && kv.Value.name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-                    names.Add(kv.Value.name + (AoeOf(kv.Value) != null ? "  [Aoe]" : ""));
-            names.Sort();
-            int n = 0;
-            foreach (string s in names) { if (n++ >= 150) { sb.Append("... (more)"); break; } sb.Append(s).Append('\n'); }
-            return names.Count == 0 ? "no prefab matches '" + text + "'" : sb.ToString();
-        }
-
-        static string Dump(string prefab)
-        {
-            GameObject pf = Prefabs.Get(prefab);
-            if (pf == null) return "ERROR: no prefab '" + prefab + "'";
-            StringBuilder sb = new StringBuilder();
-            sb.Append("prefab ").Append(prefab).Append(" root scale ").Append(Fmt.Vec(pf.transform.lossyScale)).Append('\n');
-            foreach (Component c in pf.GetComponentsInChildren<Component>(true))
-            {
-                if (c == null) continue;
-                string tn = c.GetType().Name;
-                if (tn == "Transform") continue;
-                sb.Append("  ").Append(c.transform == pf.transform ? "root" : c.transform.name).Append(": ").Append(tn);
-                SphereCollider sc = c as SphereCollider;
-                if (sc != null) sb.Append(" radius=").Append(sc.radius.ToString("F2")).Append(" trigger=").Append(sc.isTrigger).Append(" lossyScale=").Append(Fmt.Vec(sc.transform.lossyScale));
-                CapsuleCollider cc = c as CapsuleCollider;
-                if (cc != null) sb.Append(" radius=").Append(cc.radius.ToString("F2")).Append(" height=").Append(cc.height.ToString("F2"));
-                if (tn == "Aoe" || tn == "TimedDestruction")
-                {
-                    foreach (FieldInfo f in c.GetType().GetFields(AllF))
-                    {
-                        object v = f.GetValue(c);
-                        if (v == null) continue;
-                        if (f.FieldType.IsPrimitive || f.FieldType == typeof(string) || f.FieldType.IsEnum) sb.Append(' ').Append(f.Name).Append('=').Append(v);
-                        else if (f.Name == "m_damage") sb.Append(' ').Append(f.Name).Append('=').Append(v.ToString().Replace('\n', ' '));
-                    }
-                }
-                sb.Append('\n');
             }
             return sb.ToString();
         }

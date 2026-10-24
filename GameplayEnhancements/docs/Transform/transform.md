@@ -51,8 +51,7 @@ Tested in game with Maksym: model and revert for all three forms, serpent tail a
 ## Build and undo
 
 ```bash
-M=/d/steam/steamapps/common/Valheim/valheim_Data/Managed
-bash build-cmd.sh transform -r:$M/UnityEngine.AnimationModule.dll -r:$M/UnityEngine.AudioModule.dll -r:$M/assembly_utils.dll
+bash src/build.sh transform
 ```
 
-`build-cmd.sh` (in the run folder with the core `HomeCheat.dll`) stages `HomeCheat.Cmd.transform.v<time>.dll` in `BepInEx/homecheat-commands/`; `op=reload` loads it without a restart. Undo: `op=transform&type=human`, then delete the `HomeCheat.Cmd.transform.*.dll` files and restart the game.
+`src/build.sh` (extra references in `src/Features/Transform/refs.txt`) stages `HomeCheat.Cmd.transform.v<time>.dll` in `BepInEx/homecheat-commands/`; `op=reload` loads it without a restart. Undo: `op=transform&type=human`, then delete the `HomeCheat.Cmd.transform.*.dll` files and restart the game.

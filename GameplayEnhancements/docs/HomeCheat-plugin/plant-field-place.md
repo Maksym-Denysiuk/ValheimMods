@@ -3,7 +3,7 @@ description: plant, field, cultivate and place commands of the HomeCheat Valheim
 ---
 # plant, field, cultivate, place (HomeCheat core ops)
 
-Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the CheatResearch session over several of Maksym's requests (grow crops only on cultivated soil, place cultivated soil as a separate command, then a parameterised `plant` for birches "5 in a row, 3 rows, the 3rd birch of row 1 where the crosshair points", then a general `place`). Own game and own world only. Source: core `HomeCheat.cs` (`PlantBlock`, `Field`, `Cultivate`, `PlaceBlock`), archived as [HomeCheat.cs.txt](HomeCheat.cs.txt).
+Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the CheatResearch session over several of Maksym's requests (grow crops only on cultivated soil, place cultivated soil as a separate command, then a parameterised `plant` for birches "5 in a row, 3 rows, the 3rd birch of row 1 where the crosshair points", then a general `place`). Own game and own world only. Source: [src/Features/World](../../src/Features/World/) (`PlantCommand`, `FieldCommand`, `CultivateCommand`, `PlaceCommand`, cell math in the core `Kit/Anchor.cs`; until 2026-10-25 part of the core `HomeCheat.cs`).
 
 ## What they do
 

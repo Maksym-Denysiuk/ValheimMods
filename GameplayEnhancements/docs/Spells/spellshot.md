@@ -72,7 +72,7 @@ Helpers: `type=probe&filter=<text>` lists projectile prefabs, the ammo items tha
 
 ## Files
 
-`Cmd_spellshot.cs` (C# 5, built with `bash build-cmd.sh spellshot` into `HomeCheat.Cmd.spellshot.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). A copy of the source is next to this note as `Cmd_spellshot.cs.txt` (rename to `.cs` to build); the working copy, the plan (`plan-spellshot.md`) and the build script are in `LocalOutputs/2026-10-24--00-48/`, which is not kept.
+`Cmd_spellshot.cs` (C# 5, built with `bash build-cmd.sh spellshot` into `HomeCheat.Cmd.spellshot.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Since 2026-10-25 the source is [src/Features/Spellshot](../../src/Features/Spellshot/) (build: `bash build.sh spellshot`, see [architecture.md](../HomeCheat-plugin/architecture.md)); the working copy, the plan (`plan-spellshot.md`) and the build script are in `LocalOutputs/2026-10-24--00-48/`, which is not kept.
 
 ## Undo
 

@@ -3,7 +3,7 @@ description: heal, cleanse and bless commands of the HomeCheat Valheim plugin (2
 ---
 # heal, cleanse, bless (HomeCheat command DLL)
 
-Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the spells-design session as slot 5 ("healing and blessings") of the spell bar. Own game and own world only. Source: [Cmd_heal.cs.txt](../Spells/Cmd_heal.cs.txt) (rename to `Cmd_heal.cs` and build with `bash build-cmd.sh heal`, see [README.md](README.md#build)). The three commands live in one DLL (`HomeCheat.Cmd.heal.v<time>.dll`).
+Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the spells-design session as slot 5 ("healing and blessings") of the spell bar. Own game and own world only. Source: [src/Features/Heal](../../src/Features/Heal/) (build: `bash build.sh heal`, see [README.md](README.md#build)). The three commands live in one DLL (`HomeCheat.Cmd.heal.v<time>.dll`).
 
 None of them touches the console, god mode or a cheat flag: they call `Player.Heal`, `AddStamina`, `AddEitr`, the status effect manager and the guardian power methods.
 

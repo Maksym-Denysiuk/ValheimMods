@@ -1,0 +1,6 @@
+# Animator
+UnityEngine.AnimationModule.dll
+# AudioSource
+UnityEngine.AudioModule.dll
+# ZInput, Vector2s
+assembly_utils.dll

@@ -1,5 +1,5 @@
 // earthquake: the stag hammer's ground slam repeated in expanding rings around a player, with a tilted stone circle.
-// Own game / own world only. C# 5 (csc 4.0). Build: bash build-cmd.sh earthquake
+// Own game / own world only. C# 5 (csc 4.0). Build: bash build.sh earthquake
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace HomeCheat.Features.Earthquake
 {
-    public class EarthquakeEffect : HarmEffect
+    public sealed class EarthquakeEffect : HarmEffect
     {
         public override string Name { get { return "earthquake"; } }
         const float SimpleForce = 2.1f;      // the Demolisher sledge push (210) against the slam prefab's 100
@@ -21,50 +21,36 @@ namespace HomeCheat.Features.Earthquake
                 return "earthquake [target=<nick, other player only if this game is the host>] [stages=5] [hits=2] [delay=0.003 s between hits of one point] [stagegap=0.4 s between stages]"
                     + " [radius=<r m, default the slam radius>] [spacing=<m between points, default 1.4r so neighbouring slams overlap>] [aoe=<slam prefab>] [damage=0 (x prefab damage, 0 = push only)] [mode=simple|strong (push x2.1 = Demolisher sledge value, or x4.2)] [force=<own multiplier, overrides mode>] [players=1 (also pushes other players and friendly or tamed creatures, never yourself; 0 = enemies only)] [props=0]"
                     + " [stone=rock_7] [stonefrom=2] [stonestep=2 (stones on every 2nd ring from stonefrom: 1 = every ring)] [tilt=45 (deg, top leans away from the player)] [stoney=0 (m, lift)] [stonelife=60 (s from the command until the INNERMOST stone circle breaks, 0 = they stay)] [dropcount=<n or min-max> (stones dropped by each broken rock, default 1; game = as the game rolls it, Rock_7: 3-6)] [stonegap=10 (s each circle further out breaks earlier)] [stoneyaw=90 (deg, spin of each stone about its own axis; 90 puts the wide side along the circle)] [noStones=1]"
-                    + " | fx=layered (set five as accepted: rings vfx_troll_groundslam, linger vfx_darkland_groundfog, stone break fx_tombstone_destroyed + sfx_rock_wall_crumble) | fx=earth (DEFAULT, accepted set: cast fx_goblinbrute_groundslam, rings vfx_troll_groundslam, stone-break fx_tombstone_destroyed + sfx_rock_wall_crumble, linger vfx_darkland_groundfog; fx=none = no effect layers; stonefx= adds an effect when stones rise) or castfx= ringfx= stonefx= breakfx= breaksfx= lingerfx= (prefab names) lingerdur=20 fxevery=4 | kill=<radius m> (kills all untamed creatures around you, no effect run) | clearitems=1 (removes all items lying on the ground, inventories untouched) | clear=1 (remove stones this command placed, also after a reload) | find=<text> | dump=<prefab> | item=<item prefab> (print the hammer's attacks)";
+                    + " | fx=layered (set five as accepted: rings vfx_troll_groundslam, linger vfx_darkland_groundfog, stone break fx_tombstone_destroyed + sfx_rock_wall_crumble) | fx=earth (DEFAULT, accepted set: cast fx_goblinbrute_groundslam, rings vfx_troll_groundslam, stone-break fx_tombstone_destroyed + sfx_rock_wall_crumble, linger vfx_darkland_groundfog; fx=none = no effect layers; stonefx= adds an effect when stones rise) or castfx= ringfx= stonefx= breakfx= breaksfx= lingerfx= (prefab names) lingerdur=20 fxevery=4 | kill=<radius m> (kills all untamed creatures around you, no effect run)";
             }
         }
 
         const BindingFlags AllF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        static bool HitPlayers = true;
-        static string BreakFx = "", BreakSfx = "";
-        static int BreakCount, BreakEvery = 4;
+        bool hitPlayers = true;
+        string breakFx = "", breakSfx = "";
+        int breakCount, breakEvery = 4;
 
-        // a visual or sound prefab at a point, removed again after 'life' seconds (most fx_ prefabs clean themselves up; looping ones do not)
-        static void Fx(string prefab, Vector3 pos, float life)
+        public EarthquakeEffect()
         {
-            GameObject go = Prefabs.Spawn(prefab, pos, Quaternion.identity);
-            if (go == null) return;
-            Later(life, delegate
-            {
-                if (go == null) return;
-                ZNetView nv = go.GetComponent<ZNetView>();
-                if (nv != null && nv.IsValid()) ZNetScene.instance.Destroy(go);
-                else UnityEngine.Object.Destroy(go);
-            });
+            SubAction("find", "find=<text> (prefabs, [Aoe] marks the slam candidates)", delegate (Args a) { return Prefabs.Find(a.Str("find", ""), 150, delegate (GameObject g) { return g.GetComponentInChildren<Aoe>(true) != null ? "  [Aoe]" : ""; }); });
+            SubAction("dump", "dump=<prefab> (colliders, Aoe, destructible and drop facts; spawns nothing)", delegate (Args a) { return Prefabs.Dump(a.Str("dump", ""), "Aoe"); });
+            SubAction("item", "item=<item prefab> (print the hammer's attacks)", delegate (Args a) { return DumpItem(a.Str("item", "")); });
+            SubFlag("clear", "clear=1 (remove stones this command placed, also after a reload)", delegate (Args a) { return Clear(); });
+            SubFlag("clearitems", "clearitems=1 (removes all items lying on the ground, inventories untouched)", delegate (Args a) { return ClearItems(); });
+            SubFlag("weapons", "weapons=1 [top=15] (weapons by push force)", delegate (Args a) { return Weapons(a.Int("top", 15)); });
+            SubFlag("demo", "demo=1 (five stones broken with the five effect sets)", delegate (Args a) { return Demo(a); });
         }
+
         const string StoneMark = "hc_earthquake";
         static readonly string[] HammerItems = new string[] { "SledgeStagbreaker", "Stagbreaker" };
         static readonly string[] StoneNames = new string[] { "rock_7", "Rock_7" };
 
         protected override string Execute(Args a)
         {
-            string find = a.Str("find", "");
-            if (find.Length > 0) return Find(find);
-            string dump = a.Str("dump", "");
-            if (dump.Length > 0) return Dump(dump);
-            string item = a.Str("item", "");
-            if (item.Length > 0) return DumpItem(item);
-            if (a.Flag("clear", false)) return Clear();
-            if (a.Flag("clearitems", false)) return ClearItems();
-            if (a.Flag("weapons", false)) return Weapons(a.Int("top", 15));
-            if (a.Flag("demo", false)) return Demo(a);
             float killR = a.Float("kill", 0f);
             if (killR > 0f) return KillAll(killR);
 
-            string err;
-            Player target = Target(a, out err);
-            if (target == null) return err;
+            Player target = Target(a);
             if (target != Players.Local && !ZNet.instance.IsServer()) return "ERROR: effects on other players need this game to be the host";
 
             int stages = Mathf.Max(1, a.Int("stages", 5));
@@ -72,7 +58,7 @@ namespace HomeCheat.Features.Earthquake
             float delay = Mathf.Max(0f, a.Float("delay", 0.003f));
             float stageGap = Mathf.Max(0f, a.Float("stagegap", 0.4f));
             float damage = Mathf.Max(0f, a.Float("damage", 0f));
-            HitPlayers = a.Flag("players", true);
+            hitPlayers = a.Flag("players", true);
             string mode = a.Str("mode", "simple").ToLowerInvariant();
             if (mode != "simple" && mode != "strong" && mode != "1" && mode != "2") return "ERROR: mode must be simple or strong (got '" + mode + "')";
             bool strong = mode == "strong" || mode == "2";
@@ -101,13 +87,13 @@ namespace HomeCheat.Features.Earthquake
             string castFx = a.Str("castfx", fxSet == "earth" ? "fx_goblinbrute_groundslam" : "");
             string ringFx = a.Str("ringfx", (fxSet == "earth" || fxSet == "layered") ? "vfx_troll_groundslam" : "");
             string stoneFx = a.Str("stonefx", "");
-            BreakFx = a.Str("breakfx", (fxSet == "earth" || fxSet == "layered") ? "fx_tombstone_destroyed" : "");
-            BreakSfx = a.Str("breaksfx", (fxSet == "earth" || fxSet == "layered") ? "sfx_rock_wall_crumble" : "");
+            breakFx = a.Str("breakfx", (fxSet == "earth" || fxSet == "layered") ? "fx_tombstone_destroyed" : "");
+            breakSfx = a.Str("breaksfx", (fxSet == "earth" || fxSet == "layered") ? "sfx_rock_wall_crumble" : "");
             string lingerFx = a.Str("lingerfx", (fxSet == "earth" || fxSet == "layered") ? "vfx_darkland_groundfog" : "");
             float lingerDur = a.Float("lingerdur", 20f);
             int ringEvery = Mathf.Max(1, a.Int("ringevery", 1));   // the ring layer fires on every n-th point of a ring
             int fxEvery = Mathf.Max(1, a.Int("fxevery", 4));   // the stone and sound layers fire on every n-th stone
-            string[] fxAll = new string[] { castFx, ringFx, stoneFx, BreakFx, BreakSfx, lingerFx };
+            string[] fxAll = new string[] { castFx, ringFx, stoneFx, breakFx, breakSfx, lingerFx };
             foreach (string fxn in fxAll) if (fxn.Length > 0 && Prefabs.Get(fxn) == null) return "ERROR: effect prefab '" + fxn + "' not found";
             int stoneRings = 0;
             for (int kk = 1; kk <= stages; kk++) if (kk >= stoneFrom && (kk - stoneFrom) % stoneStep == 0) stoneRings++;
@@ -151,10 +137,10 @@ namespace HomeCheat.Features.Earthquake
             for (int j = 0; j < hits; j++) Schedule(t0 + j * delay, slam, center, owner, damage, props, force);
             totalHits += hits;
             sb.Append("stage 0: R=0.0 m, 1 point, hits=").Append(hits).Append('\n');
-            BreakCount = 0;
-            BreakEvery = fxEvery;
-            if (castFx.Length > 0) Fx(castFx, center, 12f);
-            if (lingerFx.Length > 0) { string lf = lingerFx; Later(stages * stageGap, delegate { Fx(lf, center, lingerDur); }); }
+            breakCount = 0;
+            breakEvery = fxEvery;
+            if (castFx.Length > 0) Fx.Spawn(this, castFx, center, 12f);
+            if (lingerFx.Length > 0) { string lf = lingerFx; Later(stages * stageGap, delegate { Fx.Spawn(this, lf, center, lingerDur); }); }
 
             for (int k = 1; k <= stages; k++)
             {
@@ -166,7 +152,7 @@ namespace HomeCheat.Features.Earthquake
                 {
                     Vector3 pos = p;
                     for (int j = 0; j < hits; j++) Schedule(when + j * delay, slam, pos, owner, damage, props, force);
-                    if (ringFx.Length > 0 && pi++ % ringEvery == 0) { string rf = ringFx; Later(when, delegate { Fx(rf, pos, 10f); }); }
+                    if (ringFx.Length > 0 && pi++ % ringEvery == 0) { string rf = ringFx; Later(when, delegate { Fx.Spawn(this, rf, pos, 10f); }); }
                 }
                 totalHits += pts.Count * hits;
                 sb.Append("stage ").Append(k).Append(": R=").Append(R.ToString("F1")).Append(" m, ").Append(pts.Count).Append(" points, hits=").Append(hits).Append('\n');
@@ -186,7 +172,7 @@ namespace HomeCheat.Features.Earthquake
                         outward.Normalize();
                         string sName = stoneName;
                         Later(when, delegate { PlaceStone(sName, pos, outward, tilt, stoneY, stoneYaw, ringLife, dropMin, dropMax); });
-                        if (stoneFx.Length > 0 && placed % fxEvery == 0) { string sf = stoneFx; Later(when, delegate { Fx(sf, pos, 15f); }); }
+                        if (stoneFx.Length > 0 && placed % fxEvery == 0) { string sf = stoneFx; Later(when, delegate { Fx.Spawn(this, sf, pos, 15f); }); }
                         placed++;
                     }
                     totalStones += placed;
@@ -202,13 +188,13 @@ namespace HomeCheat.Features.Earthquake
 
         // ---- slam ---------------------------------------------------------------------------
 
-        static void Schedule(float t, string prefab, Vector3 pos, Player owner, float damage, bool props, float force)
+        void Schedule(float t, string prefab, Vector3 pos, Player owner, float damage, bool props, float force)
         {
             if (t <= 0f) Slam(prefab, pos, owner, damage, props, force);
             else Later(t, delegate { Slam(prefab, pos, owner, damage, props, force); });
         }
 
-        static void Slam(string prefab, Vector3 pos, Player owner, float damage, bool props, float force)
+        void Slam(string prefab, Vector3 pos, Player owner, float damage, bool props, float force)
         {
             GameObject go = Prefabs.Spawn(prefab, pos + Vector3.up * 0.1f, Quaternion.identity);
             if (go == null) return;
@@ -219,9 +205,9 @@ namespace HomeCheat.Features.Earthquake
                     // push, do not hurt: the owner and friends are skipped, damage is scaled (default 0)
                     aoe.m_hitOwner = false;
                     // players and friendly or tamed creatures are pushed too (players=0 turns that off); the owner is still never hit
-                    aoe.m_hitFriendly = HitPlayers;
-                    aoe.m_ignorePVP = HitPlayers;
-                    aoe.m_hitSame = HitPlayers;      // the slam otherwise skips targets of the owner's own kind, i.e. other players
+                    aoe.m_hitFriendly = hitPlayers;
+                    aoe.m_ignorePVP = hitPlayers;
+                    aoe.m_hitSame = hitPlayers;      // the slam otherwise skips targets of the owner's own kind, i.e. other players
                     aoe.m_hitProps = props && aoe.m_hitProps;
                     aoe.m_hitTerrain = false;
                     aoe.m_damage.Modify(damage);
@@ -258,7 +244,7 @@ namespace HomeCheat.Features.Earthquake
 
 
         // records where non-player characters stand now, and logs how far each moved after the effect has played out
-        static string Probe(Vector3 center, float range, float after)
+        string Probe(Vector3 center, float range, float after)
         {
             List<Character> cs = new List<Character>();
             List<Vector3> from = new List<Vector3>();
@@ -297,7 +283,7 @@ namespace HomeCheat.Features.Earthquake
             return Mathf.Max(0.5f, Mathf.Max(b.size.x, b.size.z));
         }
 
-        static GameObject PlaceStone(string name, Vector3 pos, Vector3 outward, float tilt, float lift, float yaw, float life, int dropMin, int dropMax)
+        GameObject PlaceStone(string name, Vector3 pos, Vector3 outward, float tilt, float lift, float yaw, float life, int dropMin, int dropMax)
         {
             // up-axis leans 'tilt' degrees away from the player; a random spin keeps the circle from looking stamped
             Vector3 up = (Vector3.up * Mathf.Cos(tilt * Mathf.Deg2Rad) + outward * Mathf.Sin(tilt * Mathf.Deg2Rad)).normalized;
@@ -313,11 +299,11 @@ namespace HomeCheat.Features.Earthquake
 
         // the stone is broken the game's own way (break effect, removal synced to everyone). With dropcount >= 0 its drop
         // table is emptied first; nothing is searched for or deleted afterwards (a scan of all items per stone made the game stutter)
-        static void Break(GameObject go, int dropMin, int dropMax)
+        void Break(GameObject go, int dropMin, int dropMax)
         {
             if (go == null) return;
-            if (BreakFx.Length > 0) Fx(BreakFx, go.transform.position, 8f);
-            if (BreakSfx.Length > 0 && BreakCount++ % BreakEvery == 0) Fx(BreakSfx, go.transform.position, 6f);
+            if (breakFx.Length > 0) Fx.Spawn(this, breakFx, go.transform.position, 8f);
+            if (breakSfx.Length > 0 && breakCount++ % breakEvery == 0) Fx.Spawn(this, breakSfx, go.transform.position, 6f);
             DropOnDestroyed dd = go.GetComponent<DropOnDestroyed>();
             if (dropMin >= 0 && dd != null && dd.m_dropWhenDestroyed != null)
             {
@@ -332,7 +318,7 @@ namespace HomeCheat.Features.Earthquake
         }
 
         // kills every creature (not players, not tamed ones) within 'range' m of the local player; used to clear a test arena
-        static string KillAll(float range)
+        string KillAll(float range)
         {
             Player p = Players.Local;
             if (p == null) return "ERROR: no local player";
@@ -352,7 +338,7 @@ namespace HomeCheat.Features.Earthquake
         }
 
         // every weapon, strongest push first: SharedData.m_attackForce x the attack's m_forceMultiplier (primary and secondary)
-        static string Weapons(int top)
+        string Weapons(int top)
         {
             List<KeyValuePair<float, string>> rows = new List<KeyValuePair<float, string>>();
             HashSet<string> crafted = new HashSet<string>();
@@ -380,7 +366,7 @@ namespace HomeCheat.Features.Earthquake
         }
 
         // removes every item lying on the ground in the loaded world (ItemDrop objects). Inventories, chests, pickables and pieces are not touched.
-        static string ClearItems()
+        string ClearItems()
         {
             int n = 0;
             Dictionary<string, int> kinds = new Dictionary<string, int>();
@@ -404,7 +390,7 @@ namespace HomeCheat.Features.Earthquake
 
         // demo=1: five Rock_7 side by side in front of you, tilted away like in the spell; each one is broken in turn with the break layers of
         // one effect set (1 earth, 2 epic, 3 subtle, 4 frost, 5 layered), the first after 'demostart' s, then every 'demogap' s
-        static string Demo(Args a)
+        string Demo(Args a)
         {
             Player p = Players.Local;
             if (p == null) return "ERROR: no local player";
@@ -442,7 +428,7 @@ namespace HomeCheat.Features.Earthquake
                 float t = start + i * gap;
                 Later(t, delegate
                 {
-                    BreakFx = set[1]; BreakSfx = set[2]; BreakCount = 0; BreakEvery = 1;
+                    breakFx = set[1]; breakSfx = set[2]; breakCount = 0; breakEvery = 1;
                     Break(go, 0, 0);
                 });
                 sb.Append("stone ").Append(i + 1).Append(" (").Append(i < 2 ? "left" : i == 2 ? "centre" : "right").Append("): set ").Append(set[0]).Append(", breaks at ").Append(t.ToString("F0")).Append(" s with ")
@@ -452,7 +438,7 @@ namespace HomeCheat.Features.Earthquake
             return sb.ToString();
         }
 
-        static string Clear()
+        string Clear()
         {
             int n = 0;
             foreach (ZNetView nv in UnityEngine.Object.FindObjectsOfType<ZNetView>())
@@ -467,88 +453,7 @@ namespace HomeCheat.Features.Earthquake
 
         // ---- facts --------------------------------------------------------------------------
 
-        static string Find(string text)
-        {
-            StringBuilder sb = new StringBuilder();
-            FieldInfo f = typeof(ZNetScene).GetField("m_namedPrefabs", AllF);
-            Dictionary<int, GameObject> d = f.GetValue(ZNetScene.instance) as Dictionary<int, GameObject>;
-            List<string> names = new List<string>();
-            foreach (KeyValuePair<int, GameObject> kv in d)
-                if (kv.Value != null && kv.Value.name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-                    names.Add(kv.Value.name + (kv.Value.GetComponentInChildren<Aoe>(true) != null ? "  [Aoe]" : ""));
-            names.Sort();
-            int n = 0;
-            foreach (string s in names) { if (n++ >= 150) { sb.Append("... (more)"); break; } sb.Append(s).Append('\n'); }
-            return names.Count == 0 ? "no prefab matches '" + text + "'" : sb.ToString();
-        }
-
-        static string Dump(string prefab)
-        {
-            GameObject pf = Prefabs.Get(prefab);
-            if (pf == null) return "ERROR: no prefab '" + prefab + "'";
-            StringBuilder sb = new StringBuilder();
-            sb.Append("prefab ").Append(prefab).Append(" root scale ").Append(Fmt.Vec(pf.transform.lossyScale));
-            Renderer[] rs = pf.GetComponentsInChildren<Renderer>(true);
-            if (rs.Length > 0)
-            {
-                Bounds b = rs[0].bounds;
-                foreach (Renderer rd in rs) b.Encapsulate(rd.bounds);
-                sb.Append("  render bounds size ").Append(Fmt.Vec(b.size)).Append(" centre offset ").Append(Fmt.Vec(b.center - pf.transform.position));
-            }
-            sb.Append('\n');
-            foreach (Component c in pf.GetComponentsInChildren<Component>(true))
-            {
-                if (c == null) continue;
-                string tn = c.GetType().Name;
-                if (tn == "Transform") continue;
-                sb.Append("  ").Append(c.transform == pf.transform ? "root" : c.transform.name).Append(": ").Append(tn);
-                SphereCollider sc = c as SphereCollider;
-                if (sc != null) sb.Append(" radius=").Append(sc.radius.ToString("F2")).Append(" trigger=").Append(sc.isTrigger).Append(" lossyScale=").Append(Fmt.Vec(sc.transform.lossyScale));
-                CapsuleCollider cc = c as CapsuleCollider;
-                if (cc != null) sb.Append(" radius=").Append(cc.radius.ToString("F2")).Append(" height=").Append(cc.height.ToString("F2"));
-                BoxCollider bc = c as BoxCollider;
-                if (bc != null) sb.Append(" size=").Append(Fmt.Vec(bc.size)).Append(" centre=").Append(Fmt.Vec(bc.center));
-                MeshCollider mc = c as MeshCollider;
-                if (mc != null) sb.Append(" convex=").Append(mc.convex);
-                Destructible dsr = c as Destructible;
-                if (dsr != null)
-                {
-                    sb.Append(" health=").Append(dsr.m_health).Append(" destroyedEffect=[");
-                    if (dsr.m_destroyedEffect != null && dsr.m_destroyedEffect.m_effectPrefabs != null)
-                        foreach (EffectList.EffectData ed in dsr.m_destroyedEffect.m_effectPrefabs)
-                            sb.Append(ed.m_prefab != null ? ed.m_prefab.name : "?").Append("; ");
-                    sb.Append("] hitEffect=[");
-                    if (dsr.m_hitEffect != null && dsr.m_hitEffect.m_effectPrefabs != null)
-                        foreach (EffectList.EffectData ed2 in dsr.m_hitEffect.m_effectPrefabs)
-                            sb.Append(ed2.m_prefab != null ? ed2.m_prefab.name : "?").Append("; ");
-                    sb.Append("] spawnWhenDestroyed=").Append(dsr.m_spawnWhenDestroyed != null ? dsr.m_spawnWhenDestroyed.name : "-").Append(" fragments=").Append(dsr.m_autoCreateFragments);
-                }
-                DropOnDestroyed dod = c as DropOnDestroyed;
-                if (dod != null && dod.m_dropWhenDestroyed != null)
-                {
-                    DropTable dt = dod.m_dropWhenDestroyed;
-                    sb.Append(" dropMin=").Append(dt.m_dropMin).Append(" dropMax=").Append(dt.m_dropMax).Append(" chance=").Append(dt.m_dropChance).Append(" oneOfEach=").Append(dt.m_oneOfEach).Append(" items=[");
-                    foreach (DropTable.DropData dr in dt.m_drops)
-                        sb.Append(dr.m_item != null ? dr.m_item.name : "?").Append(" stack ").Append(dr.m_stackMin).Append("-").Append(dr.m_stackMax).Append(" w").Append(dr.m_weight).Append("; ");
-                    sb.Append("]");
-                }
-                if (tn == "Aoe")
-                {
-                    foreach (FieldInfo f in c.GetType().GetFields(AllF))
-                    {
-                        object v = f.GetValue(c);
-                        if (v == null) continue;
-                        if (f.FieldType.IsPrimitive || f.FieldType == typeof(string) || f.FieldType.IsEnum || f.FieldType == typeof(Vector2))
-                            sb.Append(' ').Append(f.Name).Append('=').Append(v);
-                        else if (f.Name == "m_damage") sb.Append(' ').Append(f.Name).Append('=').Append(v.ToString().Replace('\n', ' '));
-                    }
-                }
-                sb.Append('\n');
-            }
-            return sb.ToString();
-        }
-
-        static string DumpItem(string item)
+        string DumpItem(string item)
         {
             GameObject ip = ObjectDB.instance.GetItemPrefab(item);
             if (ip == null) return "ERROR: no item prefab '" + item + "' (op=earthquake&find=sledge shows prefabs, items may be listed under op=list)";

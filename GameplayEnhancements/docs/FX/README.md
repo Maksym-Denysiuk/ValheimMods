@@ -101,4 +101,4 @@ Found while building them: `fx_frozenking_spikesmash` is a copy of `fx_fader_met
 
 ## Files and source
 
-The command source is [Cmd_visualeffect.cs.txt](Cmd_visualeffect.cs.txt) (HomeCheat command DLL, built with `build-cmd.sh visualeffect`; the read-only prefab inventory behind the description files is [Cmd_fxdump.cs.txt](Cmd_fxdump.cs.txt), `op=fxdump`); the full test log with the order they were fired is in the working folder `LocalOutputs/2026-10-24--00-48/` (not kept long-term). Screenshots are 900 px JPEGs taken in game by Maksym.
+The command source is [src/Features/VisualEffect](../../src/Features/VisualEffect/) (HomeCheat command DLL, built with `bash build.sh visualeffect`; the read-only prefab inventory behind the description files is [src/Features/FxDump](../../src/Features/FxDump/), `op=fxdump`); the full test log with the order they were fired is in the working folder `LocalOutputs/2026-10-24--00-48/` (not kept long-term). Screenshots are 900 px JPEGs taken in game by Maksym.

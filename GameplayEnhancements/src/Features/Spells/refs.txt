@@ -1,0 +1,10 @@
+# GUI, GUIStyle (IMGUI)
+UnityEngine.IMGUIModule.dll
+# Font, TextAnchor
+UnityEngine.TextRenderingModule.dll
+UnityEngine.UI.dll
+Unity.TextMeshPro.dll
+# ZInput
+assembly_utils.dll
+# Input.GetMouseButtonDown
+UnityEngine.InputLegacyModule.dll

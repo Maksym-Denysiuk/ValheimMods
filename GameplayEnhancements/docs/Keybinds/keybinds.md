@@ -40,7 +40,7 @@ The registry value `ConsoleBindings` was empty. No other `kbmBinding_*` value us
 
 | What | Where |
 |---|---|
-| command DLL `HomeCheat.Cmd.keybinds.v221027.dll` (source: [Cmd_keybinds.cs.txt](Cmd_keybinds.cs.txt)) | `D:\Steam\steamapps\common\Valheim\BepInEx\homecheat-commands\` |
+| command DLL `HomeCheat.Cmd.keybinds.v221027.dll` (source: [src/Features/Keybinds](../../src/Features/Keybinds/)) | `D:\Steam\steamapps\common\Valheim\BepInEx\homecheat-commands\` |
 | `kbmBinding_Console` `<Keyboard>/F5` -> `<Keyboard>/backquote` | registry `HKCU\Software\IronGate\Valheim`, written by the game (`op=keybinds&console=backquote` calls the game's own `Rebind` and `ZInput.Save`) |
 | `ConsoleBindings` `` -> `F9 save` | same registry key, typed in the console: `bind F9 save` |
 | spell pin F6 removed | `BepInEx\config\homecheat\spells.txt` |

@@ -3,7 +3,7 @@ description: repair and refill commands of the HomeCheat Valheim plugin (2026-10
 ---
 # repair and refill (HomeCheat core ops)
 
-Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the CheatResearch session at Maksym's request ("add refill ... first parameter aim or radius" and "add repair with the same signature"). Own game and own world only. Source: core `HomeCheat.cs` (`Repair`, `Refill`), archived as [HomeCheat.cs.txt](HomeCheat.cs.txt).
+Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, in the CheatResearch session at Maksym's request ("add refill ... first parameter aim or radius" and "add repair with the same signature"). Own game and own world only. Source: [src/Features/World](../../src/Features/World/) (`RepairCommand`, `RefillCommand`; until 2026-10-25 part of the core `HomeCheat.cs`).
 
 ## What they do
 

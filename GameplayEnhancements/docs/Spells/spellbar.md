@@ -3,7 +3,7 @@ description: spell bar of the HomeCheat Valheim plugin (2026-10-24) - G opens th
 ---
 # spell bar (HomeCheat command `spells`)
 
-Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, world `ClaudeTest`. Own game and own hosted world only. Source: [Cmd_spells.cs.txt](Cmd_spells.cs.txt) (the bar) and [Cmd_heal.cs.txt](Cmd_heal.cs.txt) (`heal`, `cleanse`, `bless`, slot 5 of the real spell set). Full design, slot map and open questions: [spellbar-design.md](spellbar-design.md).
+Built 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK-PERS`, world `ClaudeTest`. Own game and own hosted world only. Source: [src/Features/Spells](../../src/Features/Spells/) (the bar) and [src/Features/Heal](../../src/Features/Heal/) (`heal`, `cleanse`, `bless`, slot 5 of the real spell set). Full design, slot map and open questions: [spellbar-design.md](spellbar-design.md).
 
 ## What it does
 

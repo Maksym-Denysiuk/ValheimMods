@@ -3,7 +3,7 @@ description: hidebody command for the HomeCheat plugin (2026-10-24) - hides our 
 ---
 # hidebody
 
-Our own game, our own hosted world `ClaudeTest`, our own second client `Claude2`. Date 2026-10-24. Source: [Cmd_hidebody.cs.txt](Cmd_hidebody.cs.txt). Background: [body-hiding-research.md](body-hiding-research.md).
+Our own game, our own hosted world `ClaudeTest`, our own second client `Claude2`. Date 2026-10-24. Source: [src/Features/HideBody](../../src/Features/HideBody/). Background: [body-hiding-research.md](body-hiding-research.md).
 
 ## What it does
 

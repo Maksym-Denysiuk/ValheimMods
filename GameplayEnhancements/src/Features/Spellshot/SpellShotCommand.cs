@@ -1,7 +1,6 @@
 // spellshot: a matrix of projectiles along the crosshair (own game / own world only).
 // op=spellshot&type=arrow|balistashot|thunderbolt&perrow=1&rows=1&dist=1&spacing=0.6&speed=&projectile=&damage=1
 // op=spellshot&type=probe&filter=needle   -> discovery: prefabs with a Projectile, items whose attack fires one
-// C# 5 (csc 4.0): no ?., no $"", no expression bodies.
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -11,7 +10,7 @@ using UnityEngine;
 
 namespace HomeCheat.Features.Spellshot
 {
-    public class SpellShotCommand : CommandBase
+    public sealed class SpellShotCommand : CommandBase
     {
         public override string Name { get { return "spellshot"; } }
         protected override string Usage
@@ -25,7 +24,7 @@ namespace HomeCheat.Features.Spellshot
         }
 
         const int MaxCount = 81;
-        static float lastShot = -100f;
+        float lastShot = -100f;   // volley cooldown
 
         // type -> candidate prefab names (a Projectile prefab, or an ammo item whose attack fires one), first existing wins
         static string[] Candidates(string type)
@@ -61,7 +60,7 @@ namespace HomeCheat.Features.Spellshot
             if (!Odd(perrow) || !Odd(rows)) return "ERROR: perrow and rows must be 1 to 9";
             float dist = Mathf.Max(0.5f, a.Float("dist", 1f));
             float spacing = Mathf.Max(0.1f, a.Float("spacing", 0.6f));
-            bool spacingGiven = a.ContainsKey("spacing");
+            bool spacingGiven = a.Has("spacing");
             float scale = a.Float("scale", 1f);
             float strikeDamage = a.Float("strikedamage", type == "thunderbolt" ? 40f : 0f);
             float dmgMul = a.Float("damage", 1f);
@@ -116,7 +115,7 @@ namespace HomeCheat.Features.Spellshot
 
             lastShot = Time.time;
             if (type == "thunderbolt" && given.Length == 0 && a.Flag("beam", true))
-                return Beam(a, p, cam, perrow, rows, a.ContainsKey("dist") ? dist : 6f, spacingGiven ? spacing : 1.5f, scale);
+                return Beam(a, p, cam, perrow, rows, a.Has("dist") ? dist : 6f, spacingGiven ? spacing : 1.5f, scale);
             int ok = 0;
             string firstErr = null;
             for (int i = 0; i < rows; i++)
@@ -210,7 +209,7 @@ namespace HomeCheat.Features.Spellshot
             }
         }
 
-        // crosshair point like HomeApi.AimPoint, but creatures count as hit surfaces (AimPoint's ray passes through them, so a
+        // crosshair point like Aim.Point, but creatures count as hit surfaces (AimPoint's ray passes through them, so a
         // strike aimed at a troll landed on the ground behind it); the player's own colliders are skipped
         static Vector3 AimWithCharacters(Player p, Camera cam, out bool aimed)
         {
@@ -229,7 +228,7 @@ namespace HomeCheat.Features.Spellshot
         // thunderbolt as a beam: from the head towards the crosshair point and on, until a wall/terrain/piece or 'range'.
         // Every 'step' metres a lightning visual (fx) plus an invisible lightningAOE damage carrier appear, one after another
         // (0.03 s apart) so the bolt sweeps forward. Creatures on the line are not blockers: everything on it is hit.
-        static string Beam(Args a, Player p, Camera cam, int perrow, int rows, float dist, float spacing, float scale)
+        string Beam(Args a, Player p, Camera cam, int perrow, int rows, float dist, float spacing, float scale)
         {
             string fx = a.Str("fx", "fx_Lightning");
             if (Prefabs.Get("lightningAOE") == null) return "ERROR: prefab lightningAOE not found";
@@ -281,7 +280,7 @@ namespace HomeCheat.Features.Spellshot
                             {
                                 GameObject v = Prefabs.Spawn(fxName, pos - dirB * (segLen * 0.5f), visRot);
                                 if (v != null && fs != 1f) v.transform.localScale = v.transform.localScale * fs;
-                                if (v != null && lifeS > 0f) { GameObject vv = v; Later(lifeS, delegate { if (vv != null) ZNetScene.instance.Destroy(vv); }); }
+                                if (v != null && lifeS > 0f) { GameObject vv = v; Later(lifeS, delegate { Fx.Destroy(vv); }); }
                                 GameObject c = Prefabs.Spawn("lightningAOE", pos, rot);
                                 if (c == null) return;
                                 if (sc != 1f) c.transform.localScale = c.transform.localScale * sc;
@@ -370,13 +369,9 @@ namespace HomeCheat.Features.Spellshot
         static string Probe(string filter)
         {
             StringBuilder sb = new StringBuilder();
-            FieldInfo f = typeof(ZNetScene).GetField("m_namedPrefabs", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            Dictionary<int, GameObject> d = f.GetValue(ZNetScene.instance) as Dictionary<int, GameObject>;
             List<string> lines = new List<string>();
-            foreach (KeyValuePair<int, GameObject> kv in d)
+            foreach (GameObject g in Prefabs.All())
             {
-                GameObject g = kv.Value;
-                if (g == null) continue;
                 if (filter.Length > 0 && g.name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
                 Projectile pr = g.GetComponent<Projectile>();
                 if (pr != null)

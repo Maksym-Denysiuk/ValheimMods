@@ -88,7 +88,7 @@ Changes made while showing them: `sfx_gdking_rock_destroyed` was removed from se
 
 ## Files
 
-`Cmd_slime.cs` (C# 5, built with `build-cmd.sh slime` into `HomeCheat.Cmd.slime.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Final build `HomeCheat.Cmd.slime.v213831.dll`. A copy of the source is next to this note as `Cmd_slime.cs.txt` (rename to `.cs` to build); the working copy and plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_slime.cs`, `plan-slime.md`), which is not kept.
+`Cmd_slime.cs` (C# 5, built with `build-cmd.sh slime` into `HomeCheat.Cmd.slime.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Final build `HomeCheat.Cmd.slime.v213831.dll`. Since 2026-10-25 the source is [src/Features/Slime](../../src/Features/Slime/) (build: `bash build.sh slime`, see [architecture.md](../HomeCheat-plugin/architecture.md)); the working copy and plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_slime.cs`, `plan-slime.md`), which is not kept.
 
 ## Undo
 
