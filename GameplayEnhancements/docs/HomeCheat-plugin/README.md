@@ -1,5 +1,5 @@
 ---
-description: HomeCheat BepInEx plugin for our own Valheim (2026-10-24) - overview, file command channel, install, build, uninstall, and the index of every command with its syntax and where it is documented; core ops (repair, refill, plant, field, cultivate, place, scale and others), heal/cleanse/bless, and the source archive
+description: HomeCheat BepInEx plugin for our own Valheim (2026-10-24, restructured 2026-10-25) - overview, file command channel, install, build, uninstall, and the index of every command with its syntax and where it is documented; world ops (repair, refill, plant, field, cultivate, place, scale and others), heal/cleanse/bless; architecture in docs/homecheat-architecture.md of the ValheimMods repository
 ---
 # HomeCheat plugin (overview and command index)
 
@@ -8,7 +8,7 @@ HomeCheat is a BepInEx 5 client plugin for Maksym's own Valheim game and world (
 ## How it works
 
 - **Command channel.** Write a file `<unique-name>.cmd` into `BepInEx/config/homecheat/inbox/` holding a form body, for example `op=give&prefab=Wood&amount=50`. The plugin polls every 0.5 s, runs the command on the Unity main thread and writes the answer to `outbox/<unique-name>.out`. Up to 20 files per poll.
-- **Command DLLs.** Extra commands are DLLs in `BepInEx/homecheat-commands/` with classes that implement `IHomeCommand` (`Name`, `Help`, `Run`), see [HomeApi.cs.txt](HomeApi.cs.txt). `op=reload` loads new files without a game restart; a file name is loaded once, so every build gets a new name (`HomeCheat.Cmd.<name>.v<hhmmss>.dll`). `op=commands` lists what is loaded. Core ops are in the plugin itself ([HomeCheat.cs.txt](HomeCheat.cs.txt)).
+- **Core and features.** The core plugin `HomeCheat.dll` holds the channel, the command registry, the timers, the shared helpers (`Kit`) and six built-ins (`ping`, `status`, `reload`, `commands`, `help`, `harmeffect`). Every other command lives in a feature DLL `BepInEx/homecheat-commands/HomeCheat.Cmd.<feature>.v<yyyyMMddHHmmss>.dll`; only the newest build of each feature loads. `op=reload` loads newer builds without a game restart and unloads the build they replace (its patches, objects and timers go with it). `op=commands` lists every command with its feature. Classes, inheritance and how to add a command: [homecheat-architecture.md](../../../docs/homecheat-architecture.md); sources in [src/](../../src/).
 - **Parameters.** `key=value` pairs joined with `&` (or new lines), URL-decoded, keys case-insensitive. Flags accept `1`, `true`, `yes` (and `aim`); any other word is false even when the default is true.
 - **Defaults** are chosen so a command works with only its essential parameter. Parameters with no safe default (a prefab name, a tree filter) are required and return an error when missing.
 
@@ -18,11 +18,11 @@ BepInEx 5 in the Valheim folder, `HomeCheat.dll` in `BepInEx/plugins/`. Built an
 
 ## Build
 
-Run `bash build-cmd.sh <name>` ([build-cmd.sh.txt](build-cmd.sh.txt), rename to `.sh`) from the folder that holds `HomeCheat.dll` and `Cmd_<name>.cs`. It compiles with csc 4.0 against the game's `Managed` assemblies and the core DLL into `HomeCheat.Cmd.<name>.v<time>.dll` and copies it into `BepInEx/homecheat-commands/`; then `op=reload`. The core plugin is compiled the same way into `HomeCheat.dll`. The working copies live in the (gitignored) run folder `LocalOutputs/2026-10-24--00-48/`; the `.txt` files here are the archive.
+With Git Bash: `bash src/build.sh <feature>` compiles `src/Features/<Feature>/*.cs` with csc 4.0 against the game's `Managed` assemblies and the installed core into `HomeCheat.Cmd.<feature>.v<yyyyMMddHHmmss>.dll` and stages it in `BepInEx/homecheat-commands/`; then `op=reload`. `bash src/build.sh core` builds and installs `HomeCheat.dll` (game closed: the core only loads at start), `all` does both, `selftest` runs the logic tests without the game. Extra game assemblies a feature needs are listed in its `refs.txt`. Details: [homecheat-architecture.md](../../../docs/homecheat-architecture.md#build).
 
 ## Undo and uninstall
 
-- One command DLL: delete its `HomeCheat.Cmd.<name>.*.dll` from `BepInEx/homecheat-commands/` and restart the game (a reload only adds commands).
+- One feature: delete its `HomeCheat.Cmd.<feature>.*.dll` from `BepInEx/homecheat-commands/` and restart the game (a reload only loads newer builds).
 - The whole plugin: delete `BepInEx/plugins/HomeCheat.dll`, the DLLs in `BepInEx/homecheat-commands/` and the folder `BepInEx/config/homecheat/`. BepInEx itself stays until its files are removed from the Valheim folder. Nothing in the game's own files is changed.
 - Changes made in the world (planted, placed, resized objects) are normal world data: see the undo section of each page, or restore a world backup.
 

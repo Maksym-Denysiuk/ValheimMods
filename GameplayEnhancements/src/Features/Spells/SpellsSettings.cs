@@ -20,6 +20,7 @@ namespace HomeCheat.Features.Spells
         public int ConsumedFrame = -1;
         public SpellBar Bar;
         public PatchSet Patches;
+        public bool Patched;              // the two patches are in; applied only once a world is loaded (see SpellPatches.EnsureApplied)
 
         public static string Dir { get { return Path.Combine(Paths.ConfigPath, "homecheat"); } }
         public static string RealFile { get { return Path.Combine(Dir, "spells.txt"); } }

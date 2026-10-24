@@ -72,7 +72,7 @@ Hits 1 versus 2 per point: no clear difference. Stone drops with `dropcount` 0, 
 
 ## Files
 
-`Cmd_earthquake.cs` (C# 5, built with `build-cmd.sh earthquake` into `HomeCheat.Cmd.earthquake.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Since 2026-10-25 the source is [src/Features/Earthquake](../../src/Features/Earthquake/) (build: `bash build.sh earthquake`, see [architecture.md](../HomeCheat-plugin/architecture.md)); the working copy and the plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_earthquake.cs`, `plan-earthquake.md`), which is not kept.
+`Cmd_earthquake.cs` (C# 5, built with `build-cmd.sh earthquake` into `HomeCheat.Cmd.earthquake.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Since 2026-10-25 the source is [src/Features/Earthquake](../../src/Features/Earthquake/) (build: `bash build.sh earthquake`, see [homecheat-architecture.md](../../../docs/homecheat-architecture.md)); the working copy and the plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_earthquake.cs`, `plan-earthquake.md`), which is not kept.
 
 ## Undo
 

@@ -55,13 +55,11 @@ namespace HomeCheat.Features.Spells
             GameObject go = Own(new GameObject(SpellsSettings.ObjName));
             UnityEngine.Object.DontDestroyOnLoad(go);
             settings.Bar = go.AddComponent<SpellBar>();
-            try
-            {
-                string r = SpellPatches.Apply(settings.Enabled);
-                if (r.StartsWith("ERROR")) { HomeApi.Log("spells: " + r); settings.Enabled = false; }
-            }
-            catch (Exception e) { HomeApi.Log("spells: patch failed: " + e.Message); settings.Enabled = false; }
-            HomeApi.Log("spells: loaded, enabled=" + settings.Enabled + ", placeholder=" + settings.Placeholder);
+            // no patches here: at game start they hang the scene load; SpellBar.Update applies them once a world is loaded
+            // (immediately on an op=reload inside a world)
+            SpellPatches.EnsureApplied();
+            HomeApi.Log("spells: loaded, enabled=" + settings.Enabled + ", placeholder=" + settings.Placeholder
+                + (settings.Enabled && !settings.Patched ? " (patches wait for a loaded world)" : ""));
         }
 
         // patches and the bar object are released by the base class

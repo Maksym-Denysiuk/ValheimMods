@@ -16,7 +16,7 @@ namespace HomeCheat.Features.Slime
         {
             get
             {
-                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=1 (cast effects, set 1..5 of the spell-fx list, 0 = off)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] | near=<r> (list characters and hp)";
+                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=2 (cast effects, set 1..5 of the spell-fx list, 0 = off; 2 = meteor hit + Abomination attack at the caster, Fader roar at 0.3 s)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] | near=<r> (list characters and hp)";
             }
         }
 
@@ -100,7 +100,7 @@ namespace HomeCheat.Features.Slime
             Vector3 center = target.transform.position;
             // cast effects (fx=1..5 = the five combinations of the spell-fx list, fx=0 off). All prefabs besides the checked ones are
             // inferred from the description files, see references/ValheimCustomMods/FX/.
-            int fxSet = a.Int("fx", 1);
+            int fxSet = a.Int("fx", 2);   // set 2 chosen by Maksym 2026-10-25
             bool castFx = fxSet >= 1 && fxSet <= 5;
             string ringFx = null;
             float ringFxT = 0.2f;
@@ -155,7 +155,7 @@ namespace HomeCheat.Features.Slime
             switch (set)
             {
                 case 1: FxAt("vfx_BombBlob_explode_poison", pos, wait); FxAt("sfx_oozebomb_explode", pos, wait); break;
-                case 2: break; // set 2 has no stone-break effect (fx_Abomination_attack2 moved to the cast, at the caster)
+                case 2: break; // set 2 has no stone-break effect: fx_Abomination_attack2 plays once at the caster at the start
                 case 3: FxAt("vfx_GuckSackSmall_Destroyed", pos, wait); FxAt("sfx_GuckSackDestroyed", pos, wait); break;
                 case 4: FxAt("vfx_ice_destroyed", pos, wait); FxAt("sfx_ice_destroyed", pos, wait); break;
                 case 5: FxAt("vfx_GuckSackDestroyed", pos, wait); FxAt("vfx_BombBlob_explode_poison", pos, wait); FxAt("sfx_gdking_rock_destroyed", pos, wait); break;

@@ -16,11 +16,11 @@ Done 2026-10-24, Valheim 1.0.20 (network version 41), BepInEx 5.4.2351. The pack
 
 | Part | Source | Edited where |
 |---|---|---|
-| `<Package>/docs/` (with the `Cmd_<name>.cs.txt` sources) | this repository | here |
+| `<Package>/docs/` | this repository | here |
+| `GameplayEnhancements/src/` (`Core/`, `Features/<Feature>/`, `SelfTest/`, `build.sh`; design in [homecheat-architecture.md](homecheat-architecture.md)) | this repository | here; checked, not rewritten, by the build |
 | `README.md` and `*.ps1` of each package | HomeOS `scripts/valheim/packages/<Package>/`, shared `common.ps1` | HomeOS |
 | `AdminPanelEnchancements/kickban/` | HomeOS `scripts/valheim/kick-ban-patch.js`, `scripts/valheim/lib/il-reader.js` | HomeOS |
-| `GameplayEnhancements/payload/` | the game folder of the PC that builds: `BepInEx/plugins/HomeCheat.dll`, the BepInEx core, and for each command the highest `HomeCheat.Cmd.<name>.v<time>.dll` (the plugin's own load order: the last one wins) | rebuilt, never by hand |
-| `GameplayEnhancements/src/` | the docs' `.cs.txt` files, as `.cs`, plus `build-cmd.sh` | rebuilt |
+| `GameplayEnhancements/payload/` | the game folder of the PC that builds: `BepInEx/plugins/HomeCheat.dll`, the BepInEx core, and for each feature the `HomeCheat.Cmd.<feature>.v<stamp>.dll` with the highest stamp as a number (the plugin's own rule) | rebuilt, never by hand |
 | `GameplayEnhancements/skills/valheim-spell-fx/` | HomeOS `.claude/skills/valheim-spell-fx/` (spell effect composer: finds the FX docs from either place) | HomeOS |
 | `MANIFEST.md` | size and sha256 of every file | rebuilt |
 
@@ -32,7 +32,7 @@ From HomeOS:
 node scripts/valheim/packages/build.js [--game <Valheim folder>] [--zips <dir>]
 ```
 
-It rewrites the generated parts in place, stops when a command DLL has no source in the docs, and writes the two zips to `LocalOutputs/<yyyy-mm-dd--hh-mm>/packages/` (or `--zips`). Then commit and push this repository, then the submodule pointer in HomeOS.
+It rewrites the generated parts in place, stops when a feature DLL has no `src/Features/<Feature>/` folder or a feature folder has no build, and writes the two zips to `LocalOutputs/<yyyy-mm-dd--hh-mm>/packages/` (or `--zips`). Then commit and push this repository, then the submodule pointer in HomeOS.
 
 ## Package scripts
 
@@ -55,6 +55,6 @@ All of them: `-GamePath` (else found through Steam's `libraryfolders.vdf`), `-Ba
 ## Limits
 
 - The kick patch covers only the PC it runs on and is undone by every Steam update: run `check.ps1` after updates.
-- The packaged DLLs are built against Valheim 1.0.20; a game update can break a command. Rebuild from `src/` (`build-cmd.sh`, `VALHEIM_DIR` for another install path).
+- The packaged DLLs are built against Valheim 1.0.20; a game update can break a command. Rebuild from `src/` (`bash src/build.sh all`, `VALHEIM_DIR` for another install path).
 - The packages hold no world data and no per-player state (spell pins, `spells.state`).
 - `payload/` redistributes BepInEx 5 and the libraries it ships (HarmonyX, MonoMod, Mono.Cecil) unchanged; their own licences apply to those files.

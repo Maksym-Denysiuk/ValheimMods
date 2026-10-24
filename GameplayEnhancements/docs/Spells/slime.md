@@ -30,7 +30,7 @@ Drop a file into `BepInEx/config/homecheat/inbox/`, for example `slime-1.cmd` wi
 | `lifetime` | prefab (3 s) | cloud life in seconds |
 | `cloud` | `blob_aoe` | other cloud prefab; keeps that prefab's own damage (for example `oozebomb_explosion`: Poison 40, radius 4, 10 s) |
 | `cloudr` | read from the prefab | cloud radius override in metres |
-| `fx` | 1 | cast effects, one of five sets (0 = none); see "Effect sets" below |
+| `fx` | 2 | cast effects, one of five sets (0 = none); see "Effect sets" below |
 | `stonefx` | 0 | 1 to 5: demo of that set's stone-break effects on 4 points of ring 2, 3 s after the cast |
 | `hurtself` | 1 | 1 = clouds hit every player and NPC outside the gap (a player standing at the gap edge is hit too); 0 = the target is the cloud owner and immune |
 | `target` | self | another player's nickname, only if this game is the host |
@@ -51,17 +51,17 @@ Helpers on the same command: `find=<text>` (prefabs with an `Aoe` are marked), `
 
 ## Effect sets (cast visuals and sounds)
 
-Chosen with the `valheim-spell-fx` skill from the description files in `../FX/`; the cast prefabs are spawned at the caster (and on the 6 ring-1 clouds where marked) and removed after 8 s. Only prefabs marked ✔ were seen in game before; the others are inferred from the dump. All five were fired in ClaudeTest on 2026-10-24; Maksym looked at them (no verdict recorded yet, so the default stays set 1).
+Chosen with the `valheim-spell-fx` skill from the description files in `../FX/`; the cast prefabs are spawned at the caster (and on the 6 ring-1 clouds where marked) and removed after 8 s. Only prefabs marked ✔ were seen in game before; the others are inferred from the dump. All five were fired in ClaudeTest on 2026-10-24; Maksym looked at them; on 2026-10-25 he chose set 2 (all three effects once, at the caster's spot, at the start), and it is the default since (`fx=2`).
 
 | Set | Cast (t) | Stone-break demo (`stonefx`) |
 |---|---|---|
-| 1 Faithful (default) | `fx_Bonemass_aoe_start` + `sfx_blob_attack` (0 s), `vfx_blob_attack` on ring-1 clouds (0.2 s) | `vfx_BombBlob_explode_poison`, `sfx_oozebomb_explode` |
-| 2 Epic | `fx_fader_meteor_hit` ✔ + `fx_Abomination_attack2` at the caster (0 s), `fx_Fader_Roar` ✔ (0.3 s) | none |
+| 1 Faithful | `fx_Bonemass_aoe_start` + `sfx_blob_attack` (0 s), `vfx_blob_attack` on ring-1 clouds (0.2 s) | `vfx_BombBlob_explode_poison`, `sfx_oozebomb_explode` |
+| 2 Epic (default since 2026-10-25) | under the caster, once: `fx_fader_meteor_hit` ✔ (0 s: big green blast, camera shake 1.3) + `fx_Abomination_attack2` (0 s: grey stones, dirt, camera shake 1.2), `fx_Fader_Roar` ✔ (0.3 s, green lights) | none |
 | 3 Subtle | `fx_Fader_Roar` ✔ (0 s), `vfx_blob_hit` on ring-1 clouds (0.2 s) | `vfx_GuckSackSmall_Destroyed`, `sfx_GuckSackDestroyed` |
 | 4 Frost | `fx_fenring_icenova` ✔ (0 s), `vfx_blob_frost_attack` on ring-1 clouds (0.2 s) | `vfx_ice_destroyed`, `sfx_ice_destroyed` |
 | 5 Layered | set 1 cast plus `fx_Fader_Roar` ✔ (0.5 s) | `vfx_GuckSackDestroyed`, `vfx_BombBlob_explode_poison`, `sfx_gdking_rock_destroyed` |
 
-Changes made while showing them: `sfx_gdking_rock_destroyed` was removed from set 2, and `fx_Abomination_attack2` moved from the stones to the caster at the start. The stone-break effects are only a demo on ring 2: firing them when an earthquake stone really breaks needs a `breakfx=` parameter in `Cmd_earthquake.cs` (not built). The stones' own break effect and sound are the game's.
+Changes made while showing them: `sfx_gdking_rock_destroyed` was removed from set 2, and `fx_Abomination_attack2` moved from the stones to the caster at the start; on 2026-10-25 Maksym confirmed it there: once, at the caster's spot, at the start. The stone-break effects are only a demo on ring 2: firing them when an earthquake stone really breaks needs a `breakfx=` parameter in `Cmd_earthquake.cs` (not built). The stones' own break effect and sound are the game's.
 
 ## Test results (ClaudeTest)
 
@@ -88,7 +88,7 @@ Changes made while showing them: `sfx_gdking_rock_destroyed` was removed from se
 
 ## Files
 
-`Cmd_slime.cs` (C# 5, built with `build-cmd.sh slime` into `HomeCheat.Cmd.slime.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Final build `HomeCheat.Cmd.slime.v213831.dll`. Since 2026-10-25 the source is [src/Features/Slime](../../src/Features/Slime/) (build: `bash build.sh slime`, see [architecture.md](../HomeCheat-plugin/architecture.md)); the working copy and plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_slime.cs`, `plan-slime.md`), which is not kept.
+`Cmd_slime.cs` (C# 5, built with `build-cmd.sh slime` into `HomeCheat.Cmd.slime.v<time>.dll`, staged in `BepInEx/homecheat-commands/`, loaded with `op=reload`). Final build `HomeCheat.Cmd.slime.v213831.dll`. Since 2026-10-25 the source is [src/Features/Slime](../../src/Features/Slime/) (build: `bash build.sh slime`, see [homecheat-architecture.md](../../../docs/homecheat-architecture.md)); the working copy and plan are in `LocalOutputs/2026-10-24--00-48/` (`Cmd_slime.cs`, `plan-slime.md`), which is not kept.
 
 ## Undo
 

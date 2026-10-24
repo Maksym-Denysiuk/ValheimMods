@@ -39,12 +39,28 @@ namespace HomeCheat.Features.Spells
             try { radial.Open(RadialData.SO.MainGroupConfig, null); } catch (Exception e) { HomeApi.Log("spells: vanilla fallback failed: " + e.Message); }
         }
 
+        // Patching RadialBase.Open / UseHotbarItem while the game is still starting hangs the main-scene load (verified
+        // 2026-10-25: launch with spells.state enabled=1 froze at "Unloading 3 Unused Serialized files"; with enabled=0 it reached
+        // the menu). So the patches go in only once a world is loaded: from SpellBar.Update, or op=spells&enabled=1 in a world.
+        internal static void EnsureApplied()
+        {
+            SpellsSettings s = SpellsSettings.Current;
+            if (s == null || !s.Enabled || s.Patched || Player.m_localPlayer == null) return;
+            string r;
+            try { r = Apply(true); }
+            catch (Exception e) { r = "ERROR: " + e.Message; }
+            HomeApi.Log("spells: world loaded, " + r);
+            if (r.StartsWith("ERROR")) SpellsSettings.TurnOff();
+        }
+
         internal static string Apply(bool on)
         {
             SpellsSettings s = SpellsSettings.Current;
             if (s == null || s.Patches == null) return "ERROR: spells not loaded";
             s.Patches.RemoveAll();
+            s.Patched = false;
             if (!on) return "patches removed";
+            if (Player.m_localPlayer == null) return "patches wait for a loaded world";
             const BindingFlags all = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             MethodInfo m1 = null;
             foreach (MethodInfo m in typeof(RadialBase).GetMethods(all))
@@ -53,6 +69,7 @@ namespace HomeCheat.Features.Spells
             if (m1 == null || m2 == null) return "ERROR: target methods not found (game version changed?)";
             s.Patches.Patch(m1, typeof(SpellPatches).GetMethod("OpenPrefix"), null);
             s.Patches.Patch(m2, typeof(SpellPatches).GetMethod("HotbarPrefix"), null);
+            s.Patched = true;
             return "patches applied (RadialBase.Open, UseHotbarItem)";
         }
     }

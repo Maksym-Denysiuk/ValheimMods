@@ -34,7 +34,14 @@ namespace HomeCheat.Features.Diag
             catch (Exception e) { sb.Append("profile: ").Append(e.Message).Append('\n'); }
             Player p = Players.Local;
             foreach (MethodInfo m in typeof(Inventory).GetMethods(all))
-                if (m.Name == "AnyCheatedItem") sb.Append("Inventory.AnyCheatedItem(").Append(Sig(m)).Append(") = ").Append(Call(m, p.GetInventory())).Append('\n');
+                if (m.Name == "AnyCheatedItem" || m.Name == "CheatedDamagingItemEquipped") sb.Append("Inventory.").Append(m.Name).Append("(").Append(Sig(m)).Append(") = ").Append(Call(m, p.GetInventory())).Append('\n');
+            // the attacker conditions of Character.ApplyDamage: any of these marks a creature the local player hits as cheated
+            foreach (string n in new string[] { "IsDebugFlying", "InGodMode", "InGhostMode" })
+            {
+                MethodInfo m = typeof(Character).GetMethod(n, all, null, Type.EmptyTypes, null);
+                sb.Append("Player.").Append(n).Append("() = ").Append(m == null ? "?" : Call(m, p)).Append('\n');
+            }
+            AppendCheatedAround(sb, p, a.Float("radius", 25f));
             // nearest pickable: is its ZDO marked cheated?
             Pickable near = null; float best = 1e9f;
             foreach (Pickable pk in UnityEngine.Object.FindObjectsOfType<Pickable>())
@@ -68,6 +75,31 @@ namespace HomeCheat.Features.Diag
                 }
             }
             return sb.ToString();
+        }
+
+        // loose items, ragdolls and creatures around the player whose ZDO carries the cheated mark (CheatUtils.IsCheated)
+        static void AppendCheatedAround(StringBuilder sb, Player p, float radius)
+        {
+            int key = (int)Refl.GetStatic(typeof(Player).Assembly.GetType("ZDOVars"), "s_cheated");
+            int items = 0, itemsCheated = 0, chars = 0, charsCheated = 0, dolls = 0, dollsCheated = 0;
+            StringBuilder names = new StringBuilder();
+            foreach (ZNetView nv in UnityEngine.Object.FindObjectsOfType<ZNetView>())
+            {
+                if (nv == null || !nv.IsValid() || Vector3.Distance(nv.transform.position, p.transform.position) > radius) continue;
+                bool cheated = nv.GetZDO().GetInt(key, 0) != 0;
+                ItemDrop drop = nv.GetComponent<ItemDrop>();
+                // an item keeps its mark in its own data (ItemData.m_cheated), not in the ZDO key
+                if (drop != null) { items++; if (cheated || (drop.m_itemData != null && drop.m_itemData.m_cheated)) { itemsCheated++; if (names.Length < 300) names.Append(' ').Append(Prefabs.BaseName(nv.gameObject)); } }
+                else if (nv.GetComponent<Ragdoll>() != null) { dolls++; if (cheated) dollsCheated++; }
+                else if (nv.GetComponent<Character>() != null && nv.GetComponent<Player>() == null) { chars++; if (cheated) charsCheated++; }
+            }
+            StringBuilder inv = new StringBuilder();
+            foreach (ItemDrop.ItemData it in p.GetInventory().GetAllItems())
+                if (it != null && it.m_cheated) inv.Append(' ').Append(it.m_dropPrefab != null ? it.m_dropPrefab.name : it.m_shared.m_name).Append(" x").Append(it.m_stack);
+            sb.Append("inventory items marked cheated:").Append(inv.Length > 0 ? inv.ToString() : " none").Append('\n');
+            sb.Append("within ").Append(radius.ToString("F0")).Append(" m: items ").Append(itemsCheated).Append(" cheated of ").Append(items)
+              .Append(", ragdolls ").Append(dollsCheated).Append(" of ").Append(dolls).Append(", creatures ").Append(charsCheated).Append(" of ").Append(chars)
+              .Append(names.Length > 0 ? "; cheated items:" + names : "").Append('\n');
         }
 
         static string Sig(MethodInfo m)

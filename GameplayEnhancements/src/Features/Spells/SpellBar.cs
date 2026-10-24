@@ -297,6 +297,7 @@ namespace HomeCheat.Features.Spells
             if (!SpellsSettings.On) { assigning = null; return; }
             Player p = Player.m_localPlayer;
             if (p == null || HudHidden()) { assigning = null; return; }
+            SpellPatches.EnsureApplied();
             barVisible = true;
             bool inRadial = InRadial();
             if (inRadial) { radialGoneAt = 0f; HandleRadialSecondary(); }
