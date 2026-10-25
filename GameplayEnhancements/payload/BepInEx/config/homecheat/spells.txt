@@ -44,11 +44,11 @@
 4.5 | Oaks x2 | op=scale&filter=Oak&factor=2&radius=30
 4.6 | Reset sky | op=visualeffect&name=reset
 # real form (W3-world-plant): 4.7 | Tree x3 (only you see) | op=scale&aim=1&factor=3
-4.7 | Tree x3 (soon) | @dummy
+4.7 | Tree x3 (only you see) | op=scale&aim=1&factor=3
 # real form (W3-world-plant): 4.8 | Tree x5 (only you see) | op=scale&aim=1&factor=5
-4.8 | Tree x5 (soon) | @dummy
+4.8 | Tree x5 (only you see) | op=scale&aim=1&factor=5
 # real form (W3-world-plant): 4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10
-4.9 | Tree x10 (soon) | @dummy
+4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10
 4.10 | ShipSpeed (x3) | op=ship&speed=3
 4.11 | ShipSpeed+ (x5) | op=ship&speed=5
 4.12 | ShipSpeed++ (x10) | op=ship&speed=10
@@ -107,5 +107,5 @@
 7.7 | Plant food... | op=field&area={area}&prefab={crop} | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
 7.8 | Harvest patch | op=harvest
 # real form (W3-world-plant): 7.9 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1 | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
-7.9 | Plant trees... (soon) | @dummy | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
+7.9 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1 | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
 8 | Construct
