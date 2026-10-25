@@ -52,9 +52,10 @@
 4.8 | Tree x5 (soon) | @dummy
 # real form (W3-world-plant): 4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10
 4.9 | Tree x10 (soon) | @dummy
-4.10 | Ship x5 | op=ship&speed=5
-4.11 | Ship x10 | op=ship&speed=10
-4.12 | Ship normal | op=ship&speed=1
+4.10 | ShipSpeed (x3) | op=ship&speed=3
+4.11 | ShipSpeed+ (x5) | op=ship&speed=5
+4.12 | ShipSpeed++ (x10) | op=ship&speed=10
+4.13 | Ship normal | op=ship&speed=1
 5 | Heal, defence, bless
 5.1 | Heal | op=heal | pin=F3
 5.2 | Cleanse | op=cleanse
@@ -94,10 +95,8 @@
 6.5.6 | Refill r50 | op=refill&aim=0&radius=50
 6.5.7 | Repair+refill r10 | op=repair&aim=0&radius=10 ;; op=refill&aim=0&radius=10
 6.6 | Shield
-# real form (W1-world-build): 6.6.1 | Start point | op=coord&set=start
-6.6.1 | Start point (soon) | @dummy
-# real form (W1-world-build): 6.6.2 | End point | op=coord&set=end
-6.6.2 | End point (soon) | @dummy
+6.6.1 | Start point | op=coord&set=start
+6.6.2 | End point | op=coord&set=end
 # real form (W2-dome): 6.6.3 | Place shield | op=dome&from=coords
 6.6.3 | Place shield (soon) | @dummy
 # real form (W2-dome): 6.6.4 | List shields | op=dome&step=list

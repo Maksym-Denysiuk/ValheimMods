@@ -1,8 +1,8 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 11:04 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 11:16 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
-Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025110026.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025110156.dll.
+Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025110156.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
@@ -21,12 +21,12 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 12187 | b617696f370a9b7f |
+| docs/HomeCheat-plugin/README.md | 12239 | c8eb73414cd9bcba |
 | docs/HomeCheat-plugin/build-terrain.md | 11611 | ffb576b2e8db9c6c |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3505 | 2468f7a3fe9d73c3 |
 | docs/HomeCheat-plugin/plant-field-place.md | 7069 | ee49c3e03bbd8157 |
 | docs/HomeCheat-plugin/repair-refill.md | 3652 | 6c89fc5acd5c0024 |
-| docs/HomeCheat-plugin/ship.md | 7735 | f4621b2b41454060 |
+| docs/HomeCheat-plugin/ship.md | 9042 | 7e0cabfd3b2a5354 |
 | docs/HomeCheat-plugin/tree-scale.md | 3850 | 452b28c55b54adc1 |
 | docs/Keybinds/README.md | 819 | fc525dcfcd76a569 |
 | docs/Keybinds/keybinds.md | 6211 | a5627525cdc5e597 |
@@ -43,14 +43,14 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/architecture/diagrams/homecheat-core.svg | 120777 | 9186f4649f606f1d |
 | docs/architecture/diagrams/homecheat-features.svg | 134088 | 87fd98fbbac82274 |
 | docs/architecture/diagrams/homecheat-spells.svg | 79425 | 96480cdff73d86da |
-| docs/architecture/homecheat-architecture.md | 38035 | 4c9767a14622e3a0 |
-| docs/architecture/homecheat-commands.md | 13665 | db217cab3df96b26 |
+| docs/architecture/homecheat-architecture.md | 42363 | 7ce028d3bc29c5e0 |
+| docs/architecture/homecheat-commands.md | 15263 | 60e4ea020f7c59bd |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5375 | 6d37772ecf22af6b |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
 | payload/BepInEx/config/homecheat/spells-ui-test.txt | 3193 | e8d424c76af30e2f |
-| payload/BepInEx/config/homecheat/spells.txt | 6906 | 3b5c795e322b5023 |
+| payload/BepInEx/config/homecheat/spells.txt | 6843 | 437c5bcbb050acbc |
 | payload/BepInEx/core/0Harmony.dll | 204800 | 1a21cc03424fc82c |
 | payload/BepInEx/core/0Harmony.xml | 267107 | d1f02fc3ada3a13d |
 | payload/BepInEx/core/0Harmony20.dll | 112640 | 5708451a91eaecee |
@@ -76,7 +76,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.hidebody.v20261024235501.dll | 10752 | c2a7712addf5f68d |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.keybinds.v20261025002247.dll | 9216 | 0d3ee4da781650f3 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.killmobs.v20261024235500.dll | 6144 | 9d3ee71eeaa5c95b |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.ship.v20261025110026.dll | 8192 | 346f1424cb1c75fa |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.ship.v20261025111116.dll | 8704 | eb57e24fb8f85169 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.slime.v20261025003356.dll | 23040 | e3e2f83ce6458370 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v20261025104610.dll | 101888 | a2e707aae2e67b5f |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261025110055.dll | 23552 | c215d0567f1e171c |
@@ -91,16 +91,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 9644 | 212dc2387ab0a2dc |
-| skills/valheim-spells-craft/baseline.md | 1934 | c90b1d7e734606a8 |
-| skills/valheim-spells-craft/evals.md | 14194 | 02d60594fc498fb7 |
-| skills/valheim-spells-craft/instructions/done-gate.md | 5996 | 8f1ab240aa83546e |
+| skills/valheim-spells-craft/SKILL.md | 10242 | f44eba699839c5f1 |
+| skills/valheim-spells-craft/baseline.md | 1934 | 8a9e3031b8b9c9b3 |
+| skills/valheim-spells-craft/evals.md | 16811 | e8f77f3e20f9c05a |
+| skills/valheim-spells-craft/instructions/done-gate.md | 6242 | 903836430eeccab8 |
 | skills/valheim-spells-craft/instructions/implement.md | 7701 | 5e67bdb8bcce4078 |
 | skills/valheim-spells-craft/instructions/plan.md | 5877 | cd9018cad2c7a09c |
 | skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
 | skills/valheim-spells-craft/instructions/spec-card.md | 5082 | 489b29e425115b49 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 13085 | 4d9cd547282fbd08 |
-| skills/valheim-spells-craft/skill-meta-data.md | 5697 | 7c0de9914267deeb |
+| skills/valheim-spells-craft/skill-meta-data.md | 6786 | b41445993286ae59 |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |
@@ -162,7 +162,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/Keybinds/KeybindsCommand.cs | 4735 | 2e63b11d96f08ee3 |
 | src/Features/Keybinds/refs.txt | 28 | a59754d54aaf5cd3 |
 | src/Features/KillMobs/KillMobsCommand.cs | 2164 | 4b15ad5bda3bed7f |
-| src/Features/Ship/ShipCommand.cs | 5486 | 3c86ac93c3c99bab |
+| src/Features/Ship/ShipCommand.cs | 6089 | 746d166d6fe7dca4 |
 | src/Features/Slime/SlimeEffect.cs | 21762 | 6adb953fdddd6e86 |
 | src/Features/Spells/Spell.cs | 704 | 76c3299b9be776af |
 | src/Features/Spells/SpellAsk.cs | 505 | 4622a4595ee37d55 |
