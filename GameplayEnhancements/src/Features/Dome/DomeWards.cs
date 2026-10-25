@@ -10,7 +10,7 @@ using System.Text;
 using HomeCheat.Kit;
 using UnityEngine;
 
-namespace HomeCheat.Features.DomeCommands
+namespace HomeCheat.Features.Dome
 {
     internal sealed class WardState
     {

@@ -11,7 +11,7 @@ using HomeCheat.Kit;
 using Splatform;
 using UnityEngine;
 
-namespace HomeCheat.Features.DomeCommands
+namespace HomeCheat.Features.Dome
 {
     public sealed class DomeCommand : CommandBase
     {

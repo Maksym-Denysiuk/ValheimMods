@@ -118,6 +118,12 @@ package "fxdump" as fd {
 package "ship" as sh {
   class ShipCommand
 }
+package "dome" as dm {
+  class DomeCommand
+  class DomeWards
+  class DomeLayout
+  class DomePatches
+}
 
 CommandBase <|-- GiveCommand
 CommandBase <|-- SpawnCommand
@@ -150,6 +156,10 @@ CommandBase <|-- KillMobsCommand
 CommandBase <|-- VisualEffectCommand
 CommandBase <|-- FxDumpCommand
 CommandBase <|-- ShipCommand
+CommandBase <|-- DomeCommand
+DomeCommand ..> DomeWards : ward ZDOs
+DomeCommand ..> DomeLayout : zone, lattice
+DomePatches ..> DomeCommand : OnSpawned starts sync
 
 FieldCommand ..> FieldAnchor
 CultivateCommand ..> FieldAnchor

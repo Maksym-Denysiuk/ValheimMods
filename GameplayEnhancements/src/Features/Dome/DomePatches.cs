@@ -3,7 +3,7 @@
 using System.Reflection;
 using HomeCheat.Kit;
 
-namespace HomeCheat.Features.DomeCommands
+namespace HomeCheat.Features.Dome
 {
     public static class DomePatches
     {

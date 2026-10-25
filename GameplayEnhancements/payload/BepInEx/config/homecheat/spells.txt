@@ -33,12 +33,9 @@
 3.5 | Shield
 3.5.1 | Start point | op=coord&set=start
 3.5.2 | End point | op=coord&set=end
-# real form (W2-dome): 3.5.3 | Place shield | op=dome&from=coords
-3.5.3 | Place shield (soon) | @dummy
-# real form (W2-dome): 3.5.4 | List shields | op=dome&step=list
-3.5.4 | List shields (soon) | @dummy
-# real form (W2-dome): 3.5.5 | Remove shield | op=dome&step=remove
-3.5.5 | Remove shield (soon) | @dummy
+3.5.3 | Place shield | op=dome&from=coords
+3.5.4 | List shields | op=dome&step=list
+3.5.5 | Remove shield | op=dome&step=remove&confirm=1
 4 | Fun
 4.1 | Raven 60 s | op=transform&type=raven&duration=60 | pin=S4
 4.2 | Serpent 60 s | op=transform&type=serpent&duration=60
@@ -97,12 +94,9 @@
 6.6 | Shield
 6.6.1 | Start point | op=coord&set=start
 6.6.2 | End point | op=coord&set=end
-# real form (W2-dome): 6.6.3 | Place shield | op=dome&from=coords
-6.6.3 | Place shield (soon) | @dummy
-# real form (W2-dome): 6.6.4 | List shields | op=dome&step=list
-6.6.4 | List shields (soon) | @dummy
-# real form (W2-dome): 6.6.5 | Remove shield | op=dome&step=remove
-6.6.5 | Remove shield (soon) | @dummy
+6.6.3 | Place shield | op=dome&from=coords
+6.6.4 | List shields | op=dome&step=list
+6.6.5 | Remove shield | op=dome&step=remove&confirm=1
 7 | Field
 7.1 | Cultivate 3x5 | op=cultivate&rows=3&perrow=5 | pin=S1
 7.2 | Carrots 3x5 | op=field&prefab=Pickable_Carrot&rows=3&perrow=5

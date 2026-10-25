@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace HomeCheat.Features.DomeCommands
+namespace HomeCheat.Features.Dome
 {
     internal struct DomePoint
     {

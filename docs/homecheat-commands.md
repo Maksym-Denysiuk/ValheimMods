@@ -3,7 +3,7 @@ description: HomeCheat command catalog (2026-10-25) - every command once, with i
 ---
 # HomeCheat command catalog
 
-One row per command (37: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
+One row per command (38: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
 
 `scripts/commands-check.js` of the `valheim-spells-craft` skill compares this table with the code, the index and the spell file; keep one row per command name.
 
@@ -57,6 +57,7 @@ One row per command (37: `override string Name` in `GameplayEnhancements/src/`).
 | fxdump | fxdump | `FxDumpCommand` | info | none | none | prefab and component inventory | writes two CSV files | - | read-only | - |
 | keybinds | keybinds | `KeybindsCommand` | UI/input | self | none | Harmony patches (`ConnectPanel` key, F9 hints) | key behaviour while loaded | - | `status=1` | - |
 | ship | ship | `ShipCommand` | form/movement | the ship you are on, steering or sitting (host only) | none | `Ship.GetLocalShip`, instance fields `m_sailForceFactor` and `m_backwardForce` (x speed from the originals), `ZNetView.ClaimOwnership` when another PC owns the ship | none saved; the ship sails faster for everyone on it; ship ownership (physics) moves to this PC; `OnUnload` restores | speed 10 (refused above) | `status=1` | 4.10-4.13 |
+| dome | dome | `DomeCommand` | place object (protect) | ground, a zone between two points (host only) | centre and radius from two points (`from=coords` = `Kit.Coords` start/end, or `from=x,z&to=x,z`); one ward, or a hex group without gaps | vanilla `guard_stone` (`PrivateArea`) created as by the hammer (`Piece.SetCreator`, `PrivateArea.Setup`, `WearNTear.OnPlaced`), refusals via `Kit.Constructions`, `Ground.IsBlocked`, water level and other creators' ward ZDOs; host sync of the ward ZDOs (`s_enabled`, permitted list) every 2 s, postfix `Player.OnSpawned` | wards saved with the world, ZDO mark `hc_dome` (+ centre, radius, count, state signature); with `cost=1` the materials; the ZDO owner of every group ward moves to the host when it syncs | radius 150 m, 50 wards (refused above) | `step=list`, `preview=1` (read-only); `step=remove` needs `confirm=1` | 3.5.3-3.5.5, 6.6.3-6.6.5 |
 
 ## Exists, extend or new
 
@@ -99,4 +100,4 @@ Before deciding, read this catalog, the nearest command's page and its source in
 | "kill the mobs after the test" | `killmobs` | test helper | exists; never a kill mode of the command under test |
 | "show green lights on me" | `visualeffect` | visual only | not a command: catalog entry via `/valheim-spell-fx` |
 | "turn into a wolf" | `transform` | form / self / on self / model swap | extend: new form in `TransformCommand.Candidates` and `TransformState` |
-| "protection dome like the trader" | none | place + protect / zone / two points / ward | new (`dome`); requirements written 2026-10-24, kept privately in HomeOS |
+| "protection dome like the trader" | none | place + protect / zone / two points / ward | new (`dome`, built 2026-10-25: vanilla wards, a group for a large zone; requirements kept privately in HomeOS) |
