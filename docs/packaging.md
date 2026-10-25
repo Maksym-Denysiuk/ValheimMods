@@ -1,5 +1,5 @@
 ---
-description: how the two Valheim packages are built, what each holds, how the scripts behave, how they were tested (2026-10-24) and their limits
+description: how the two Valheim packages are built, what each holds, how the scripts behave, the install runbook with known failures and fixes, how they were tested (2026-10-24) and their limits
 ---
 # Packaging
 
@@ -21,7 +21,8 @@ Done 2026-10-24, Valheim 1.0.20 (network version 41), BepInEx 5.4.2351. The pack
 | `README.md` and `*.ps1` of each package | HomeOS `scripts/valheim/packages/<Package>/`, shared `common.ps1` | HomeOS |
 | `AdminPanelEnchancements/kickban/` | HomeOS `scripts/valheim/kick-ban-patch.js`, `scripts/valheim/lib/il-reader.js` | HomeOS |
 | `GameplayEnhancements/payload/` | the game folder of the PC that builds: `BepInEx/plugins/HomeCheat.dll`, the BepInEx core, and for each feature the `HomeCheat.Cmd.<feature>.v<stamp>.dll` with the highest stamp as a number (the plugin's own rule) | rebuilt, never by hand |
-| `GameplayEnhancements/skills/valheim-spell-fx/` | HomeOS `.claude/skills/valheim-spell-fx/` (spell effect composer: finds the FX docs from either place) | HomeOS |
+| `GameplayEnhancements/skills/valheim-spell-fx/`, `skills/valheim-spells-craft/` | HomeOS `.claude/skills/` (spell effect composer; command builder) | HomeOS |
+| `GameplayEnhancements/docs/architecture/` | this repository's `docs/*.md` and `docs/diagrams/*.svg`, links rewritten (inside the package: relative; elsewhere: GitHub) | here, in `docs/` |
 | `MANIFEST.md` | size and sha256 of every file | rebuilt |
 
 ## Build
@@ -44,6 +45,28 @@ It rewrites the generated parts in place, stops when a feature DLL has no `src/F
 | `send-command.ps1` | - | writes `inbox/<name>.cmd`, prints the answer; refuses when the game is not running; withdraws the command when no answer comes |
 
 All of them: `-GamePath` (else found through Steam's `libraryfolders.vdf`), `-BackupRoot` (default `D:\ValheimBackups`, else `%USERPROFILE%\ValheimBackups`), `-DryRun`, refuse to write while `valheim.exe` runs. Nothing is deleted: replaced files go to `<BackupRoot>\<time>-<package>\`.
+## Install runbook
+
+For an install on request ("install GameplayEnhancements", "reinstall after the update"). Run from the unpacked package folder in Windows PowerShell 5.1; 5.1 has no `&&`, so run one command per line.
+
+1. **Preconditions.** `valheim.exe` is not running (`Get-Process valheim -ErrorAction SilentlyContinue` returns nothing; every script refuses otherwise). Note a non-default game folder for `-GamePath`.
+2. **Dry run.** `powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -DryRun`. Read the steps it prints: BepInEx (only if missing), plugin, command builds, older builds moved out, spell files (only if missing), key settings.
+3. **Install.** The same command without `-DryRun`. Everything replaced goes to `<BackupRoot>\<time>-gameplay\`.
+4. **Check.** `powershell -NoProfile -ExecutionPolicy Bypass -File check.ps1` until exit 0.
+5. **In game.** Start Valheim (launch option `-console` for the console key), load a world, then `send-command.ps1 "op=ping"` (answer `pong`), `"op=status"`, `"op=commands&builds=1"` (one build per feature, the package's stamps).
+
+| Failure | Cause | Fix |
+|---|---|---|
+| a script says the game is running | `valheim.exe` still open (also after a crash) | close it, check the process list, run again |
+| `The token '&&' is not a valid statement separator` | PowerShell 5.1 | one command per line, or `;` |
+| no BepInEx log after starting the game, commands never answered | BepInEx blocked (Smart App Control enforced) or `winhttp.dll` missing | `check.ps1` names the missing file; Smart App Control is the PC owner's decision |
+| `send-command.ps1` withdraws the command with no answer | no world loaded, or the plugin did not start | load a world; read `BepInEx\LogOutput.log` for `HomeCheat` lines |
+| an older or a dev command build answers | a build with a higher stamp in `homecheat-commands\` (the newest stamp loads) | move the extra build out, restart the game |
+| the game hangs on the main scene after an update | a Harmony patch applied at start on a changed game method (as the spell bar did on 2026-10-25) | move that feature's DLL out, start, rebuild from `src\` |
+| a command fails after a Valheim update | game API changed | rebuild from `src\` (`bash src/build.sh all`, `VALHEIM_DIR` for another path), `op=reload`, or restart for the core |
+| the spell bar shows the old spells | `install.ps1` keeps an existing `spells.txt` | copy `payload\BepInEx\config\homecheat\spells.txt` over it, then `op=spells&reload=1` |
+
+A failure not in this table is fixed, then added here in the same task.
 
 ## Verification (2026-10-24)
 

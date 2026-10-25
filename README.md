@@ -8,7 +8,7 @@ Changes to Valheim 1.0.20 (network version 41) for our own game and our own worl
 | Package | What it does | Start here |
 |---|---|---|
 | [AdminPanelEnchancements](AdminPanelEnchancements/README.md) | host admin: `kick` (console and players-list button) also bans; world backups: 5 kept, one at most every 3 minutes | [README](AdminPanelEnchancements/README.md), docs in [docs/](AdminPanelEnchancements/docs/) |
-| [GameplayEnhancements](GameplayEnhancements/README.md) | BepInEx 5 + the HomeCheat plugin: building and world helpers, spells and the spell bar, transform, visual effects, key changes | [README](GameplayEnhancements/README.md), command index in [docs/HomeCheat-plugin/](GameplayEnhancements/docs/HomeCheat-plugin/README.md), classes and how to add a command in [docs/homecheat-architecture.md](docs/homecheat-architecture.md) |
+| [GameplayEnhancements](GameplayEnhancements/README.md) | BepInEx 5 + the HomeCheat plugin: building and world helpers, spells and the spell bar, transform, visual effects, key changes | [README](GameplayEnhancements/README.md), command index in [docs/HomeCheat-plugin/](GameplayEnhancements/docs/HomeCheat-plugin/README.md), classes and how to add a command in [docs/homecheat-architecture.md](docs/homecheat-architecture.md), every command with what it changes in [docs/homecheat-commands.md](docs/homecheat-commands.md), install runbook in [docs/packaging.md](docs/packaging.md#install-runbook) |
 
 ## Install in short
 
@@ -32,4 +32,4 @@ Nothing is deleted: every file or setting a script replaces goes to a dated back
 
 ## Generated parts
 
-`MANIFEST.md`, `payload/`, `kickban/`, `skills/` and the `*.ps1` scripts in each package are written by the HomeOS build (`scripts/valheim/packages/build.js`); edit the docs and `GameplayEnhancements/src/` here, the scripts in HomeOS. How the build works: [docs/packaging.md](docs/packaging.md).
+`MANIFEST.md`, `payload/`, `kickban/`, `skills/`, `GameplayEnhancements/docs/architecture/` (a copy of `docs/`) and the `*.ps1` scripts in each package are written by the HomeOS build (`scripts/valheim/packages/build.js`); edit the docs and `GameplayEnhancements/src/` here, the scripts in HomeOS. How the build works: [docs/packaging.md](docs/packaging.md).

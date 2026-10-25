@@ -1,9 +1,9 @@
 ---
-description: HomeCheat (GameplayEnhancements) architecture since 2026-10-25 - class diagrams, core plugin vs feature DLLs, the main classes, what is inherited and what is composed, command lifecycle and hot reload, conventions (C# 5), how to add a command, build and selftest
+description: HomeCheat (GameplayEnhancements) architecture since 2026-10-25 - class diagrams, core plugin vs feature DLLs, the main classes, what is inherited and what is composed, command lifecycle and hot reload, conventions (C# 5), parameter conventions, target model, Kit helpers by need, how to add a command, build and selftest, extension points, safety guards, test aids, known defects; command catalog in homecheat-commands.md
 ---
 # HomeCheat architecture
 
-Restructured 2026-10-25 from one 880-line plugin class plus flat command files. Valheim 1.0.20, BepInEx 5.4.2351, C# 5 (csc 4.0 that ships with Windows). Package: [GameplayEnhancements](../GameplayEnhancements/README.md), sources: [GameplayEnhancements/src/](../GameplayEnhancements/src/), command index: [docs/HomeCheat-plugin/README.md](../GameplayEnhancements/docs/HomeCheat-plugin/README.md), class diagrams: [diagrams/](diagrams/) (PlantUML sources and SVG). Paths below are relative to `GameplayEnhancements/`.
+Restructured 2026-10-25 from one 880-line plugin class plus flat command files. Valheim 1.0.20, BepInEx 5.4.2351, C# 5 (csc 4.0 that ships with Windows). Package: [GameplayEnhancements](../GameplayEnhancements/README.md), sources: [GameplayEnhancements/src/](../GameplayEnhancements/src/), command index: [docs/HomeCheat-plugin/README.md](../GameplayEnhancements/docs/HomeCheat-plugin/README.md), command catalog (what each command changes, extend-or-new rules): [homecheat-commands.md](homecheat-commands.md), class diagrams: [diagrams/](diagrams/) (PlantUML sources and SVG). Paths below are relative to `GameplayEnhancements/`.
 
 ## Two kinds of DLL
 
@@ -151,6 +151,63 @@ Behaviour that shapes the code, checked in game on 2026-10-25. The full paramete
 - `Fmt.Vec` and `Args` use InvariantCulture. Numbers printed with `ToString("F1")` in older answers still follow the PC's culture.
 - All game access stays on the main thread; the dispatcher refuses other threads.
 
+## Parameter conventions
+
+How `Args` reads a form (`src/Core/Pure/Args.cs`):
+
+| Call | Returns |
+|---|---|
+| `Str(key, def)` | the value when the key exists and is not empty, else `def` |
+| `Int`, `Float` | parsed with InvariantCulture (`0.5`, never `0,5`), else `def` |
+| `Flag(key, def)` | empty or missing = `def`; `1`, `true`, `yes`, `aim` = true; any other word = false, even when `def` is true |
+| `Has(key)` | the key exists, even with an empty value (`Anchor.FromArgs` uses it for `dist`) |
+| `Required(key, hint)` | the value, or `CommandException "<key> required, <hint>"` |
+| `Raw` | a copy of all parameters, to forward to another command (`harmeffect`) |
+
+Rules for a command's parameters:
+- Keys are lower case and mean the same thing in every command. Families in use: placement `aim=1|0` then `radius=` (repair, refill), `at=aim|self|x,y,z` (spellshot, visualeffect), `dist=` (metres ahead instead of the crosshair, `Anchor.FromArgs`); grid `rows`, `perrow`, `spacing`, `aimcol`, `scale`, `clear` (plant, place, field, cultivate); ring `rings`, `gap`, `step`, `itemsize`, `delay` (slime, visualeffect); target `target=<nick>`, `players=`, `boss=`, `tamed=`; strength `damage=`, `push=`, `force=`, `mode=`; time `duration=`, `delay=`, `lifetime=`; read-only sub-actions `list=1`, `status=1`, `report=1`, `find=<text>`, `dump=<prefab>`, `probe=`.
+- Defaults make the command work with only its essential parameter (`op=heal`, `op=plant&prefab=Beech_Sapling`). A parameter with no safe default is read with `Required` and the command fails with `ERROR: <key> required, <hint>`.
+- A new option is opt-in: it keeps the old behaviour when absent. Changing an existing default that changes who is hit, how much, or what stays in the world is a decision for Maksym, never a side effect of another change.
+- `Usage` states every parameter with its default and cap; test aids and read-only sub-actions say so in their help text.
+- The answer's first line is a summary with counts (`planted 24 (Pickable_Carrot=24) ...`), and it names any cap or clamp that applied. Failures throw `CommandException` (answered as `ERROR: ...`). Numbers through `Fmt` (InvariantCulture).
+
+## Target model
+
+Every effect that touches characters decides five classes: **self**, **enemies** (untamed creatures), **tamed** creatures, **other players**, **bosses**.
+
+- Self should be safe by default. `earthquake`, `spellshot` and `killmobs` never hit the caster; `slime` with its default `hurtself=1` hits the target player too once they leave the free gap (`SlimeEffect.cs:73`, see Known defects).
+- Other players are reached only when this game hosts the world (`ZNet.instance.IsServer()`): `slime` and `earthquake` refuse `target=<nick>` otherwise (`SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`), `transform` refuses other players on a client and allows only the raven form on them (`TransformCommand.cs:111-118`).
+- `target=<nick>` centres a `HarmEffect` on another player (`HarmEffect.Target`, unknown nick = `ERROR`); `Players.Find` matches the nickname case-insensitively.
+- Tamed creatures and bosses are excluded unless asked: `killmobs` has `tamed=1`, `boss=1`.
+- Hitting other players or friendly creatures should be an opt-in parameter. Two older defaults do not follow this yet (see Known defects): `slime hurtself=1`, `earthquake players=1`.
+- Who sees an effect: objects spawned with a `ZNetView` on the host are synced to every player; local-only objects (`visualeffect share=0`, `transform` models, the spell bar) are seen only on this PC; `scale` on trees is re-applied on load only where HomeCheat is installed (`TreeScalePatch`).
+
+## Kit by need
+
+Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead of writing a fourth copy; a helper written inside a feature moves here only when a second feature needs it and it has stopped changing (a core change: restart).
+
+| Need | Helper |
+|---|---|
+| the local player, or a clear error when no world is loaded | `Players.Local` (throws `no local player: load a world first`) |
+| another player by nickname | `Players.Find(name)` (null when offline); in a `HarmEffect`: `Target(a)` |
+| the crosshair point | `Aim.Point(p, out aimed)` (60 m ray on solid objects and terrain, else 8 m ahead) |
+| the solid object under the crosshair | `Aim.SolidHit(range, out hit)` (no terrain, triggers ignored) |
+| a grid of cells from the crosshair or `dist=` metres ahead | `Anchor.AtAim(p)`, `Anchor.FromArgs(p, a)`, `anchor.Cell(row, col, centre, spacing)`; maths in `GridMath` (Pure) |
+| a grid from the player's own cell | `FieldAnchor.AheadOfPlayer` (feature World, not Kit yet) |
+| ground height, is a spot free, is it cultivated | `Ground.Height`, `Ground.IsBlocked(pos, radius)`, `Ground.IsCultivated` |
+| physics masks | `Masks.Solid` (buildings, trees, rocks, plants), `Masks.SolidAndTerrain` |
+| a prefab by name | `Prefabs.Get` (null), `Prefabs.Require(name, hint)` (throws), `Prefabs.Spawn(name, pos, rot)` |
+| prefab discovery for `find=` / `dump=` / `list` | `Prefabs.All()`, `Matching(text, tag)`, `Find(text, max, tag)`, `Dump(prefab, fieldsOf...)`, `Lines` |
+| a visual or sound effect that removes itself | `Fx.Spawn(owner, prefab, pos, life)` (timer owned by the command), `Fx.Destroy(go)` (networked or local) |
+| a non-public game field | `Refl.Get/Set/GetFloat/SetFloat/GetStatic/Field` (missing member = default, never a crash) |
+| object or tree scale saved with the world | `Trees.SetScale(inst, scale)` (ZDO key `scale`), `Trees.ApplyScale(tree, factor)` |
+| numbers in answers | `Fmt.Vec(v)`, `Fmt.F(f, digits)` |
+| a delayed action bound to the command | `Later(seconds, act)` on `CommandBase` (cancelled on unload) |
+| a GameObject removed on unload | `Own(go)` on `CommandBase` |
+| Harmony patches removed on unload | `Patches.Apply(typeof(X))`, `Patches.Patch(method, prefix, postfix)` on `CommandBase` |
+| run another command | `HomeApi.Exec("op=...")` |
+| log | `HomeApi.Log`, `HomeApi.LogError` |
+
 ## Add a command
 
 1. Pick the feature folder it belongs to (or create `src/Features/<Feature>/`; the folder name in lower case is the DLL name).
@@ -172,3 +229,57 @@ bash src/build.sh all          # core (if the game is closed) and every feature
 ```
 
 Every build of a feature gets a new file name; the older builds stay in `homecheat-commands/` but do not load. The HomeOS package build (`scripts/valheim/packages/build.js`) takes the newest build of each feature and `src/` as it is, and stops when a feature folder has no build or a build has no folder.
+
+## Extension points
+
+Where new behaviour goes, from the smallest change to the largest. Prefer the first row that fits; see [homecheat-commands.md](homecheat-commands.md) for the extend-or-new rules and the commands each point already serves.
+
+| Want | Extend | Where | Notes |
+|---|---|---|---|
+| a new spell-bar entry for an existing command (a preset) | one line in the spell file | `BepInEx/config/homecheat/spells.txt` (format in its header: `slot.entry \| label \| command \| flags`, `;;` chains commands, flags `sticky`, `pin=`, `shift=`) | no build; `op=spells&reload=1`. The game folder copy is the source; `build.js` copies it into `payload/`; `install.ps1` installs it only when missing |
+| a new option of an existing command | a parameter read in `Execute`, default = old behaviour | the command's class in `src/Features/<F>/` | `op=reload`; document it in `Usage`, the page and the catalog |
+| a read-only helper of a command (discovery, report) | `SubAction(key, help, run)` or `SubFlag(...)` in the constructor | the command's class | runs instead of `Execute` when the key is present |
+| a new projectile or strike type | a branch in `Candidates(type)` and the type check | `Features/Spellshot/SpellShotCommand.cs:30,55` | `type=probe&filter=` lists projectile prefabs |
+| a new named visual effect | a `CatalogEntry` | `Features/VisualEffect/VisualEffectCommand.cs:36` | designed with `/valheim-spell-fx`; `list=1` shows the catalog |
+| a new animal form | a `case` in `Candidates(type)` and the form's movement in `TransformState` | `Features/Transform/TransformCommand.cs:28`, `TransformState.cs` | local player only; other players: raven only |
+| a new boss blessing | nothing: `bless name=` matches any guardian power by part of its name | `Features/Heal/BlessCommand.cs` | `bless&list=1` lists the status effects |
+| a new effect centred on a player (rings, clouds, slams) | `public sealed class <Name>Effect : HarmEffect` | new `src/Features/<Name>/` | `Target(a)`, `Ring(...)`; also reachable as `op=harmeffect&kind=<name>` |
+| any other new command | `public sealed class <Name>Command : CommandBase` | an existing feature folder when it shares helpers with it (World: grid and terrain commands), else a new folder | steps in "Add a command" |
+| behaviour the game decides internally (UI, network sync, input) | a Harmony patch class applied through `Patches` | the command's feature folder | `static Current` for state; UI patches only once a world is loaded (see spells) |
+| a helper two features need | move it to `src/Core/Kit/` | core | core change: one owner, rebuild `core`, game restart |
+| a new channel, registry or lifecycle behaviour | core services | `src/Core/Services/`, `src/Core/Contracts/` | core change, as above |
+
+## Safety guards
+
+What protects the game today, and what is still planned. Planned items go into the core in one pass (phase 4 wave 0 of the work plan); until then a new command carries the listed check itself.
+
+| Guard | State | Where today | A new command until the core pass |
+|---|---|---|---|
+| no console cheat path (`Terminal`, `Console`, god/ghost/fly, no-cost, profile cheat fields are never written) | in place | plugin header; `Features/Diag` only reads them | never write these members |
+| no network port: commands only from the local inbox | in place | `FileInboxChannel` | - |
+| main thread only | in place | `CommandDispatcher` | - |
+| other players only when this game hosts the world | per feature | `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111`, `SpellBar.cs:405` | check `ZNet.instance.IsServer()` before touching another player or shared world data |
+| world loaded | partly | `Players.Local`, `Prefabs.Require` throw a clear error; nothing checks `ZNetScene`/`ObjectDB`/`ZoneSystem` in general | get the player through `Players.Local` first; check `ObjectDB.instance` when items or status effects are used (`BlessCommand`) |
+| caps on counts and sizes | per feature | `cultivate` 2 500, `field` 40 000 examined / 2 500 planted, `place` 400, `plant` 400, `path` 400 stamps, `spellshot` 81 shots and 300 strike points per volley, `groundlevel` radius 12, `list` 200 | a `const` cap, stated in `Usage`, reported in the answer when it applied |
+| timers and objects of a replaced build | in place | `CommandBase` (`ICommandLifecycle.Unload`): timers cancelled, patches removed, owned objects destroyed | use `Later`, `Own`, `Patches` only |
+| timers and objects when the player leaves the world | missing | `Scheduler` runs on `Time.time`, nothing listens for logout | mark persistent objects in their ZDO (earthquake `hc_earthquake`) so a `clear=1` finds them later |
+| destructive or world-wide actions need `confirm=1` | missing | earthquake `kill=` and `clearitems=1` act at once | require `confirm=1` and a radius with a default |
+
+## Test aids
+
+- Commands meant for testing: `killmobs` (clear the arena; skips players, tamed and bosses unless asked), `heal` (restore the caster), `spawn` (enemies to test on), `give`, `cheatstate` (before and after a test), `status`, `inspect`, `list`, `fxdump`.
+- Read-only sub-actions inside commands: `find=`, `dump=`, `probe=1`, `report=1`, `list=1`, `near=`, `weapons=1`.
+- Rule: a command never gets its own heal, kill or clear-the-area mode for testing; a missing test helper becomes its own small command (feature `KillMobs` is the model) and is marked "test helper" in its `Usage`. Older exceptions are listed under Known defects.
+- Test world `ClaudeTest`; second player `Claude2` (Maksym's own account). One command at a time through `send-command.ps1`, unique inbox names. Evidence: the answer, new `HomeCheat` errors in `BepInEx/LogOutput.log`, probe numbers, what Maksym saw, `op=cheatstate` before and after. The log of [homecheat-test-run-2026-10-25.md](homecheat-test-run-2026-10-25.md) is the format to follow.
+
+## Known defects (2026-10-25)
+
+| Defect | Where | Why it matters |
+|---|---|---|
+| `slime` defaults to `hurtself=1`: the clouds hit every player and NPC outside the gap, the target too when it leaves the gap | `SlimeEffect.cs:73` | a widened default hit a second player on 2026-10-24; the target model asks for opt-in |
+| `earthquake` defaults to `players=1` (pushes other players and tamed creatures) | `EarthquakeEffect.cs:71` | same rule: other players should be opt-in |
+| `earthquake` carries test aids `kill=<radius>` and `clearitems=1`, without `confirm=1`; `slime` carries `heal=1`, `keephealed=`, `healstats=1` | `EarthquakeEffect.cs:41,52`, `SlimeEffect.cs:38-51` | test aids belong in `killmobs`/`heal`; destructive actions need `confirm=1` |
+| timers and temporary objects survive leaving the world | `Scheduler` | an effect started in one world can finish in the next |
+| no host guard in the core | - | each feature repeats the `IsServer` check |
+| older answers format numbers with the PC's culture (`ToString("F1")`) | World and Earthquake answers | a comma may appear instead of a point |
+| `cheatinfo` is a discovery leftover (code review: delete) | `Features/Diag/CheatInfoCommand.cs` | - |
