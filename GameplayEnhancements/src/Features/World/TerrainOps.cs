@@ -11,7 +11,9 @@
 //   covers and rounds the radius up to whole vertices (only a circle checks the distance), so wider or overlapping level
 //   operations stack; one per vertex (whole world metres) sets each vertex exactly once.
 // - paint: a hoe piece's paint and smoothing settings with the paint radius asked for; paint does not stack.
-// This PC must own the zone (it hosts the world).
+// This PC must own the zone's TerrainComp, or the operation is dropped without a log line (TerrainComp.RPC_ApplyOperation
+// returns unless IsOwner, IL 1.0.20): Claim takes the zones another peer owns before every batch (Construction's
+// TerrainLevel.Claim, portal hub 2026-10-25: 3 of 4 zones owned by another peer, every operation there dropped).
 using System.Collections.Generic;
 using HomeCheat.Kit;
 using UnityEngine;
@@ -110,6 +112,56 @@ namespace HomeCheat.Features.WorldCommands
         public static void Paint(string template, Vector3 pos)
         {
             Spawn(templates[template], pos);
+        }
+
+        // the box around these vertices and points (whole world metres); false when both are empty
+        public static bool Bounds(List<Vector2> verts, List<Vector3> pts, out float x0, out float z0, out float x1, out float z1)
+        {
+            x0 = z0 = float.MaxValue; x1 = z1 = float.MinValue;
+            if (verts != null)
+                foreach (Vector2 v in verts) { x0 = Mathf.Min(x0, v.x); x1 = Mathf.Max(x1, v.x); z0 = Mathf.Min(z0, v.y); z1 = Mathf.Max(z1, v.y); }
+            if (pts != null)
+                foreach (Vector3 q in pts) { x0 = Mathf.Min(x0, q.x); x1 = Mathf.Max(x1, q.x); z0 = Mathf.Min(z0, q.z); z1 = Mathf.Max(z1, q.z); }
+            return x0 <= x1;
+        }
+
+        // takes over the TerrainComps another peer owns under the box grown by 'reach' m (an operation reaches every heightmap
+        // within its radius, TerrainOp.Awake). The other peer takes a zone back within seconds, so call it before every batch.
+        // The commands are host only. Returns the zones taken
+        public static int Claim(float x0, float z0, float x1, float z1, float reach)
+        {
+            int zones, foreign;
+            Zones(x0, z0, x1, z1, reach, true, out zones, out foreign);
+            return foreign;
+        }
+
+        // report=1, read-only: the terrain zones under the box grown by 'reach' m and how many another peer owns. A zone without
+        // a TerrainComp yet counts as this PC's (the first operation creates it here)
+        public static string OwnersLine(float x0, float z0, float x1, float z1, float reach)
+        {
+            int zones, foreign;
+            Zones(x0, z0, x1, z1, reach, false, out zones, out foreign);
+            return "terrain zones " + zones + ": " + (zones - foreign) + " owned by this PC, " + foreign + " by another peer"
+                + (foreign > 0 ? " (a change there is dropped unless this PC takes the zone first, as groundlevel and path do)" : "");
+        }
+
+        static void Zones(float x0, float z0, float x1, float z1, float reach, bool claim, out int zones, out int foreign)
+        {
+            zones = 0; foreign = 0;
+            x0 -= reach; z0 -= reach; x1 += reach; z1 += reach;
+            List<Heightmap> maps = new List<Heightmap>();
+            Heightmap.FindHeightmap(new Vector3((x0 + x1) * 0.5f, 0f, (z0 + z1) * 0.5f), 0.5f * Mathf.Sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0)), maps);
+            foreach (Heightmap hm in maps)
+            {
+                if (hm == null) continue;
+                zones++;
+                // FindTerrainCompiler, not GetAndCreateTerrainCompiler: the report creates nothing
+                TerrainComp tc = TerrainComp.FindTerrainCompiler(hm.transform.position);
+                ZNetView nv = tc != null ? tc.GetComponent<ZNetView>() : null;
+                if (nv == null || !nv.IsValid() || nv.IsOwner()) continue;
+                foreign++;
+                if (claim) nv.ClaimOwnership();
+            }
         }
 
         // the old hoe stamps (TerrainModifier objects) whose level or smoothing reaches into the box: removed, so they stop

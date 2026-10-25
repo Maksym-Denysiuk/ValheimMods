@@ -162,3 +162,27 @@ Still untested (B): `avoid=1` / `shrink=1` of the circle next to a wall, the ±8
 **Verification (in game 2026-10-25, ClaudeTest, Maksym).** A 16 x 16 m Start-end rectangle (heights 31.95..37.84, 8 of 324 vertices level before): `groundlevel&area=coords` 324 of 324 within 5 cm of 32.32; a stone path start-end 22.7 x 2 m: 72 of 72 inside points paved, 24 of 48 outside points paved (edge cells), Maksym: "now 2m". Exit to the menu and back into the world: 324 of 324 at 32.32, the path 72 of 72 and 24 of 48 again. A 4 m circle with `delta=1` on open ground: 8 of 49 level before, 50 of 50 at 35.80 after. No `Failed to deserialize TerrainOp` errors in `LogOutput.log`.
 
 **Not covered yet (B).** `avoid=1` with old hoe stamps next to a building (kept stamps), a dirt path, a path with `tool=raise`, Claude2 seeing the result (terrain is saved in the zone's `TerrainComp` and synced like any hoe work).
+
+## Zones owned by another peer (since 2026-10-25)
+
+**Problem.** A `TerrainOp` is applied by the peer that owns the zone's `TerrainComp`: `TerrainComp.RPC_ApplyOperation` returns at once unless the receiver owns it (IL 1.0.20), with no log line. In a zone another peer owns (Claude2 walked there first), `groundlevel` and `path` answered as usual and the ground stayed as it was. Found by `construct` at the portal hub (3 of its 4 zones owned by another peer, 207 vertices up to 3.7 m off twice in a row; fixed there in `TerrainLevel.Claim`).
+
+**Now.** `TerrainOps.Claim` takes over the `TerrainComp`s another peer owns under the area (grown by the operation's reach), the way construct does:
+
+| Command | When it takes over |
+|---|---|
+| `groundlevel` | once when the command runs, then again before every batch of 150 vertices and before the paint, because the other peer takes a zone back within seconds |
+| `path` | once, right before all its paint and level operations, which go out in the same frame |
+
+- The answer names it: `..., took over N terrain zone(s) owned by another peer`; the log too (`groundlevel: took over ...`, `path: took over ...`).
+- `report=1` of both (read-only, creates no `TerrainComp`) and the flatness line in the log end with `terrain zones N: X owned by this PC, Y by another peer`. A zone without a `TerrainComp` yet counts as this PC's: the first operation creates it here.
+- Host only (`Host.RequireWorld`, the world this PC hosts). Taking a zone over changes only who applies terrain there; the other peer gets it back by the game's own rules when this PC's player leaves.
+
+**Method.** Read the game's IL: `TerrainOp.Awake` finds every heightmap within the operation's radius and calls `TerrainComp.ApplyOperation`, which routes to the owner; `RPC_ApplyOperation` drops it unless `IsOwner`. `ZDOMan.ReleaseNearbyZDOS` gives a zone whose owner is not a connected peer back to the host on its next tick.
+
+**Verification (in game 2026-10-25, ClaudeTest, no second player).** A temporary test build, never committed, marked the zone under the area as owned by a peer that does not exist (`ZDO.SetOwner`) right before the operations, and in every batch:
+- before the fix (takeover skipped): `groundlevel delta=1 radius=4` at -517,235: 0 of 51 vertices within 5 cm of the target 35.63, all 51 left at 34.63, log `terrain zones 1: 0 owned by this PC, 1 by another peer`; `path type=stone length=6 width=2`: 0 of 18 inside points paved;
+- with the takeover: the same circle 51 of 51 within 5 cm of 35.63 (100 %), `took over 1 terrain zone(s)`; the same path 18 of 18 inside points paved (100 %), `took over 2 terrain zone(s)`;
+- then the clean build again (`v20261025225321`). No `Failed to deserialize TerrainOp` and no new HomeCheat errors in `LogOutput.log`.
+
+**Not covered yet (B).** A real second player taking a zone back between batches: the made-up peer is never connected, so the host takes the zone back on its own within about 2 s and only the first batch is tested against a foreign owner. Test with Claude2: Claude2 walks to fresh ground first, Maksym's player follows, then `op=groundlevel&report=1&area=self` (expect `1 by another peer` or more), `op=groundlevel&area=coords` over a rectangle of several batches (expect `took over` and 100 % within 5 cm in the log), and `op=path&report=1` after a path there.

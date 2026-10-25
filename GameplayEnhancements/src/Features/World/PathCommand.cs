@@ -96,11 +96,11 @@ namespace HomeCheat.Features.WorldCommands
             else { line.Add(s); line.Add(e); }
 
             float total;
-            int needed;
-            int made = Stamp(go, line, width, rr, out total, out needed);
+            int needed, took;
+            int made = Stamp(go, line, width, rr, out total, out needed, out took);
             string cut = needed > made ? "; cut at " + MaxStamps + " stamps (needed " + needed + "): shorten the path or split it" : "";
             return "path " + type + " from " + src + " " + Fmt.Vec(s) + " to " + Fmt.Vec(e) + ": " + Fmt.F(total, 1) + " m long (direct "
-                + Fmt.F(direct, 1) + " m) x " + Fmt.F(width, 1) + " m" + route + ", " + made + " stamps of r=" + Fmt.F(rr, 1) + " (tool " + tool + ")"
+                + Fmt.F(direct, 1) + " m) x " + Fmt.F(width, 1) + " m" + route + ", " + made + " stamps of r=" + Fmt.F(rr, 1) + " (tool " + tool + ")" + Took(took)
                 + (from == "coords" && a.Has("length") ? "; length= ignored with from=coords" : "") + cut + "; check with op=path&report=1";
         }
 
@@ -127,9 +127,9 @@ namespace HomeCheat.Features.WorldCommands
                     made++;
                 }
             }
-            pt.Done();
+            int took = pt.Done();
             return "path " + type + " " + length.ToString("F1") + " x " + width.ToString("F1") + " m from " + Fmt.Vec(an.Origin)
-                + (an.Aimed ? " (crosshair)" : "") + ": " + made + " stamps of r=" + rr.ToString("F1") + " (tool " + tool + "); check with op=path&report=1";
+                + (an.Aimed ? " (crosshair)" : "") + ": " + made + " stamps of r=" + rr.ToString("F1") + " (tool " + tool + ")" + Took(took) + "; check with op=path&report=1";
         }
 
         // the corners of a route from s to e on a 1 m grid over their bounding box plus Margin; s and e are kept exact
@@ -176,7 +176,7 @@ namespace HomeCheat.Features.WorldCommands
         }
 
         // stamps every 'rr' metres along the polyline (y ignored), 'across' stamps wide, until MaxStamps; returns stamps made
-        static int Stamp(GameObject go, List<Vector3> line, float width, float rr, out float total, out int needed)
+        static int Stamp(GameObject go, List<Vector3> line, float width, float rr, out float total, out int needed, out int took)
         {
             Painter pt = new Painter(go, rr, width, "from " + Fmt.Vec(line[0]) + " to " + Fmt.Vec(line[line.Count - 1]));
             int across = Mathf.Max(1, Mathf.CeilToInt(width / (2f * rr)));
@@ -210,17 +210,20 @@ namespace HomeCheat.Features.WorldCommands
                     made++;
                 }
             }
-            pt.Done();
+            took = pt.Done();
             return made;
         }
 
         // the stamps of one path as saved terrain operations: the tool's paint and smoothing at radius rr per stamp, and when
         // the tool levels (tool=raise), its level circle as one operation per vertex at the stamp's own height + level offset
-        // (the first stamp to reach a vertex sets it; overlapping level operations would stack)
+        // (the first stamp to reach a vertex sets it; overlapping level operations would stack). The stamps are kept until Done,
+        // which first takes the terrain zones another peer owns under the strip (TerrainOps.Claim) and then spawns them all
         sealed class Painter
         {
             readonly string template;
+            readonly float reach;
             readonly TerrainModifier tm;
+            readonly List<Vector3> stamps = new List<Vector3>();
             readonly Dictionary<long, Vector3> verts = new Dictionary<long, Vector3>();
             readonly Last path = new Last();
 
@@ -230,6 +233,7 @@ namespace HomeCheat.Features.WorldCommands
                 if (tm == null) throw new CommandException(go.name + " has no TerrainModifier");
                 TerrainOps.Prepare();
                 template = TerrainOps.PaintTemplate(go, rr + MaskHalfCell, true);
+                reach = Mathf.Max(rr + MaskHalfCell, Mathf.Max(tm.m_smooth ? tm.m_smoothRadius : 0f, tm.m_level ? tm.m_levelRadius : 0f)) + 1f;
                 path.Half = width / 2f;
                 path.What = what;
                 path.Tool = go;
@@ -251,13 +255,19 @@ namespace HomeCheat.Features.WorldCommands
                         long key = ((long)(int)v.x << 32) ^ (uint)(int)v.y;
                         if (!verts.ContainsKey(key)) verts[key] = new Vector3(v.x, pos.y + tm.m_levelOffset, v.y);
                     }
-                if (template != null) TerrainOps.Paint(template, pos);
+                stamps.Add(pos);
             }
 
-            public void Done()
+            // returns the terrain zones taken from another peer
+            public int Done()
             {
+                float x0, z0, x1, z1;
+                int took = TerrainOps.Bounds(null, stamps, out x0, out z0, out x1, out z1) ? TerrainOps.Claim(x0, z0, x1, z1, reach) : 0;
+                if (took > 0) HomeApi.Log("path: took over " + took + " terrain zone(s) owned by another peer, so the paint and level operations land there");
+                if (template != null) foreach (Vector3 q in stamps) TerrainOps.Paint(template, q);
                 foreach (Vector3 v in verts.Values) TerrainOps.Vertex(v.x, v.z, v.y);
                 last = path;
+                return took;
             }
         }
 
@@ -274,9 +284,19 @@ namespace HomeCheat.Features.WorldCommands
                 Vector3[] outs = { p.At + p.Right * (last.Half + EdgeOut), p.At - p.Right * (last.Half + EdgeOut) };
                 foreach (Vector3 q in outs) { outside++; if (TerrainOps.PaintedLike(q, last.Tool)) outPainted++; }
             }
+            List<Vector3> axis = new List<Vector3>();
+            foreach (AxisPoint ap in last.Axis) axis.Add(ap.At);
+            float x0, z0, x1, z1;
+            TerrainOps.Bounds(null, axis, out x0, out z0, out x1, out z1);
             return "path " + last.What + ": " + inPainted + " of " + inside + " points inside the strip painted " + type + " (" + Fmt.F(100f * inPainted / inside, 1) + " %), "
                 + outPainted + " of " + outside + " points " + Fmt.F(EdgeOut, 1) + " m outside its edges painted " + type + " (" + Fmt.F(100f * outPainted / outside, 1)
-                + " %; the same paint there from an older path or a bend counts too)";
+                + " %; the same paint there from an older path or a bend counts too); "
+                + TerrainOps.OwnersLine(x0, z0, x1, z1, last.Half + EdgeOut);
+        }
+
+        static string Took(int took)
+        {
+            return took > 0 ? ", took over " + took + " terrain zone(s) owned by another peer" : "";
         }
     }
 }
