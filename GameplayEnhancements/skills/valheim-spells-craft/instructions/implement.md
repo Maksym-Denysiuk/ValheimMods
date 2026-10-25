@@ -5,7 +5,7 @@ One card: code, build, test, docs. Each phase 4 session runs this for its own ca
 ## 1. Card and questions
 
 1. Start-of-run check (SKILL.md). Read the docs listed in SKILL.md, the nearest command's page and its `src/Features/<F>/`.
-2. Use the given card, or write one (`spec-card.md`) to `LocalOutputs/<ts>/<name>-spec.md`.
+2. Use the given card (`<pkg>/docs/Backlog/<name>.md`, updated in place), or write a draft (`spec-card.md`) to `LocalOutputs/<ts>/<name>-spec.md` and move it to `<pkg>/docs/Backlog/<name>.md` on Maksym's go (where a card lives: `spec-card.md`).
 3. Blocking questions in one message (Ask column). A new command or feature waits for Maksym's go on the card; tweaks inside a test loop do not; default changes and anything aimed at another player are always asked.
    Unattended: a card from an approved or unattended plan is the go; blocking questions found while building become `ASSUMPTION:` lines on the card (SKILL.md gate 2). Default changes and other players stay blocked (gates 3-4).
 

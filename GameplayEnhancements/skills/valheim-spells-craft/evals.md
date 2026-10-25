@@ -1,6 +1,6 @@
 # valheim-spells-craft evals
 
-Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (requirements, HomeOS `references/claude-code/valheim-spells-craft-requirements.md`), 20-23 from the work plan, 24-25 from the build plan, 26-34 from phase 3 (backlog plan, unattended and without the game, 2026-10-25). Run the first three, 4, 13, 20-23 and 26-28 on paper after every change to the skill.
+Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (requirements, HomeOS `references/claude-code/valheim-spells-craft-requirements.md`), 20-23 from the work plan, 24-25 from the build plan, 26-34 from phase 3 (backlog plan, unattended and without the game, 2026-10-25), 35-40 from the review of v1.1 (2026-10-25). Run the first three, 4, 13, 20-23, 26-28 and 35 on paper after every change to the skill.
 
 | # | Scenario | Prompt | Expected | Failure looks like |
 |---|---|---|---|---|
@@ -38,3 +38,9 @@ Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (re
 | 32 | Probes | card needs a prefab name not readable offline (harpoon) | Probes field with the read-only command; first in the test list | a guessed prefab name built in |
 | 33 | Refresh between waves | plan whose wave 0 changes `src/Core/` | a refresh session listed between wave 0 and wave 1 | wave 1 sessions stop at their start-of-run check |
 | 34 | Skill file integrity | after any edit to the skill (2026-10-25: `implement.md` held a second copy of itself from a `$` expanded while writing) | every `instructions/*.md` has one top heading and no repeated section; files are written with the Edit/Write tools, never through an unquoted shell heredoc | duplicated or cut text in an instruction file |
+| 35 | Refresh order | refresh over a range where step 3 found a missing catalog row | docs fixed and committed + pushed first, then `knowledge-sha` = that commit, check exit 0, security review, `build.js`, package commit, HomeOS commit | sha set to the HEAD before the docs commit, so the next run stops again or the new docs were never checked |
+| 36 | One card, one place | implement session given `docs/Backlog/flatten.md` | updates that file (status, test log); writes no `LocalOutputs/*-spec.md` copy; on done the card becomes the page and the backlog file is removed | two cards drift apart, or the backlog file stays after done |
+| 37 | Catalog says the wrong feature | a command moved from World to a new Terrain feature, catalog row still says `world` | `commands-check.js` exit 1 naming the row and the code path; fixed in the docs before new work | check passes because only names are compared |
+| 38 | Game folder elsewhere | Valheim installed outside `D:\Steam`, no env set | the check finds it through the Steam libraries or asks for `--game`; when it falls back to the payload copy the note says so | a stale payload `spells.txt` reported as clean without a word |
+| 39 | Unattended refresh | an unattended plan reaches the refresh between waves | the refresh runs to step 8, stops at the security record with `status: awaiting review`; the plan reports the waves after it as waiting | the record written without a yes, or wave 1 starts on a stale skill |
+| 40 | Sync sweeps half-done work | the hourly repo sync runs while an implement session has an unbuilt file in `src/Features/<F>/` | nothing unfit to publish was ever in the tree; the handoff names the sync commit that took the file | ids or personal paths published mid-task, or the sweep goes unmentioned |

@@ -1,6 +1,15 @@
 # Spec card
 
-One card per command or change. Implement mode keeps it as `LocalOutputs/<ts>/<name>-spec.md` (HomeOS) and updates it after every step, so a new session can continue from it. Plan mode puts all cards in `backlog-plan.md`; approved cards are stored as `<pkg>/docs/Backlog/<name>.md` and become the command page when the command is done.
+One card per command or change, in one place at a time:
+
+| Card state | Where | Who writes |
+|---|---|---|
+| draft (plan mode) | inside `backlog-plan.md` | plan mode |
+| draft (implement mode without a plan) | `LocalOutputs/<ts>/<name>-spec.md` (HomeOS; elsewhere next to the package) | implement mode, until Maksym's go |
+| approved | `<pkg>/docs/Backlog/<name>.md`, the only copy from then on | plan mode after the approval, or implement mode on the go (the draft is not kept beside it) |
+| done | the card becomes the command page (`done-gate.md` 1.1), the backlog file is removed | done gate |
+
+Implement mode updates the approved card in `docs/Backlog/` after every step (status, test log), so a new session can continue from it. It is in the public repository: gate 10 applies to everything written on it.
 
 ## Template
 

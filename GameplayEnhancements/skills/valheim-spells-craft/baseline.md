@@ -1,6 +1,6 @@
 # Baseline
 
-knowledge-sha: `8682d14`
+knowledge-sha: `e735903`
 refreshed: 2026-10-25
 
 `knowledge-sha` is the ValheimMods commit whose docs this skill was last checked against. `scripts/commands-check.js --baseline baseline.md` reports how far it is behind and stops the run when `src/Core/` or `homecheat-architecture.md` changed since (refresh first: `instructions/refresh.md`). Only the refresh session changes this file.
@@ -12,6 +12,8 @@ Every row must exist as a heading in `<docs>`; the check fails when one is renam
 | Doc | Anchor | Used by |
 |---|---|---|
 | `homecheat-architecture.md` | `#two-kinds-of-dll` | implement: core vs feature |
+| `homecheat-architecture.md` | `#main-classes` | refresh: docs coverage |
+| `homecheat-architecture.md` | `#inherit-or-compose` | refresh: new base class, implement |
 | `homecheat-architecture.md` | `#lifecycle-and-hot-reload` | implement: OnLoad, reload |
 | `homecheat-architecture.md` | `#conventions` | implement: C# 5 rules |
 | `homecheat-architecture.md` | `#parameter-conventions` | implement, spec card |

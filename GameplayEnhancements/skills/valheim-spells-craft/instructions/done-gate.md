@@ -34,9 +34,9 @@ A rebase conflict or a failed push: stop, do not commit the pointer, report. Nev
 
 ## 4. Refresh brief (trigger *done* only)
 
-1. Read `baseline.md` for `knowledge-sha`. Look for an open brief: `LocalOutputs/*/skill-refresh-brief.md` with `status: open`.
+1. Read `baseline.md` for `knowledge-sha`. Look for an open brief (`status: open`): HomeOS `LocalOutputs/*/skill-refresh-brief.md`; outside HomeOS `skill-refresh-brief.md` in the folder that holds the unpacked `GameplayEnhancements`.
    - Found: extend its range to the new submodule HEAD and add this command to its list.
-   - None: write `LocalOutputs/<ts>/skill-refresh-brief.md`:
+   - None: write `LocalOutputs/<ts>/skill-refresh-brief.md` (outside HomeOS: `<pkg>/../skill-refresh-brief.md`, never inside `<pkg>`, which a reinstall replaces):
      ```markdown
      # valheim-spells-craft refresh brief
      status: open
@@ -48,5 +48,5 @@ A rebase conflict or a failed push: stop, do not commit the pointer, report. Nev
      - evals likely affected: <numbers or new scenario>
      Run: /valheim-spells-craft refresh with this brief (instructions/refresh.md).
      ```
-2. Propose the refresh session: in the Claude Desktop app, `start_session` (initiation `own_initiative`, context `fresh`, title "Refresh valheim-spells-craft", the brief's path and content as the prompt): a card Maksym starts with one click. When a brief was only extended, say the existing card or brief covers it. Elsewhere: tell Maksym to start a session with "refresh valheim-spells-craft from <brief path>".
+2. Propose the refresh session: in the Claude Desktop app, `start_session` (initiation `own_initiative`, context `fresh`, title "Refresh valheim-spells-craft", the brief's path and content as the prompt): a card Maksym starts with one click. When a brief was only extended, say the existing card or brief covers it. Elsewhere: the refresh runs only in HomeOS; tell Maksym the brief's path and to copy it to HomeOS `LocalOutputs/<ts>/` and start a session there with "refresh valheim-spells-craft from <brief path>". The refresh is attended: its security record needs Maksym's yes (`refresh.md` step 9).
 3. The start-of-run check of the next run reports a skipped refresh, so nothing is lost if the card is not started.

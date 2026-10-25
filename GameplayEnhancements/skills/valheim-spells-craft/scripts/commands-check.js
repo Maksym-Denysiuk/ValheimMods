@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Read-only check that the HomeCheat code and its docs describe the same commands, and that the doc sections the
 // valheim-spells-craft skill relies on still exist. Nothing is written.
-// Usage: node commands-check.js [--list] [--json] [--baseline <baseline.md>] [--mods <ValheimMods folder>] [--pkg <GameplayEnhancements folder>]
+// Usage: node commands-check.js [--list] [--json] [--baseline <baseline.md>] [--mods <ValheimMods folder>] [--pkg <GameplayEnhancements folder>] [--game <Valheim folder>]
 //   (no flag)   compare: command names in src/ (Core built-ins + Features/<F>), the catalog docs/homecheat-commands.md,
-//               the command index GameplayEnhancements/docs/HomeCheat-plugin/README.md, the op= values in spells.txt
+//               (names and the Feature column), the command index GameplayEnhancements/docs/HomeCheat-plugin/README.md, the op= values
+//               in the game folder's spells.txt (--game, VALHEIM_DIR, VALHEIM_DIR_WIN, Steam libraries; else the payload copy, said so)
 //   --list      print every command: name, feature, class, file
 //   --baseline  also check the anchors listed in baseline.md and how far its knowledge-sha is behind HEAD (git, HomeOS only)
 // Exit: 0 clean, 1 differences found, 2 a folder or file was not found.
@@ -77,11 +78,50 @@ function tableNames(file, heading) {
   return names;
 }
 
+// feature cell of each catalog row: { name: feature }
+function catalogFeatures(file) {
+  const out = {};
+  let on = false;
+  for (const l of read(file).split(/\r?\n/).map(s => s.trim())) {
+    if (l === '## Catalog') { on = true; continue; }
+    if (!on) continue;
+    if (l.startsWith('#')) break;
+    if (!l.startsWith('|')) continue;
+    const c = l.split('|').map(s => s.trim());
+    const n = c[1].replace(/`/g, '').toLowerCase();
+    if (!n || /^-+$/.test(n) || n === 'command') continue;
+    out[n] = (c[2] || '').replace(/`/g, '').toLowerCase();
+  }
+  return out;
+}
+
+// Valheim folder: --game, else VALHEIM_DIR (the Git Bash path build.sh uses), else VALHEIM_DIR_WIN, else every Steam
+// library in libraryfolders.vdf, else the usual places. The same order as the package's common.ps1, without the registry.
+function gameDir() {
+  const has = d => d && fs.existsSync(path.join(d, 'valheim.exe'));
+  const given = opt('--game');
+  if (given) { if (!has(given)) fail('--game: valheim.exe not found in ' + given); return given; }
+  const bash = process.env.VALHEIM_DIR;
+  const cands = [bash && bash.replace(/^\/([a-zA-Z])\//, (m, d) => d.toUpperCase() + ':\\').replace(/\//g, '\\'),
+    process.env.VALHEIM_DIR_WIN];
+  for (const steam of ['C:\\Program Files (x86)\\Steam', 'C:\\Program Files\\Steam', 'D:\\Steam']) {
+    const vdf = path.join(steam, 'steamapps', 'libraryfolders.vdf');
+    if (!fs.existsSync(vdf)) continue;
+    for (const m of read(vdf).matchAll(/"path"\s+"([^"]+)"/g))
+      cands.push(path.join(m[1].replace(/\\\\/g, '\\'), 'steamapps', 'common', 'Valheim'));
+  }
+  cands.push('D:\\Steam\\steamapps\\common\\Valheim', 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Valheim');
+  return cands.find(has) || null;
+}
+
+// the game's spells.txt is the live one; the payload copy is only a fallback and is said so
 function spellFile(pkg) {
-  const game = process.env.VALHEIM_DIR_WIN || 'D:\\Steam\\steamapps\\common\\Valheim';
-  const cands = [path.join(game, 'BepInEx', 'config', 'homecheat', 'spells.txt'),
-    path.join(pkg, 'payload', 'BepInEx', 'config', 'homecheat', 'spells.txt')];
-  return cands.find(f => fs.existsSync(f)) || null;
+  const game = gameDir();
+  const live = game && path.join(game, 'BepInEx', 'config', 'homecheat', 'spells.txt');
+  if (live && fs.existsSync(live)) return { file: live, live: true };
+  const copy = path.join(pkg, 'payload', 'BepInEx', 'config', 'homecheat', 'spells.txt');
+  if (fs.existsSync(copy)) return { file: copy, live: false, game };
+  return null;
 }
 
 function spellOps(file) {
@@ -132,6 +172,9 @@ else {
   for (const n of catalog) if (!names.has(n)) problems.push(`homecheat-commands.md row '${n}' has no command in the code`);
   const dup = catalog.filter((n, i) => catalog.indexOf(n) !== i);
   for (const n of new Set(dup)) problems.push(`homecheat-commands.md has '${n}' more than once`);
+  const feat = catalogFeatures(catalogFile);
+  for (const c of cmds) if (feat[c.name] && feat[c.name] !== c.feature)
+    problems.push(`homecheat-commands.md row '${c.name}' says feature '${feat[c.name]}', the code has it in '${c.feature}' (${c.file})`);
 }
 
 // 3. command index
@@ -148,8 +191,9 @@ else {
 const sf = spellFile(R.pkg);
 if (!sf) notes.push('spells.txt not found (game folder or payload): spell ops not checked');
 else {
-  notes.push('spells.txt: ' + sf);
-  for (const o of spellOps(sf)) if (!names.has(o.op)) problems.push(`spells.txt line ${o.line} uses unknown op '${o.op}': ${o.text}`);
+  notes.push(sf.live ? 'spells.txt (game): ' + sf.file
+    : `spells.txt: game ${sf.game ? 'folder has none' : 'folder not found (pass --game <Valheim folder>)'}, checked the payload copy ${sf.file}, which may be older than the game's`);
+  for (const o of spellOps(sf.file)) if (!names.has(o.op)) problems.push(`spells.txt line ${o.line} uses unknown op '${o.op}': ${o.text}`);
 }
 
 // 5. feature folders without a command

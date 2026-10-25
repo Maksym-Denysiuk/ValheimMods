@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 01:12 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 10:42 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025005643.dll, HomeCheat.Cmd.spellshot.v20261024235646.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025011404.dll.
 
@@ -41,8 +41,8 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/architecture/diagrams/homecheat-core.svg | 85338 | 5edf38941c7f1b6f |
 | docs/architecture/diagrams/homecheat-features.svg | 128897 | f15ceca4153f9b90 |
 | docs/architecture/diagrams/homecheat-spells.svg | 52780 | e538ccc51c37272a |
-| docs/architecture/homecheat-architecture.md | 30746 | 169abab972bc9bec |
-| docs/architecture/homecheat-commands.md | 11387 | c50c42fab7e736a2 |
+| docs/architecture/homecheat-architecture.md | 31264 | 214d85183657b842 |
+| docs/architecture/homecheat-commands.md | 11432 | 550852802331eab5 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5375 | 6d37772ecf22af6b |
@@ -88,16 +88,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 8611 | a26f79b4e1d6a757 |
-| skills/valheim-spells-craft/baseline.md | 1766 | 76a2e3016ffece44 |
-| skills/valheim-spells-craft/evals.md | 7871 | 53e1edd987e84d52 |
-| skills/valheim-spells-craft/instructions/done-gate.md | 5149 | e3be890d50fb9203 |
-| skills/valheim-spells-craft/instructions/implement.md | 6633 | 76e06483d0dc0b19 |
-| skills/valheim-spells-craft/instructions/plan.md | 5510 | 7dbbdb6725700ab3 |
-| skills/valheim-spells-craft/instructions/refresh.md | 2887 | 23f6ab3a4289cd8e |
-| skills/valheim-spells-craft/instructions/spec-card.md | 4357 | 6d19bf833cae20d6 |
-| skills/valheim-spells-craft/scripts/commands-check.js | 10545 | 35384541b8d98acf |
-| skills/valheim-spells-craft/skill-meta-data.md | 3638 | 0de64b78741fca9d |
+| skills/valheim-spells-craft/SKILL.md | 9135 | 35b0ff281c0d9e9d |
+| skills/valheim-spells-craft/baseline.md | 1934 | 8b3ec6a153ac0364 |
+| skills/valheim-spells-craft/evals.md | 9701 | b39b15dca6d15fe8 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 5547 | 9b922beaf70c57b7 |
+| skills/valheim-spells-craft/instructions/implement.md | 6786 | e496dd8b5808ed4f |
+| skills/valheim-spells-craft/instructions/plan.md | 5877 | cd9018cad2c7a09c |
+| skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
+| skills/valheim-spells-craft/instructions/spec-card.md | 4833 | 385a912d86d6c8d6 |
+| skills/valheim-spells-craft/scripts/commands-check.js | 13085 | 4d9cd547282fbd08 |
+| skills/valheim-spells-craft/skill-meta-data.md | 4825 | 83fb6324ef54205f |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |
@@ -105,18 +105,23 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Core/Builtins/ReloadCommand.cs | 566 | 641c57cc5cb6686d |
 | src/Core/Builtins/StatusCommand.cs | 688 | 0081e864b1be7148 |
 | src/Core/Builtins/TreeScalePatch.cs | 872 | 18e34526cda3a0e4 |
-| src/Core/Contracts/CommandBase.cs | 4213 | 8a493e6ed4c625d4 |
+| src/Core/Builtins/WorldExitPatch.cs | 837 | e13b6537c1f10830 |
+| src/Core/Contracts/CommandBase.cs | 5871 | c68a6cb3e6efa7d7 |
 | src/Core/Contracts/HarmEffect.cs | 1583 | e543d6841981b2ac |
 | src/Core/Contracts/HomeApi.cs | 1155 | ffe20aa9c373ab60 |
 | src/Core/Contracts/ICommandLifecycle.cs | 344 | 673c84a1564ced03 |
 | src/Core/Contracts/IHomeCommand.cs | 410 | e2e6235bb992ada4 |
 | src/Core/Contracts/PatchSet.cs | 2156 | c3b5c5566d4a4ec5 |
-| src/Core/HomeCheatPlugin.cs | 2645 | 298f18452ac7dccc |
+| src/Core/HomeCheatPlugin.cs | 3150 | c4776c134e14a5e2 |
 | src/Core/Kit/Aim.cs | 1199 | d2e53e5b9f4a1e1f |
 | src/Core/Kit/Anchor.cs | 1882 | 4e514a2101a5396c |
+| src/Core/Kit/Caps.cs | 1457 | 0ca97e64bd81a408 |
+| src/Core/Kit/Constructions.cs | 1906 | b92249c87a8803f5 |
+| src/Core/Kit/Coords.cs | 3473 | 93531580d27a7184 |
 | src/Core/Kit/Fmt.cs | 533 | 8b370009b5a84543 |
 | src/Core/Kit/Fx.cs | 1129 | 8ce65ea0d32948f9 |
 | src/Core/Kit/Ground.cs | 895 | c55e1ccadcdb86ec |
+| src/Core/Kit/Host.cs | 1569 | 8d7253ff92d9ec05 |
 | src/Core/Kit/Masks.cs | 934 | ddc2c20156a0690d |
 | src/Core/Kit/Players.cs | 752 | 63a711c305f2b39a |
 | src/Core/Kit/Prefabs.cs | 7516 | 0da99bbb369bbf6d |
@@ -126,11 +131,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Core/Pure/BuildStamp.cs | 1310 | d45c194b6b743e52 |
 | src/Core/Pure/CommandException.cs | 287 | da74ee62f57c92be |
 | src/Core/Pure/FormParser.cs | 1153 | b85e40852f81eb11 |
-| src/Core/Pure/GridMath.cs | 725 | 2abb2c0d83879ea5 |
+| src/Core/Pure/GridCell.cs | 290 | 4ff6119b5596a424 |
+| src/Core/Pure/GridMath.cs | 2530 | 2b94ac592ebdc92f |
+| src/Core/Pure/GridPoint.cs | 470 | 83a6498a7e41a359 |
+| src/Core/Pure/GridRoute.cs | 6007 | cee07039a625aad5 |
+| src/Core/Pure/GridRouteStatus.cs | 369 | 2460fc00650f152c |
+| src/Core/Pure/PointStore.cs | 5621 | 2b6f7729c6a24c9c |
 | src/Core/Services/CommandDispatcher.cs | 1509 | 1fd5159896095034 |
-| src/Core/Services/CommandRegistry.cs | 8701 | 1933ccf525f1bed0 |
+| src/Core/Services/CommandRegistry.cs | 9593 | f42a2996f62acee8 |
 | src/Core/Services/FileInboxChannel.cs | 2374 | 4331e4dfe659244c |
-| src/Core/Services/Scheduler.cs | 2087 | f76b8579268b3960 |
+| src/Core/Services/Scheduler.cs | 2421 | ea28720042f0f96e |
 | src/Features/Diag/CheatInfoCommand.cs | 1489 | bfc3336345417073 |
 | src/Features/Diag/CheatStateCommand.cs | 7508 | c1cba61782242d31 |
 | src/Features/Earthquake/EarthquakeEffect.cs | 37060 | 85084356aeaffce8 |
@@ -150,13 +160,17 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/Keybinds/refs.txt | 28 | a59754d54aaf5cd3 |
 | src/Features/KillMobs/KillMobsCommand.cs | 2164 | 4b15ad5bda3bed7f |
 | src/Features/Slime/SlimeEffect.cs | 21762 | 6adb953fdddd6e86 |
-| src/Features/Spells/Spell.cs | 342 | 582cd532c85e5d55 |
+| src/Features/Spells/Spell.cs | 704 | 76c3299b9be776af |
+| src/Features/Spells/SpellAsk.cs | 505 | 4622a4595ee37d55 |
+| src/Features/Spells/SpellAskOption.cs | 431 | 6f3ef42388c881be |
 | src/Features/Spells/SpellBar.cs | 27434 | 5b5a23c198f9f32d |
 | src/Features/Spells/SpellFile.cs | 15434 | 6f9ff9d0a15d6b03 |
 | src/Features/Spells/SpellGroup.cs | 485 | 6d869c72f98e1c90 |
 | src/Features/Spells/SpellGroupConfig.cs | 1731 | 9a9c3092d6b69c89 |
 | src/Features/Spells/SpellHotbarConfig.cs | 1636 | 37d0aeb60e0a31f0 |
 | src/Features/Spells/SpellLeafConfig.cs | 565 | a41c3ad1a83fd196 |
+| src/Features/Spells/SpellNode.cs | 855 | c08353042d7efd16 |
+| src/Features/Spells/SpellParse.cs | 12042 | d7883ac593faa37a |
 | src/Features/Spells/SpellPatches.cs | 3917 | e33ce0bbea6a9829 |
 | src/Features/Spells/SpellRootConfig.cs | 2694 | 3317cead50bab522 |
 | src/Features/Spells/SpellsCommand.cs | 5841 | 94e7214abb7add06 |
