@@ -130,6 +130,10 @@ package "dome" as dm {
   class DomeWards
   class DomeLayout
   class DomePatches
+  class DomeMenu
+  class DomePlayers
+  class DomeNumbers
+  class DomeShow
 }
 package "despawn" as ds {
   class DespawnCommand
@@ -181,6 +185,10 @@ CommandBase <|-- DomeCommand
 DomeCommand ..> DomeWards : ward ZDOs
 DomeCommand ..> DomeLayout : zone, lattice
 DomePatches ..> DomeCommand : OnSpawned starts sync
+DomeMenu ..> DomeCommand : Apply, MyGroups, ShowDomes
+DomeCommand ..> DomePlayers : join history
+DomeCommand ..> DomeNumbers : Group-N never reused
+DomeCommand ..> DomeShow : test-aid domes
 CommandBase <|-- DespawnCommand
 AttackCommand <|-- TrapCommand
 CommandBase <|-- ConstructCommand
