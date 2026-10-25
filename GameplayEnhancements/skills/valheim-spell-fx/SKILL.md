@@ -67,7 +67,7 @@ Description format in the fx_ and vfx_ files: first what you see, then `Game:` w
    - **Cleanup**: looping or long effects (side notes "loops", "lasts ~N s") need `duration`.
    - **Who sees it**: most prefabs have a `ZNetView` and show for every player when spawned on the host.
    - **Risks**: camera shake strength, effects that cover the player, prefabs "not placed by any prefab" (never used by the game, more likely to look broken).
-   - **Next command work**: if the spell needs more than firing prefabs one by one (movement, repeats, damage), say which existing command to extend or that a new `Cmd_<name>.cs` is needed.
+   - **Next command work**: if the spell needs more than firing prefabs one by one (movement, repeats, damage), say which existing command to extend or that a new command is needed (a class in `<pkg>/src/Features/<Feature>/`), and hand the chosen combination to `/valheim-spells-craft`, which builds the mechanics, tests and documents them.
 6. **Write the answer** in the format below. English in files, chat in Maksym's language.
 
 ## Output format
@@ -107,3 +107,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <pkg>/send-command.ps1 "op=v
 v1 (2026-10-24): built on the three description files made that day from a dump of our own game (`fx_` 281, `vfx_` 487, `sfx_` 791 prefabs, 27 checked in game), so spell ideas reuse real prefabs instead of names from memory.
 
 v2 (2026-10-24): the Valheim docs moved into the GameplayEnhancements package (submodule ValheimMods). The skill now runs from HomeOS or from its copy in the package (`<pkg>/skills/`, written by `scripts/valheim/packages/build.js`); the finder locates the FX docs itself and stops with exit 2 instead of silently finding nothing; previews go through `send-command.ps1` instead of a hard-coded game path.
+
+v3 (2026-10-25): after the HomeCheat restructure, command code lives in `src/Features/<Feature>/` (no more `Cmd_<name>.cs`); step 5 hands the mechanics to the new `valheim-spells-craft` skill.

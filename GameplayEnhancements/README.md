@@ -56,11 +56,15 @@ The spell bar starts in placeholder mode (casts only show a toast); `op=spells&p
 
 ## Build from source
 
-`src\` holds the core (`Core\`), one folder per feature DLL (`Features\<Feature>\`, extra game references in its `refs.txt`), the logic tests (`SelfTest\`) and `build.sh`. With Git Bash, from this folder: `bash src/build.sh <feature>` (then `op=reload` in game), `bash src/build.sh core` (game closed), `bash src/build.sh all`, `bash src/build.sh selftest`. Set `VALHEIM_DIR=/c/...` when the game is not in `D:\Steam`. It needs only the .NET Framework 4 compiler that ships with Windows (C# 5). Classes, lifecycle and how to add a command: `docs/homecheat-architecture.md` in the ValheimMods repository (not part of this package).
+`src\` holds the core (`Core\`), one folder per feature DLL (`Features\<Feature>\`, extra game references in its `refs.txt`), the logic tests (`SelfTest\`) and `build.sh`. With Git Bash, from this folder: `bash src/build.sh <feature>` (then `op=reload` in game), `bash src/build.sh core` (game closed), `bash src/build.sh all`, `bash src/build.sh selftest`. Set `VALHEIM_DIR=/c/...` when the game is not in `D:\Steam`. It needs only the .NET Framework 4 compiler that ships with Windows (C# 5). Classes, lifecycle, extension points and how to add a command: `docsarchitecturehomecheat-architecture.md`; every command with what it changes: `docsarchitecturehomecheat-commands.md` (copies of the repository's `docs/`, written by the HomeOS build).
 
 ## Claude skill: spell effects
 
 `skills\valheim-spell-fx\` is a Claude Code skill: describe a spell ("a frost nova that roots enemies") and it proposes five effect combinations from the real prefabs in `docs\FX\`, with timing, preview commands and what is still needed to make the spell work. It fires nothing without a yes. To use it outside HomeOS, open this folder in Claude Code and ask Claude to follow `skills\valheim-spell-fx\SKILL.md`, or install it as a skill: copy the folder to `%USERPROFILE%\.claude\skills\` and set `VALHEIM_FX_DIR` to this package's `docs\FX`. It is a copy; the original is kept in HomeOS.
+
+## Claude skill: new commands
+
+`skillsalheim-spells-craft` is a Claude Code skill that plans, builds, tests and documents new HomeCheat commands or extends existing ones, always from the docs in `docsarchitecture` and the code in `src`. Plan mode writes spec cards and a session plan; implement mode builds one card. Use it the same way as the effect skill above (open this folder in Claude Code and ask Claude to follow `skillsalheim-spells-craftSKILL.md`). It is a copy; the original is kept in HomeOS.
 
 ## Uninstall
 

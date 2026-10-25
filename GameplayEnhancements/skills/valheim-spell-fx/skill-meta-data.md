@@ -13,13 +13,13 @@ Created:
 2026-10-24
 
 Last Reviewed:
-2026-10-24
+2026-10-25
 
 Security Reviewed:
-2026-10-24
+2026-10-25
 
 Security Result:
 pass with notes: search words from the spell text go on a bash command line (SKILL.md Step 2); pass plain single words (letters only)
 
 Security Scope:
-SKILL.md, evals.md, scripts/find-fx.js; local file reads, HomeCheat inbox writes, shell use of the finder; no network, secrets or private data
+SKILL.md, evals.md, scripts/find-fx.js; local file reads, HomeCheat inbox writes, shell use of the finder; no network, secrets or private data; re-reviewed 2026-10-25 after v3 (text only: step 5 names src/Features/<Feature>/ and hands the mechanics to valheim-spells-craft; no new capability)

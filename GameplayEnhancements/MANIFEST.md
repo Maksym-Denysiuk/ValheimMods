@@ -1,12 +1,12 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 00:20 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 00:58 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025005643.dll, HomeCheat.Cmd.spellshot.v20261024235646.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025011404.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
-| README.md | 6473 | da148053cf5a1119 |
+| README.md | 7096 | 24bd2b9b6155f9ed |
 | check.ps1 | 2271 | ef377005b0ad1b74 |
 | common.ps1 | 6198 | e01932f7436ce07e |
 | docs/FX/README.md | 8538 | af2650e491ac8109 |
@@ -21,7 +21,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 9741 | e044d431103ac43d |
+| docs/HomeCheat-plugin/README.md | 9940 | c774728eafc45be2 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3505 | 2468f7a3fe9d73c3 |
 | docs/HomeCheat-plugin/plant-field-place.md | 7069 | ee49c3e03bbd8157 |
 | docs/HomeCheat-plugin/repair-refill.md | 3652 | 6c89fc5acd5c0024 |
@@ -38,6 +38,13 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
 | docs/Transform/hidebody.md | 3129 | 611470fc69a21ccf |
 | docs/Transform/transform.md | 7841 | 7f10dfffedaf1591 |
+| docs/architecture/diagrams/homecheat-core.svg | 85338 | 5edf38941c7f1b6f |
+| docs/architecture/diagrams/homecheat-features.svg | 128897 | f15ceca4153f9b90 |
+| docs/architecture/diagrams/homecheat-spells.svg | 52780 | e538ccc51c37272a |
+| docs/architecture/homecheat-architecture.md | 30746 | 169abab972bc9bec |
+| docs/architecture/homecheat-commands.md | 11387 | c50c42fab7e736a2 |
+| docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
+| docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5375 | 6d37772ecf22af6b |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
 | payload/BepInEx/config/homecheat/spells-ui-test.txt | 1785 | e6316d0e2f2da073 |
@@ -77,10 +84,20 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/doorstop_config.ini | 1460 | 4d5c6dfa0f771c6a |
 | payload/winhttp.dll | 26112 | 93406d0a02e7c164 |
 | send-command.ps1 | 1587 | 58fc65dbc9e0a1a5 |
-| skills/valheim-spell-fx/SKILL.md | 9503 | aab47af074542288 |
+| skills/valheim-spell-fx/SKILL.md | 9848 | 2f71e520f7c97d95 |
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
-| skills/valheim-spell-fx/skill-meta-data.md | 1330 | 57e6d05d32c2c277 |
+| skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
+| skills/valheim-spells-craft/SKILL.md | 6286 | 6892666848c00be2 |
+| skills/valheim-spells-craft/baseline.md | 1766 | 76a2e3016ffece44 |
+| skills/valheim-spells-craft/evals.md | 5645 | d7a5ea12803e5830 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 4789 | d60971fd6ae0bf3c |
+| skills/valheim-spells-craft/instructions/implement.md | 9417 | d4827ed7e8ac7449 |
+| skills/valheim-spells-craft/instructions/plan.md | 3095 | 85712f1428e61ace |
+| skills/valheim-spells-craft/instructions/refresh.md | 2887 | 23f6ab3a4289cd8e |
+| skills/valheim-spells-craft/instructions/spec-card.md | 4017 | 738a27a9db21246f |
+| skills/valheim-spells-craft/scripts/commands-check.js | 10545 | 35384541b8d98acf |
+| skills/valheim-spells-craft/skill-meta-data.md | 2490 | 680a24230adae083 |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |
@@ -94,7 +111,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Core/Contracts/ICommandLifecycle.cs | 344 | 673c84a1564ced03 |
 | src/Core/Contracts/IHomeCommand.cs | 410 | e2e6235bb992ada4 |
 | src/Core/Contracts/PatchSet.cs | 2156 | c3b5c5566d4a4ec5 |
-| src/Core/HomeCheatPlugin.cs | 2640 | 92fa643cd067da58 |
+| src/Core/HomeCheatPlugin.cs | 2645 | 298f18452ac7dccc |
 | src/Core/Kit/Aim.cs | 1199 | d2e53e5b9f4a1e1f |
 | src/Core/Kit/Anchor.cs | 1882 | 4e514a2101a5396c |
 | src/Core/Kit/Fmt.cs | 533 | 8b370009b5a84543 |
