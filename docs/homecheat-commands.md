@@ -55,7 +55,7 @@ One row per command (36: `override string Name` in `GameplayEnhancements/src/`).
 | visualeffect | visualeffect | `VisualEffectCommand` | visual/sound | none | crosshair, self, point, ring pattern | fx prefabs, catalog | temporary effects; `share=1` networked | count | `list=1`, `name=status`, `name=_probe`, `name=_envs` | 4.6 |
 | fxdump | fxdump | `FxDumpCommand` | info | none | none | prefab and component inventory | writes two CSV files | - | read-only | - |
 | keybinds | keybinds | `KeybindsCommand` | UI/input | self | none | Harmony patches (`ConnectPanel` key, F9 hints) | key behaviour while loaded | - | `status=1` | - |
-| ship | ship | `ShipCommand` | form/movement | the ship you are on (only while this PC owns it, host only) | none | `Ship.GetLocalShip`, instance fields `m_sailForceFactor` and `m_backwardForce` (x speed from the originals) | none saved; the ship sails faster for everyone on it; `OnUnload` restores | speed 10 (refused above) | `status=1` | 4.10, 4.11, 4.12 |
+| ship | ship | `ShipCommand` | form/movement | the ship you are on, steering or sitting (host only) | none | `Ship.GetLocalShip`, instance fields `m_sailForceFactor` and `m_backwardForce` (x speed from the originals), `ZNetView.ClaimOwnership` when another PC owns the ship | none saved; the ship sails faster for everyone on it; ship ownership (physics) moves to this PC; `OnUnload` restores | speed 10 (refused above) | `status=1` | 4.10-4.13 |
 
 ## Exists, extend or new
 
@@ -92,7 +92,7 @@ Before deciding, read this catalog, the nearest command's page and its source in
 | "flatten here but don't touch my house" | `groundlevel` | same effect, target and placement; narrower area | extend: `avoid=1` (refuse) and `shrink=1` (smaller circle), opt-in; keep-away = the area the stamp changes (smooth radius), measured to piece pivots |
 | "a road from point A to point B around rocks and walls" | `path` | terrain / ground / two stored points instead of ahead / hoe pieces | extend: `from=coords` and `avoid=1` (`GridRoute`); the new modes cut at the stamp cap and say so, the old straight mode still refuses |
 | "a harpoon that pulls enemies to me" | `spellshot` | damage + pull status / enemies / grid along crosshair / `Projectile` | extend: `type=harpoon`; the pull is the game's own `SE_Harpooned`, set as the hit's status effect, no own pull physics |
-| "make my ship faster" | none (no command touched ships) | form/movement / the ship you steer / none / instance fields | new (`ship`, own DLL); a temporary multiplier from kept originals, restored on unload, host only and owner only |
+| "make my ship faster" | none (no command touched ships) | form/movement / the ship you are on / none / instance fields | new (`ship`, own DLL); a temporary multiplier from kept originals, restored on unload, host only; this PC takes the ship's ownership so it works steering or sitting |
 | "kill the mobs after the test" | `killmobs` | test helper | exists; never a kill mode of the command under test |
 | "show green lights on me" | `visualeffect` | visual only | not a command: catalog entry via `/valheim-spell-fx` |
 | "turn into a wolf" | `transform` | form / self / on self / model swap | extend: new form in `TransformCommand.Candidates` and `TransformState` |

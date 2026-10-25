@@ -1,7 +1,9 @@
 // op=ship: sail force multiplier for the ship the local player is on (Ship.GetLocalShip).
 // Multiplies the instance's m_sailForceFactor (sail push, used in Ship.GetSailForce) and m_backwardForce (paddling back,
 // used in Ship.CustomFixedUpdate) from the values it had before the first change; speed=1 puts them back.
-// Ship physics run on the ship's owner (the one steering), so a change only works while this PC owns the ship.
+// Ship physics run on the ship's owner PC only. Taking the helm does not move ownership (the steerer's input reaches the
+// owner as RPCs), so when another PC owns the ship this PC claims it; Ship.UpdateOwner keeps it here while the local player
+// stays aboard. Works whether you steer or sit.
 // Nothing is saved: the fields live on this PC's ship instance; OnUnload restores every changed ship.
 using System.Collections.Generic;
 using System.Text;
@@ -36,7 +38,7 @@ namespace HomeCheat.Features.ShipCommands
             get
             {
                 return "ship speed=<1..10, cap 10> - multiplies the sail force and the backward paddle force of the ship you are on; speed=1 restores;"
-                    + " only while this PC owns the ship (you steer it) and hosts the world; nothing is saved, op=reload restores every changed ship";
+                    + " you steer or sit; this PC takes ownership of the ship (its physics) when another player has it; host only; nothing is saved, op=reload restores every changed ship";
             }
         }
 
@@ -61,7 +63,15 @@ namespace HomeCheat.Features.ShipCommands
                 changed.Remove(ship);
                 return name + ": restored to normal (sail force factor " + Fmt.F(orig.Sail, 3) + ")";
             }
-            if (!ship.IsOwner()) throw new CommandException(name + ": another player owns this ship; take the helm first (physics run on the owner)");
+            string took = "";
+            if (!ship.IsOwner())
+            {
+                ZNetView nview = ship.GetComponent<ZNetView>();
+                if (nview == null || !nview.IsValid()) throw new CommandException(name + ": ship has no valid network view");
+                nview.ClaimOwnership();
+                if (!ship.IsOwner()) throw new CommandException(name + ": could not take ownership of the ship (physics run on its owner)");
+                took = "; took ownership from another player";
+            }
 
             if (!known)
             {
@@ -74,7 +84,7 @@ namespace HomeCheat.Features.ShipCommands
             ship.m_sailForceFactor = orig.Sail * speed;
             ship.m_backwardForce = orig.Backward * speed;
             return name + ": speed x" + Fmt.F(speed, 1) + " (sail force factor " + Fmt.F(orig.Sail, 3) + " -> " + Fmt.F(ship.m_sailForceFactor, 3)
-                + ", backward force " + Fmt.F(orig.Backward, 1) + " -> " + Fmt.F(ship.m_backwardForce, 1) + ")";
+                + ", backward force " + Fmt.F(orig.Backward, 1) + " -> " + Fmt.F(ship.m_backwardForce, 1) + took + ")";
         }
 
         string Status()
