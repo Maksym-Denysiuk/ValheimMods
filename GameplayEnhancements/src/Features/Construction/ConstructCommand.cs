@@ -53,7 +53,10 @@ namespace HomeCheat.Features.Construction
         const float FloorBin = 0.25f;       // metres: pivot levels for the ground floor
         const float FloorShare = 0.05f;     // the ground floor holds at least this share of the pieces
         const int FloorMin = 10;            // and at least this many
-        const float SettleCheck = 30f;      // seconds after the last step: the support report once the game has computed it
+        const float FitMin = 0.3f, FitMax = 3f;   // ground=fit: columns hanging this far above the base get terrain under them
+        const float FitStamp = 0.8f;        // level radius of a fit stamp (one 1 m column)
+        const int MaxFitStamps = 2500;
+        const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
 
         string lastId = "", lastName = "";
         int lastPlaced;
@@ -77,8 +80,10 @@ namespace HomeCheat.Features.Construction
         {
             get
             {
-                return "construct step=list | step=preview&name=<construction> [at=aim|self] [yaw=<world degrees, default your facing snapped to 22.5>]"
-                    + " [ground=auto|flatten|pillars|none (auto: on terrain = flatten the footprint + " + (int)FlattenMargin + " m to the base and pole the gaps; on a piece or rock = none)]"
+                return "construct step=list | step=preview&name=<construction> [at=aim|self|x,z|x,y,z] [yaw=<world degrees, default your facing snapped to 22.5>]"
+                    + " [ground=auto|fit|flatten|pillars|none (auto: on terrain = fit; on a piece or rock = none. fit = flatten the footprint + " + (int)FlattenMargin
+                    + " m to the base, then raise the terrain under every 1 m column whose lowest piece hangs " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0)
+                    + " m up; flatten = only the levelling; both pole the gaps left; pillars = poles only)]"
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
@@ -223,23 +228,37 @@ namespace HomeCheat.Features.Construction
         static Plan MakePlan(Args a, Player p, BlueprintEntry e)
         {
             string at = a.Str("at", "aim").ToLowerInvariant();
-            if (at != "aim" && at != "self") throw new CommandException("at must be aim or self");
+            // at=x,z or at=x,y,z: a given point (to build again exactly where a build stood), treated as terrain
+            Vector3 given = Vector3.zero;
+            bool point = at.IndexOf(',') >= 0;
+            if (point)
+            {
+                string[] f = at.Split(',');
+                float gx = 0f, gy = float.NaN, gz = 0f;
+                System.Globalization.CultureInfo inv = System.Globalization.CultureInfo.InvariantCulture;
+                System.Globalization.NumberStyles ns = System.Globalization.NumberStyles.Float;
+                bool ok = f.Length == 2 ? float.TryParse(f[0], ns, inv, out gx) & float.TryParse(f[1], ns, inv, out gz)
+                    : f.Length == 3 && float.TryParse(f[0], ns, inv, out gx) & float.TryParse(f[1], ns, inv, out gy) & float.TryParse(f[2], ns, inv, out gz);
+                if (!ok) throw new CommandException("at must be aim, self, x,z or x,y,z (world metres)");
+                given = new Vector3(gx, float.IsNaN(gy) ? Ground.Height(new Vector3(gx, 0f, gz)) : gy, gz);
+            }
+            else if (at != "aim" && at != "self") throw new CommandException("at must be aim, self, x,z or x,y,z (world metres)");
             string ground = a.Str("ground", "auto").ToLowerInvariant();
-            if (ground != "auto" && ground != "flatten" && ground != "pillars" && ground != "none") throw new CommandException("ground must be auto, flatten, pillars or none");
+            if (ground != "auto" && ground != "fit" && ground != "flatten" && ground != "pillars" && ground != "none") throw new CommandException("ground must be auto, fit, flatten, pillars or none");
             string baseRule = a.Str("base", "floor").ToLowerInvariant();
             if (baseRule != "floor" && baseRule != "lowest") throw new CommandException("base must be floor or lowest");
             RaycastHit hit = new RaycastHit();
             bool aimed = at == "aim" && AimHit(out hit);
-            Vector3 anchor = at == "self" ? p.transform.position : (aimed ? hit.point : p.transform.position + p.transform.forward * 8f);
+            Vector3 anchor = point ? given : at == "self" ? p.transform.position : (aimed ? hit.point : p.transform.position + p.transform.forward * 8f);
             bool onTerrain = !aimed || IsTerrain(hit.collider);
             Plan pl = new Plan();
             pl.World = Host.RequireWorld();
             pl.Name = e.Name;
             pl.Anchor = anchor;
-            pl.BaseY = aimed ? anchor.y : Ground.Height(anchor);
-            pl.BaseText = aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
+            pl.BaseY = aimed || point ? anchor.y : Ground.Height(anchor);
+            pl.BaseText = point ? "given point " + Fmt.Vec(anchor) : aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
                 : (at == "self" ? "terrain at your feet" : "terrain 8 m ahead (no crosshair hit)");
-            pl.Ground = ground == "auto" ? (onTerrain ? "flatten" : "none") : ground;
+            pl.Ground = ground == "auto" ? (onTerrain ? "fit" : "none") : ground;
             pl.BaseRule = baseRule;
             float yaw;
             if (a.Has("yaw")) yaw = a.Float("yaw", 0f);
@@ -339,8 +358,8 @@ namespace HomeCheat.Features.Construction
 
             // flatten: the box of every piece pivot + margin levelled to the base, before anything is placed
             float delay = 0f;
-            int stamps = 0;
-            if (ground == "flatten")
+            int stamps = 0, fitStamps = 0;
+            if (ground == "flatten" || ground == "fit")
             {
                 float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
                 foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
@@ -363,13 +382,30 @@ namespace HomeCheat.Features.Construction
                     if (b == 0) stamp(); else Later(b * BatchGap, stamp);
                 }
                 delay = (nb - 1) * BatchGap + Settle;
+
+                // fit (Maksym 2026-10-25, "build based on these rules"): the lowest piece of every 1 m column marks where the
+                // original ground was; a column whose lowest piece hangs FitMin..FitMax above the base gets the terrain raised
+                // up to it (garden stones, bushes, fences, a deck on a slope). Higher columns are roof overhangs: left alone.
+                if (ground == "fit")
+                {
+                    List<Vector3> fit = FitStamps(jobs, baseY, off);
+                    fitStamps = fit.Count;
+                    int nf = (fit.Count + StampBatch - 1) / StampBatch;
+                    float start = delay;
+                    for (int b = 0; b < nf; b++)
+                    {
+                        int from = b * StampBatch, to = Mathf.Min(fit.Count, from + StampBatch);
+                        Later(start + b * BatchGap, delegate { for (int i = from; i < to; i++) TerrainStamp.At(tool, fit[i], FitStamp, 0f); });
+                    }
+                    if (nf > 0) delay = start + (nf - 1) * BatchGap + Settle;
+                }
             }
 
             string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             long me = p.GetPlayerID();
             Tally t = new Tally();
             string buildName = e.Name;
-            bool poles = ground == "flatten" || ground == "pillars";
+            bool poles = ground == "flatten" || ground == "fit" || ground == "pillars";
             List<string> notes = new List<string>();
             Action build = delegate
             {
@@ -383,7 +419,8 @@ namespace HomeCheat.Features.Construction
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
                 + " at " + Fmt.Vec(origin) + " on the " + baseText + " (base " + Fmt.F(baseY, 2) + ", terrain " + Fmt.F(Ground.Height(anchor), 2) + ")"
                 + ", " + floorText
-                + ", ground " + ground + (stamps > 0 ? " (" + stamps + " stamps, pieces after " + Fmt.F(delay, 1) + " s)" : "")
+                + ", ground " + ground + (stamps > 0 ? " (" + stamps + " level stamps" + (ground == "fit" ? ", " + fitStamps + " columns raised to their lowest piece" : "")
+                    + ", pieces after " + Fmt.F(delay, 1) + " s)" : "")
                 + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
                 + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
@@ -518,7 +555,8 @@ namespace HomeCheat.Features.Construction
             Layout(pl, e, missing, out skipped, out origin, out floorText);
             return pl.Name + ": " + e.PieceCount + " pieces" + (skipped > 0 ? " (" + skipped + " unknown, skipped)" : "") + ", " + Fmt.F(x1 - x0, 1) + " x " + Fmt.F(z1 - z0, 1)
                 + " x " + Fmt.F(y1 - y0, 1) + " m, yaw " + Fmt.F(pl.Yaw, 1) + ", base " + Fmt.F(pl.BaseY, 2) + " on the " + pl.BaseText + ", " + floorText
-                + ", ground " + pl.Ground + (pl.Ground == "flatten" ? " (the footprint + " + (int)FlattenMargin + " m levelled to the base, poles under gaps left)" : pl.Ground == "pillars" ? " (poles under gaps, terrain unchanged)" : " (unchanged)");
+                + ", ground " + pl.Ground + (pl.Ground == "fit" ? " (the footprint + " + (int)FlattenMargin + " m levelled to the base, then the terrain raised under every column whose lowest piece hangs "
+                    + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0) + " m up, poles under gaps left)" : pl.Ground == "flatten" ?" (the footprint + " + (int)FlattenMargin + " m levelled to the base, poles under gaps left)" : pl.Ground == "pillars" ? " (poles under gaps, terrain unchanged)" : " (unchanged)");
         }
 
         string Preview(Args a)
@@ -647,6 +685,32 @@ namespace HomeCheat.Features.Construction
                 + "; standing and support in " + Fmt.F(CheckAfter, 0) + " s (op=construct&step=support)";
         }
 
+        // one raise stamp per 1 m column whose lowest piece (collider bottom; pivot for bushes, stones and other non-pieces)
+        // hangs FitMin..FitMax above the base, levelled to that bottom; lower columns first, so a higher stamp's smoothing wins
+        static List<Vector3> FitStamps(List<Job> jobs, float baseY, float levelOffset)
+        {
+            Dictionary<long, float> low = new Dictionary<long, float>();
+            Dictionary<long, Vector2> at = new Dictionary<long, Vector2>();
+            foreach (Job j in jobs)
+            {
+                if (j.Piece == null) continue;
+                long key = ((long)Mathf.FloorToInt(j.Pos.x) << 32) ^ (uint)Mathf.FloorToInt(j.Pos.z);
+                float b = Bottom(j), cur;
+                if (!low.TryGetValue(key, out cur) || b < cur) { low[key] = b; at[key] = new Vector2(Mathf.Floor(j.Pos.x) + 0.5f, Mathf.Floor(j.Pos.z) + 0.5f); }
+            }
+            List<Vector3> stamps = new List<Vector3>();
+            foreach (KeyValuePair<long, float> kv in low)
+            {
+                float d = kv.Value - baseY;
+                if (d < FitMin || d > FitMax) continue;
+                Vector2 c = at[kv.Key];
+                stamps.Add(new Vector3(c.x, kv.Value - levelOffset, c.y));
+                if (stamps.Count >= MaxFitStamps) break;
+            }
+            stamps.Sort(delegate (Vector3 l, Vector3 r) { return l.y.CompareTo(r.y); });
+            return stamps;
+        }
+
         static float Top(List<Job> jobs)
         {
             float top = float.MinValue;
@@ -669,6 +733,9 @@ namespace HomeCheat.Features.Construction
                 if (j.Piece == null) continue;
                 float bottom = Bottom(j);
                 if (bottom > baseY + BaseBand || bottom < baseY - BaseBand) continue;   // above the base, or a sunk foundation
+                // terrain at or above the bottom: the piece already sits on or in the ground (a raised fit column); a ray from
+                // inside the terrain would find no surface
+                if (Ground.Height(j.Pos) >= bottom - GapTolerance) continue;
                 RaycastHit h;
                 if (!Physics.Raycast(new Vector3(j.Pos.x, bottom + 0.3f, j.Pos.z), Vector3.down, out h, 64f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore)) { noSurface++; continue; }
                 if (bottom - h.point.y <= GapTolerance) continue;
