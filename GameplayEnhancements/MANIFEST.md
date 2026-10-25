@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 11:26 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 11:31 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025112607.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025111906.dll.
 
@@ -44,7 +44,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/architecture/diagrams/homecheat-core.svg | 120777 | 9186f4649f606f1d |
 | docs/architecture/diagrams/homecheat-features.svg | 152374 | 938d2d76cf759582 |
 | docs/architecture/diagrams/homecheat-spells.svg | 79425 | 96480cdff73d86da |
-| docs/architecture/homecheat-architecture.md | 45514 | 0d0e705388419c1d |
+| docs/architecture/homecheat-architecture.md | 48429 | 34ba4ac0612e5c9e |
 | docs/architecture/homecheat-commands.md | 17407 | 5ab90a9f109ad3ad |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
@@ -93,16 +93,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 10242 | f44eba699839c5f1 |
-| skills/valheim-spells-craft/baseline.md | 1934 | 8a9e3031b8b9c9b3 |
-| skills/valheim-spells-craft/evals.md | 16811 | e8f77f3e20f9c05a |
-| skills/valheim-spells-craft/instructions/done-gate.md | 6242 | 903836430eeccab8 |
-| skills/valheim-spells-craft/instructions/implement.md | 7701 | 5e67bdb8bcce4078 |
+| skills/valheim-spells-craft/SKILL.md | 10847 | e193490054c5e0d1 |
+| skills/valheim-spells-craft/baseline.md | 1934 | ac397a1a4f9851a2 |
+| skills/valheim-spells-craft/evals.md | 19598 | 0adcdd2ecefec456 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 6596 | 9f30fb19d81dd637 |
+| skills/valheim-spells-craft/instructions/implement.md | 7894 | e5c1dfd25fd6eb41 |
 | skills/valheim-spells-craft/instructions/plan.md | 5877 | cd9018cad2c7a09c |
 | skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
 | skills/valheim-spells-craft/instructions/spec-card.md | 5082 | 489b29e425115b49 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 13085 | 4d9cd547282fbd08 |
-| skills/valheim-spells-craft/skill-meta-data.md | 6786 | b41445993286ae59 |
+| skills/valheim-spells-craft/skill-meta-data.md | 7908 | 5ac7718f437ffb02 |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |

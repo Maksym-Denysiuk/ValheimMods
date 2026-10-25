@@ -54,7 +54,7 @@ Only when Maksym says the game is running with a world loaded (default `ClaudeTe
 ## 5b. No-game run
 
 When the brief says `no game`, instead of step 5:
-1. `bash <pkg>/src/build.sh selftest` (exit 0) and the feature build (exit 0). Core changes (wave 0 core brief only): `bash src/build.sh core` (the game is closed in a no-game run).
+1. `bash <pkg>/src/build.sh selftest` (exit 0) and the feature build (exit 0). Selftest covers only `src/Core/Pure/`: Unity-free maths inside your feature is tested in a scratch console build (session scratchpad, never the repo), named in the handoff as outside selftest. Core changes (wave 0 core brief only): `bash src/build.sh core` (the game is closed in a no-game run).
 2. The card's Test plan becomes Maksym's test list: probes first, then one command per line with the expected first answer line and what to look at; `op=cheatstate` before and after; enemies by `spawn`, clean-up by `killmobs`.
 3. Status stays B in the index, with the line "built YYYY-MM-DD, not run in game: test list in <card>".
 4. Then `done-gate.md`, trigger *built*.
