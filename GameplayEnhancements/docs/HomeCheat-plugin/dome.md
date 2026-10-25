@@ -13,7 +13,7 @@ This is build order steps 2 and 3 (single ward, then groups with synced on/off a
 
 ## Ward menu (2026-10-25, attended, session "dome step 4")
 
-Maksym's redesign after the first in-game test: the Shield entries (start, end, place, list, remove) became **one** spell-bar entry, **Protect and Lights > Shield** (3.5) and **Build > Shield** (6.6), both `op=dome&step=menu`. It opens a one-screen window in the look of the mines form:
+Maksym's redesign after the first in-game test: the Shield entries (start, end, place, list, remove) became **one** spell-bar entry, `op=dome&step=menu`: since 2026-10-25 **Build > Ward** (6.6) only (it was Protect and Lights > Shield 3.5 and Build > Shield 6.6; the Protect and Lights section is gone). It opens a one-screen window in the look of the mines form:
 
 | Row | Answers | Default |
 |---|---|---|
@@ -99,7 +99,7 @@ Answers (first line):
 - `would remove dome d<id> with N ward(s): add confirm=1`, `removed dome d<id>: N ward(s)`
 - errors: `coord 'start' is not set ...`, `the two points are 0.4 m apart ...`, `radius=180.00 is over the cap 150.00`, `wards=61 is over the cap 50`, `cost=1: ...`, `host only: ...`, `no dome at the crosshair ...`
 
-Spell bar (`spells.txt`, 2026-10-25): Protect and Lights > Shield 3.5 and Build > Shield 6.6, both `op=dome&step=menu`. Start and end points: Build > Coordinates (`coord`). The former entries 3.5.1-3.5.5 / 6.6.1-6.6.5 (start, end, place, list, remove) are gone; their commands still work typed.
+Spell bar (`spells.txt`, 2026-10-25): Build > Ward 6.6, `op=dome&step=menu` (pinned on F3). Renamed from Shield, and Protect and Lights > Shield 3.5 removed with its section, at Maksym's request. Start and end points: Build > Coordinates (`coord`). The former entries 3.5.1-3.5.5 / 6.6.1-6.6.5 (start, end, place, list, remove) are gone; their commands still work typed.
 
 ## How it works
 
@@ -167,6 +167,7 @@ World `ClaudeTest`, hosted on this PC; after the first test pass (section In-gam
 | `op=dome&step=apply&group=new` (same zone, buried) | `dome Group-4 (d86dc28be): placed 1 ward(s) ...`, `ward at -418.8,40.8,-16.7 (under the ground)` | `show`: health untouched (no ZDO health written) after 40 s, so no support or wet wear; Maksym with Claude2: the buried ward protects | pass |
 | `op=dome&step=apply&group=6&status=deactivated`, then `active` (a buried ward) | `Group-6: 1 ward(s) deactivated, allowed: you, Claude2`; list `on 0/1`; `show` 6 -> 5 spheres; back `on 1/1`, 6 spheres | on/off of a buried ward from the menu | pass |
 | `op=spells&reload=1` after the spell-file change | `56 spells, 21 titles, 5 pins; 0 bad lines` | Protect and Lights > Shield, Build > Shield | pass |
+| `op=spells&reload=1` after Shield became Ward and Protect and Lights was removed (F3 pin moved 3.5 -> 6.6) | `57 spells, 20 titles, 5 pins; 0 bad lines`; `status=1`: `6 sections`; `list=1`: `6.6 Ward -> op=dome&step=menu [F3]` | root = Hotbar + 6 sections, Build = 7 entries: both fit one ring (`MaxElementsRange=[8,12]`), no spiral | pass |
 
 Offline: the 3 / 4 ward rings cover with every ward moved by the slack in a random direction (20 tries per radius, ward radius 20 and 32 m); the lattice at `Fill` 0.95 covers every zone radius 5-150 m for ward radius 10, 20 and 32 m without a gap, and a second overlapping zone with its covered spots left out still covers itself (a scratch Node port of `DomeLayout`; exes are blocked on this PC).
 

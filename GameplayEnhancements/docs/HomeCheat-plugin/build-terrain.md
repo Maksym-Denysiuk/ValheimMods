@@ -23,7 +23,7 @@ The Build section of the radial (`G` > Build) needs points to work between (Coor
 - The points are kept by the core (`Kit.Coords`) per world name in `BepInEx/config/homecheat/coords.state`, so they survive `op=reload` and game restarts. Only this PC knows them. At most 64 points per world, names up to 32 letters, digits, `_` or `-`.
 - A local marker shows each point for 10 s on `set` and `show` (`marker=` any fx prefab, `marker=none` for none). Default `vfx_Potion_health_medium` (ASSUMPTION, to be chosen with `/valheim-spell-fx`). An fx prefab with its own network view is seen by everyone; most potion vfx are not.
 - Answer: `coord start = x,y,z (your feet)` and, when the other point exists, `; start-end 20.3 m, rectangle 14.0 x 14.4 m (dx x dz)`.
-- Spell bar: 6.2.1-6.2.4 (Start, End, Show, Clear), mirrored at 3.5.1-3.5.2 (Protect > Shield).
+- Spell bar: 6.2.1-6.2.4 (Start, End, Show, Clear).
 
 ## groundlevel: flatten, keep away from buildings
 
