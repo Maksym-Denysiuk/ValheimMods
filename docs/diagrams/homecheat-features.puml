@@ -124,6 +124,9 @@ package "dome" as dm {
   class DomeLayout
   class DomePatches
 }
+package "despawn" as ds {
+  class DespawnCommand
+}
 package "traps" as tr {
   class TrapCommand
   class TrapKind
@@ -166,6 +169,7 @@ CommandBase <|-- DomeCommand
 DomeCommand ..> DomeWards : ward ZDOs
 DomeCommand ..> DomeLayout : zone, lattice
 DomePatches ..> DomeCommand : OnSpawned starts sync
+CommandBase <|-- DespawnCommand
 CommandBase <|-- TrapCommand
 TrapCommand ..> TrapKind : kind table
 TrapCommand ..> TrapWeapon : blast damage
