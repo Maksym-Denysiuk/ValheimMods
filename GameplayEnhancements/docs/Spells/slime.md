@@ -104,5 +104,5 @@ Delete the `HomeCheat.Cmd.slime.*.dll` files from `BepInEx/homecheat-commands/` 
 Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. Result: **V**.
 - `hurtself=0` made the caster the cloud owner, and Valheim then never hits other players, even with PvP on (Claude2 at 3.1 m stayed 25/25). Replaced in the spell lines by the shared rule `pvp=1` (`SlimeEffect : HarmEffect : AttackCommand`, `PvpHits.ArmAoe`): your PvP on = Claude2 is hit, off = spared, never you. V ("all works", before the rule moved into the core).
 - Slime moat: `gap=3&cloudr=3.5` (Maksym: a damage area about 3x the ring, annulus 3-17 m against 2-10 m).
-- Spells: 2.4.1 Slime ring, 2.4.2 and 3.4 Slime moat, Shift = 3 rings.
+- Spells: 2.4.1 Slime ring, 2.4.2 Slime moat (the duplicate 3.4 in Protect was removed), Shift = 3 rings.
 - The default `hurtself=1` is unchanged (Known defects); the spell lines always pass `pvp=1`.
