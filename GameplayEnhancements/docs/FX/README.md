@@ -15,6 +15,8 @@ op=visualeffect&name=_probe&prefab=fx_Lightning&at=aim&duration=8
 
 - `at` = `aim` (crosshair, default), `self`, or `x,y,z`. The effect is put on the ground (never below it): `lift=0.2` raises it, `ground=0` keeps the raw height.
 - `duration` removes it after N seconds. `scale` resizes it (networked prefabs).
+- `count=1` with `spacing=2` puts that many in a row across your view. `share=1` (default) sends a prefab without a `ZNetView` to every player; `share=0` keeps it on this PC only (then `scale` and `duration` apply); a networked prefab is seen by everyone anyway.
+- Read-only: `list=1` (the command's catalog), `name=status`, `name=_envs` (forced environments), `name=_count[&filter=<text>]` (how many prefabs start with `vfx_`, `fx_`, `sfx_`; with `filter=` every matching name).
 - Strikes spreading from the centre outwards (rings): add `pattern=outward&rings=3&step=6&itemsize=10&delay=3` (needs the command's catalog name, e.g. `name=thunderstomp`).
 - Verified catalog names in the command: `lightning`, `lightningred`, `explosion`, `fireball`, `nova`, `thunderstomp` (see the table below for their prefabs).
 - Do not run several test scripts at once: a stopped wrapper can leave a script running that keeps firing effects.

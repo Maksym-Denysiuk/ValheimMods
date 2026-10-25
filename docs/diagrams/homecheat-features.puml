@@ -1,6 +1,6 @@
 @startuml homecheat-features
 ' HomeCheat feature DLLs: one package = one Features/<Feature> folder = one HomeCheat.Cmd.<feature>.v<stamp>.dll.
-' 35 feature commands + 6 built-ins = 41. Checked against src/Features on 2026-10-25 (after the in-game test pass).
+' 35 feature commands + 6 built-ins = 41. Checked against src/Features on 2026-10-25 (docs audit after the zone takeover, raven fall and Build > Ward changes).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -65,6 +65,11 @@ package "world  (HomeCheat.Features.WorldCommands)" as world {
     +PaintTemplate(prefab, r, smooth) : string
     +Paint(template, pos)
     +RemoveLegacy(ax, az, bx, bz, avoid, keep, out kept) : int
+    +Disc(c, r) : List<Vector2>
+    +Box(ax, az, bx, bz) : List<Vector2>
+    +Bounds(verts, pts, out x0, out z0, out x1, out z1) : bool
+    +Claim(x0, z0, x1, z1, reach) : int
+    +OwnersLine(x0, z0, x1, z1, reach) : string
     +Flatness(verts, target) : string
     +PaintedLike(pos, tool) : bool
   }
@@ -102,6 +107,7 @@ package "transform  (HomeCheat.Features.TransformCommands)" as tr {
   class TransformState <<MonoBehaviour>>
   class TransformRemote <<MonoBehaviour>>
   class TransformLanding <<MonoBehaviour>>
+  class TransformFallPatch <<HarmonyPatch SEMan.ModifyFallDamage>>
 }
 package "hidebody" as hb {
   class HideBodyCommand {
@@ -118,6 +124,8 @@ package "keybinds" as kb {
   }
   class ConnectPanelKeyPatch <<HarmonyPatch ConnectPanel.Update>>
   class KeyHintsF9Patch <<HarmonyPatch KeyHints.Update>>
+  class GameCameraF11Patch <<HarmonyPatch GameCamera.LateUpdate>>
+  class FejdStartupF11Patch <<HarmonyPatch FejdStartup.LateUpdate>>
 }
 package "killmobs" as km {
   class KillMobsCommand
@@ -140,12 +148,17 @@ package "dome" as dm {
   class DomePlayers
   class DomeNumbers
   class DomeShow
+  class DomePoint
+  class WardState
 }
 package "despawn" as ds {
   class DespawnCommand
 }
 package "construction" as cn {
   class ConstructCommand
+  class Blueprint
+  class BlueprintEntry
+  class BlueprintPiece
   class BlueprintLibrary
   class BlueprintParse
   class BlueprintRepeat
@@ -155,11 +168,12 @@ package "construction" as cn {
   class MaterialSwap
   class ConstructPanel
   class ConstructPatches
+  class PreviewDoors
 }
-package "traps" as tr {
+package "traps" as tp {
   class TrapCommand
   class TrapKind
-  class TrapFxSets
+  class TrapFxSet
   class TrapWeapon
   class TrapPatches
 }
@@ -214,7 +228,12 @@ ConstructCommand ..> FitField : ground under stone
 ConstructCommand ..> PieceGhost : real piece size
 ConstructCommand ..> MaterialSwap : families
 ConstructPanel ..> ConstructCommand : op=construct forms
-TrapCommand ..> TrapFxSets : blast looks
+ConstructCommand ..> PreviewDoors : the plan's doors in the preview
+BlueprintLibrary ..> Blueprint : parsed files
+Blueprint *-- BlueprintPiece
+DomeWards ..> WardState : Read, Write
+DomeLayout ..> DomePoint : lattice spots
+TrapCommand ..> TrapFxSet : blast looks
 TrapCommand ..> TrapKind : kind table
 TrapCommand ..> TrapWeapon : blast damage
 TrapPatches ..> TrapCommand : OnSpawned starts watcher
@@ -235,11 +254,15 @@ FieldCommand ..> GrowRules
 PlantCommand ..> GrowRules
 TransformCommand ..> TransformRemote : AddComponent (other players)
 TransformState ..> TransformLanding : AddComponent
+TransformCommand ..> TransformFallPatch : Patches.Apply (OnLoad)
+TransformFallPatch ..> TransformCommand : Current (raven: fall damage 0)
 HideBodyCommand ..> HideBodySendZdosPatch : Patches.Apply
 HideBodyCommand ..> HideBodyPlayerListPatch : Patches.Apply
 HideBodyCommand ..> HideBodySyncDataPatch : Patches.Apply
 HideBodySendZdosPatch ..> HideBodyCommand : Current
 KeybindsCommand ..> ConnectPanelKeyPatch : Patches.Apply
 KeybindsCommand ..> KeyHintsF9Patch : Patches.Apply
+KeybindsCommand ..> GameCameraF11Patch : Patches.Apply
+KeybindsCommand ..> FejdStartupF11Patch : Patches.Apply
 ConnectPanelKeyPatch ..> KeybindsCommand : Current
 @enduml

@@ -30,7 +30,7 @@ One entry per line: `id | label | command | flags`. Lines starting with `#` are 
 | title | a group or sub-section: `6.1 \| Flatten`, or with flags `6.1 \| Flatten \| \| sticky` (empty command). Its entries are the ids below it (`6.1.1`, `6.1.2` ...). A title with nothing below it shows "(nothing here yet)" |
 | spell | `id \| label \| command [\| flags]`. Command = the form of an inbox file (`op=...&k=v`); `;;` chains commands; `@dummy` only shows a toast (used for "(soon)" lines whose command is built later, the real form sits in a comment above) |
 | `sticky` | the radial stays on its level after the cast. On a title: every spell below it |
-| `pin=` | `F1..F5` or `S1..S5` (S = Shift+digit): the spell's bar cell when there is no `.pins` file |
+| `pin=` | `F1..F10` or `S1..S10` (S = Shift+digit, S10 = Shift+0): the spell's bar cell when there is no `.pins` file |
 | `shift=` | a form added when Shift is held while casting from the radial or an F cell. Cells 1-5 never add it (Shift is part of their key) |
 | `ask=<key>:<answers>` | one question; several `ask=` flags are asked in order. Answers `Label=value` or `value`, comma separated, `_` in a label shows as a space: `ask=area:Start-end=coords,This_patch=patch`. `{key}` in the command (and in `shift=`) takes the answer, URL-escaped |
 | dynamic answers | `ask=player:@players` (players online; others only when this PC hosts), `@crops` (`Pickable_*` crops that grow from a plant), `@trees` (`*_Sapling` prefabs), `@prefabs` (categories: Creatures, then Items by item type). Read from the game when the level opens, sorted by label |

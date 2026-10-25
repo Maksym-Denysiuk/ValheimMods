@@ -97,7 +97,7 @@ Built 2026-10-25 in the unattended, no-game session W3-world-plant of the Valhei
 
 | Parameter | Default | Does |
 |---|---|---|
-| `area=aim\|coords` | `aim` | `aim` = the block at the crosshair, as before. `coords` = the cells of the rectangle with `op=coord` start and end as opposite corners, edges along world X and Z, the grid centred in it (`GridMath.RectCells`, both edges included); `rows`, `perrow` (`cols`) and `aimcol` are ignored and the answer says so. Over 400 cells it is refused as a whole. |
+| `area=aim\|self\|coords` | `aim` | `aim` = the block at the crosshair, as before. `self` = from you: row 1 one spacing ahead, rows running towards the crosshair. `coords` = the cells of the rectangle with `op=coord` start and end as opposite corners, edges along world X and Z, the grid centred in it (`GridMath.RectCells`, both edges included); `rows`, `perrow` (`cols`) and `aimcol` are ignored and the answer says so. Over 20 000 cells it is refused as a whole; at most 2 000 saplings are planted per cast (the answer says "cast again" for the rest). |
 | `avoid=0\|1` | 0 | 1 = a cell with a player-built piece (`Kit.Constructions.Near`) within `clear` x `scale` + 2 m is skipped and counted; works with both areas. The 2 m margin is there because the distance is measured to a piece's pivot. |
 | `scale` | 1 | now capped at 20: `scale=25` answers `ERROR: scale=25.00 is over the cap 20.00` and plants nothing. |
 
@@ -133,7 +133,7 @@ Undo: saplings and grown trees are ordinary world objects (an axe, or a world ba
 
 ## Undo
 
-Planted and placed objects are ordinary world objects: remove them in game (Hoe/Cultivator for soil, an axe or the build tool for the rest) or restore a world backup (make a fresh one before big runs; see [backup-settings-lessons-learned.md](../backup-settings-lessons-learned.md)). There is no mod-side delete command. To remove the commands themselves see [README.md](README.md#undo-and-uninstall).
+Planted and placed objects are ordinary world objects: remove them in game (Hoe/Cultivator for soil, an axe or the build tool for the rest) or restore a world backup (make a fresh one before big runs; see [backup-settings-lessons-learned.md](../../../AdminPanelEnchancements/docs/backup-settings-lessons-learned.md)). There is no mod-side undo for these commands; `op=despawn` removes the one object under the crosshair ([despawn.md](despawn.md)). To remove the commands themselves see [README.md](README.md#undo-and-uninstall).
 
 ## In-game test 2026-10-25
 

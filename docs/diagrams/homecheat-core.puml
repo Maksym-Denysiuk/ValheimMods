@@ -211,7 +211,8 @@ package "HomeCheat.Kit (static helpers)" {
 }
 
 package "HomeCheat.Builtins" {
-  class PvpProjectilePatch <<HarmonyPatch Projectile.OnHit, Character.Damage>>
+  class PvpProjectileHitPatch <<HarmonyPatch Projectile.OnHit>>
+  class PvpProjectileDamagePatch <<HarmonyPatch Character.Damage>>
   class TreeScalePatch <<HarmonyPatch ZNetView.Awake>>
   class WorldExitPatch <<HarmonyPatch ZNetScene.OnDestroy>> {
     ~OnExit : Action
@@ -240,7 +241,8 @@ ICommandLifecycle <|.. CommandBase
 CommandBase <|-- AttackCommand
 AttackCommand <|-- HarmEffect
 AttackCommand ..> PvpHits : the rule
-PvpProjectilePatch ..> PvpHits : marked shots
+PvpProjectileHitPatch ..> PvpHits : marked shots
+PvpProjectileDamagePatch ..> PvpHits : m_ignorePVP back on
 CommandBase ..> Notify : ERROR answers on screen
 CommandBase *-- "0..1" PatchSet : lazy, com.homeos.homecheat.<name>
 CommandBase ..> Args : builds per Run

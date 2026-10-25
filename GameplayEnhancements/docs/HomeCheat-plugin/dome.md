@@ -72,7 +72,7 @@ The window is drawn on this PC only (an interface, not world graphics, R0 holds)
 | Form | What it does |
 |---|---|
 | `op=dome&step=menu` | the ward menu (section Ward menu): the one spell-bar entry |
-| `op=dome&step=apply&group=new|<n>[&allow=<names>][&status=active|deactivated|deleted][&partial=1]` | the menu's Apply as a command; `partial=1` by default, as the menu (blocked wards slide inland, else are left out); `partial=0` places nothing when one spot is blocked |
+| `op=dome&step=apply&group=new\|<n>[&allow=<names>][&status=active\|deactivated\|deleted][&partial=1]` | the menu's Apply as a command; `partial=1` by default, as the menu (blocked wards slide inland, else are left out); `partial=0` places nothing when one spot is blocked |
 | `op=dome&step=show[&alpha=0.1][&on=0]` | test aid, this PC only: see-through domes over the active wards, one line per ward in the answer |
 | `op=dome&step=mark` (twice) | stand on a point on one edge, then on the opposite edge; the second answer shows the centre, the radius and how many wards it needs. Same points as `op=coord&set=start` / `end` |
 | `op=dome&from=coords` (or `step=build&from=coords`) | builds the dome between the coord start and end points |

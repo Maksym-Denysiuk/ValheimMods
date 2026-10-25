@@ -20,8 +20,9 @@ Drop `repair-1.cmd` into `BepInEx/config/homecheat/inbox/` with the text below (
 | `radius` | 10 | metres around the player, used only with `aim=0`; must be above 0 |
 | `amount` | 0 | repair: HP to set (capped at the piece's maximum); refill: fuel units to set (capped at the maximum). 0 = full |
 | `fuel` | any | refill only: part of the fuel item's prefab name (`Wood`, `Coal`, `Resin`, ...); only objects that burn it are refilled, the others are counted as skipped. See [Fuel by type](#fuel-by-type-since-2026-10-25) |
+| `report` | 0 | repair only: `report=1 [radius=10]` lists the health of every piece within the radius, read from the ZDO like the repair itself; changes nothing (a read-only sub-action, runs instead of the repair) |
 
-Examples: `op=repair` (piece under the crosshair), `op=repair&aim=0&radius=30`, `op=refill&aim=0&radius=10`. The first build of repair had default radius 0; it was changed to 10 in the same session (same defaults as refill). The spell-bar presets "Repair r10" and "Refill r10" use `aim=0&radius=10`.
+Examples: `op=repair` (piece under the crosshair), `op=repair&aim=0&radius=30`, `op=refill&aim=0&radius=10`, `op=repair&report=1&radius=20`. The first build of repair had default radius 0; it was changed to 10 in the same session (same defaults as refill). The spell-bar presets are 6.5.1 Repair and 6.5.2 Refill, both `aim=0&radius=50` (title 6.5 is sticky).
 
 Answers: `repaired N of M objects (K already at full health), crosshair|radius R m`; `refilled N of M objects (...)` with one line per object (`before -> after / max`); `nothing under the crosshair (30 m)`; `the object under the crosshair (<name>) cannot be repaired` / `has no fuel`.
 

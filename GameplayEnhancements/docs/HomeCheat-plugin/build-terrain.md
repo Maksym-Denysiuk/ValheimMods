@@ -86,7 +86,7 @@ The game's own terrain operations do the terrain work (saved `TerrainOp`s throug
 | A13 | Spawn at any online player, host only | Maksym and Claude2 only |
 | W1-a | coord marker `vfx_Potion_health_medium`, 10 s, `marker=none` to switch off | no marker, or a chosen fx |
 | W1-b | groundlevel `avoid` checks the larger of the prefab's smooth radius and radius + 1 m; `shrink` stops 1.1 m before the nearest pivot | exactly radius + 1 m |
-| W1-c | The ±8 m note fires only for `|delta| > 8`; repeated passes are not detected | reading the original height from `TerrainComp` |
+| W1-c | The ±8 m note fires only for `\|delta\| > 8`; repeated passes are not detected | reading the original height from `TerrainComp` |
 | W1-d | path `from=aim&avoid=1` also routes (crosshair to `length` ahead) | `avoid` only with `from=coords` |
 | W1-e | New path modes cut at 400 stamps and say so (as the card asks); the old straight mode still refuses over 400 | refuse in every mode |
 | W1-f | spawn `yaw`/`pitch` are world angles, not relative to the player | relative to the player's facing |

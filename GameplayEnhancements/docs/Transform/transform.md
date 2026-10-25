@@ -11,7 +11,9 @@ Game: Valheim (Unity 6 build, BepInEx, HomeCheat plugin), machine `MDENYSIUK-PER
 
 ## Command
 
-`op=transform&type=human|raven|serpent|fish[&duration=<s>][&speed=<x>][&scale=<x>][&yoff=<m>][&hover=0][&lookdive=0][&share=1][&model=<prefab>]`
+`op=transform&type=human|raven|serpent|fish[&duration=<s>][&speed=<x>][&scale=<x>][&yoff=<m>][&hover=0][&lookdive=0][&share=1][&hide=1][&target=<nick>][&model=<prefab>][&humanoffset=<m>]`
+
+`humanoffset=<m>` (default 0 = off) moves your hidden human model that many metres up while the form lasts (`TransformState`); it does not hide the body from other players (`hide=1` does that).
 
 Diagnostics: `type=models` (candidate prefabs that exist), `type=effects[&play=1]` (the serpent roar and crow call prefabs the forms use; `play=1` fires both), `type=components&model=<prefab>`, `type=values&model=<prefab>&comp=<type>`, `type=probe` (live state of the model on the player).
 
