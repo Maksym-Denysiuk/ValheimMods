@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 11:47 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 11:52 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025112607.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.traps.v20261025113746.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025113456.dll.
 
@@ -95,7 +95,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 11428 | bce9baf879778e5f |
+| skills/valheim-spells-craft/SKILL.md | 11423 | e5b8a8652f6063cd |
 | skills/valheim-spells-craft/baseline.md | 1934 | 3e55d14918333b45 |
 | skills/valheim-spells-craft/evals.md | 23694 | f04ed1fdfa1e5780 |
 | skills/valheim-spells-craft/instructions/done-gate.md | 7192 | 5a28e4b59595ec3a |
@@ -104,7 +104,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
 | skills/valheim-spells-craft/instructions/spec-card.md | 5082 | 489b29e425115b49 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 13085 | 4d9cd547282fbd08 |
-| skills/valheim-spells-craft/skill-meta-data.md | 9042 | 22f6828160f6db09 |
+| skills/valheim-spells-craft/skill-meta-data.md | 9114 | 532ad4c235cf19c2 |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |
