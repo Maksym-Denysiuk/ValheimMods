@@ -366,8 +366,15 @@ namespace HomeCheat.Features.Construction
             return (jobs.Count <= BatchSize ? "placed " + t.Placed : "placing " + jobs.Count) + " of " + e.Name + " in " + copies + " cop" + (copies == 1 ? "y" : "ies")
                 + " on " + fromId + " (shift " + Fmt.F(dx, 2) + "," + Fmt.F(dy, 2) + "," + Fmt.F(dz, 2) + " a copy, " + shared.Count + " shared landing piece(s) not placed twice"
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
-                + ", top now at " + Fmt.F(o0.y + shift.y * copies, 1) + ", ground unchanged, id " + id
+                + ", top piece now at " + Fmt.F(Top(jobs), 1) + ", ground unchanged, id " + id
                 + "; standing and support in " + Fmt.F(CheckAfter, 0) + " s (op=construct&step=support)";
+        }
+
+        static float Top(List<Job> jobs)
+        {
+            float top = float.MinValue;
+            foreach (Job j in jobs) if (j.Pos.y > top) top = j.Pos.y;
+            return top;
         }
 
         // core-wood poles under every bottom piece that does not reach the surface below it (after the flattening settled)
