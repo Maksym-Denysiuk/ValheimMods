@@ -364,7 +364,7 @@ Assumptions taken in the unattended run (Maksym reviews):
 - **A21**: overflow is the game's same-level spiral. Fallback if `GroupElement`s look wrong in layers: a "More..." group.
 - **ASSUMPTION (S0-spells)**: a title is a line whose command field is empty, so a sticky title is written `id | label | | sticky` (the plan did not fix a syntax).
 - **ASSUMPTION (S0-spells)**: a section or sub-section with nothing below it (8 Construct) opens one note "(nothing here yet)" instead of an empty level.
-- **ASSUMPTION (S0-spells)**: a pinned spell with questions (F-key or Shift+digit) opens the radial on its first question; from the Hotbar section it opens the questions with the Hotbar as Back.
+- **Confirmed by Maksym (2026-10-25)**: a spell with questions placed on the bar asks them when its key is pressed: the radial opens on its first question (F-key or Shift+digit); from the Hotbar section the questions open with the Hotbar as Back.
 - **ASSUMPTION (S0-spells)**: fixed answers keep the order of the flag; dynamic answers are sorted by label (by category first for `@prefabs`); an alphabetical block is named "first - last" label.
 - **ASSUMPTION (S0-spells)**: Flatten 6.1.x waits for `avoid=1` (W1-world-build): without it the presets would flatten into buildings, so they are `@dummy` until then, and the working Flatten / Raise / Lower of v3 is not in the menu meanwhile (`op=groundlevel` still works from the inbox).
 
