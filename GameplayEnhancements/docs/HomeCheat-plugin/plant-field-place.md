@@ -1,5 +1,5 @@
 ---
-description: plant, field, cultivate and place commands of the HomeCheat Valheim plugin (2026-10-24) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run
+description: plant, field, cultivate, harvest and place commands of the HomeCheat Valheim plugin (2026-10-24, areas and harvest 2026-10-25) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run
 ---
 # plant, field, cultivate, place (HomeCheat core ops)
 
@@ -45,6 +45,51 @@ Changed with Maksym in the test run of 2026-10-25 ([test log](../../../docs/home
 - **map=1.** `op=field&prefab=<crop>&rows=<r>&perrow=<n>&map=1` plants nothing and prints the grid: `@` the player's cell, `#` cultivated and connected, `o` cultivated but cut off, `.` no soil.
 
 Tested 2026-10-25: cultivate 1x1, 1x3, 3x3; field 3x3, 4x9, 9x2, 7x7, 9x9 (three times, one off the soil), 40x40 (twice), with carrots, Poteitr and turnips.
+
+## Soil areas and harvest (since 2026-10-25)
+
+Built 2026-10-25 in the unattended, no-game session W2-world-field of the Valheim work plan (backlog cards 3.11 cultivate-area and 3.12 field-area and harvest; Valheim 1.0.20, BepInEx 5.4.2351). Goal: cultivate and plant food between the two stored points or on a whole patch, and pick a ripe patch in one go, from the spell bar's Field group (7.6-7.8). Before: `cultivate` and `field` only laid a grid from your own cell (`rows` x `perrow`), and crops were picked one by one with E. Source: `src/Features/World/` (`CultivateCommand`, `FieldCommand`, `HarvestCommand`, `FieldPatch`).
+
+| Command | Does |
+|---|---|
+| `op=cultivate&area=coords[&spacing=1.5]` | soil on the cells of the rectangle with `op=coord` start and end as opposite corners, edges along world X and Z, the grid centred in it (`GridMath.RectCells`, both edges included). Over 2 500 cells it is refused as a whole. |
+| `op=field&prefab=<crop>&area=coords` | the crop grid (minimum crop spacing, as without `area=`) over the same rectangle; every cultivated cell is planted, no connection rule. |
+| `op=field&prefab=<crop>&area=patch` | the whole cultivated patch you stand on: `FieldPatch.Sample` grows it from your cell through cultivated soil on a 0.5 m grid (8 neighbours, at most 40 000 cells examined), and the crop grid is laid over its bounding box; cells outside the patch (another patch, or no soil) are skipped and counted. |
+| `op=harvest` | every ripe crop (`Pickable.CanBePicked()`) on the patch you stand on is picked with the vanilla `Pickable.Interact(you, false, false)`, the same call as pressing E. The items drop at each crop; auto-pickup takes the ones within reach, walk over the rest. Cap 2 500 picks. Wild pickables standing on the patch are picked too. |
+
+With `area=` the parameters `rows`, `perrow` (`cols`) and `dist` are ignored and the answer says so; `crops=a:n,b:n` bands repeat along world Z (n grid rows each). `map=1` works only without `area=`. Without `area=` both commands behave as before: the flood fill of `field` moved unchanged into `FieldPatch.Connected`.
+
+Answers (first line): `cultivated 35 cells (7 x 5, spacing 1.5 m, cap 2500) in the rectangle start x,y,z - end x,y,z`; `planted N (Pickable_Carrot=N) in the rectangle ... | the patch under you (about A m2, S samples of 0.5 m), grid C x R; K cultivated cells not in this patch, M cells without cultivated soil, B blocked by objects; spacing ...`; `harvested N (Pickable_Carrot=N) on the patch under you (about A m2); K not ripe or already picked; drops lie at each crop, ...`. Not on soil: `nothing planted: the soil under you is not cultivated ...`, `nothing harvested: stand on cultivated soil`. No points: `ERROR: coord 'start' is not set in world <world>: op=coord&set=start`.
+
+Assumptions taken in the unattended run (Maksym reviews):
+
+| # | Assumption | Instead of | Why |
+|---|---|---|---|
+| A16 | the rectangle's edges run along world X and Z | along the start-end line | simple, predictable (plan) |
+| A17 | `field area=coords` plants every cultivated cell in the rectangle; `area=patch` = the connected patch; `harvest` = vanilla `Pickable.Interact` (drops on the ground) | a connection rule in rectangles too; items straight to the inventory | plan |
+| W2-1 | `cultivate area=coords` over the cap is refused as a whole | cultivating the first 2 500 cells | a cut rectangle would leave a strip that was not asked for; same as the grid mode |
+| W2-2 | `field area=patch` lays its crop grid along world X and Z over the patch's bounding box | along your look direction | a patch has no row direction; matches `area=coords` |
+| W2-3 | `crops=` bands repeat along world Z with `area=` | one band each, the rest empty | an area has its own number of rows |
+| W2-4 | `harvest` picks wild pickables on the patch as well, and takes no filter | crops only, or a `prefab=` filter | the card says every `Pickable` that `CanBePicked()`; a filter can be added opt-in later |
+| W2-5 | `map=1` with `area=` is refused | a map of the area | the map shows field's own grid; an area map was not on the card |
+
+### Test list for Maksym (not run yet)
+
+World `ClaudeTest`, one command at a time. `op=reload` must name the new `HomeCheat.Cmd.world.v<stamp>.dll`; `op=help&cmd=harvest` shows the usage.
+
+1. `op=cheatstate` (before).
+2. `op=coord&set=start`, walk about 10 m along X and 6 m along Z, `op=coord&set=end`, then `op=cultivate&area=coords`: expect `cultivated 35 cells (7 x 5, ...)`; the soil matches the rectangle between the two markers.
+3. Points 100 m apart: `op=cultivate&area=coords` answers `ERROR: cells=... is over the cap 2500` and changes nothing.
+4. Stand in that rectangle: `op=field&prefab=Pickable_Carrot&area=coords`: crops on every soil cell in it, `0 cells without cultivated soil` or close.
+5. Cultivate two touching patches (`op=cultivate&rows=3&perrow=3` twice, side by side) and a third 3 m away. Stand on the first: `op=field&prefab=Pickable_Carrot&area=patch` plants both touching patches, the third stays empty (counted as "not in this patch").
+6. Same with `rows=5`: the answer adds `rows/perrow/dist ignored with area=`.
+7. Grow or replace the crops (wait, or plant ripe `Pickable_Carrot` with `op=field` - they are ripe as placed), stand on the patch: `op=harvest` picks both touching patches and counts them, the third patch's crops stay; carrots near you go to the inventory, the far ones lie on the ground.
+8. Step off the soil: `op=harvest` answers `nothing harvested: stand on cultivated soil`.
+9. Without `area=`: `op=field&prefab=Pickable_Carrot&rows=4&perrow=4&map=1` prints the map as before (default unchanged).
+10. Spell bar Field group: 7.6 Cultivate start-end, 7.7 Plant food... (asks area, then crop), 7.8 Harvest patch.
+11. `op=cheatstate` (after); compare.
+
+Undo: soil and crops as above (Hoe, Cultivator, pick or a world backup); picked crops are gone, replant with `op=field`.
 
 ## Undo
 

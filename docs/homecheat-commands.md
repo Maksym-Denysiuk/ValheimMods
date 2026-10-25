@@ -3,7 +3,7 @@ description: HomeCheat command catalog (2026-10-25) - every command once, with i
 ---
 # HomeCheat command catalog
 
-One row per command (36: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
+One row per command (37: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
 
 `scripts/commands-check.js` of the `valheim-spells-craft` skill compares this table with the code, the index and the spell file; keep one row per command name.
 
@@ -33,8 +33,9 @@ One row per command (36: `override string Name` in `GameplayEnhancements/src/`).
 | inspect | world | `InspectCommand` | info | none | none | prefab components | none | - | - | - |
 | place | world | `PlaceCommand` | place object | ground | grid at crosshair or `dist=` | any prefab, `Anchor` | objects in the world | 400 | - | 7.4, 7.5 |
 | plant | world | `PlantCommand` | plant/grow | ground | grid at crosshair or `dist=` | sapling `Plant`, `Anchor`, `Trees.SetScale` | saplings, scale saved in ZDO | 400 | - | 7.3; 7.9 (soon: `area=`, `ask=` tree and size) |
-| field | world | `FieldCommand` | plant/grow | ground (cultivated) | grid from your cell | `Pickable` crops, `FieldAnchor`, `CropSpacing` | crops in the world | 40 000 cells, 2 500 crops | `map=1` | 7.2; 7.7 (soon: `area=`, `ask=` area and crop) |
-| cultivate | world | `CultivateCommand` | terrain | ground | grid from your cell | hoe piece `cultivate` (`Prefabs.Get`, one `Instantiate` per cell; not `TerrainStamp`) | terrain change saved | 2 500 | - | 7.1; 7.6 (soon: `area=coords`) |
+| field | world | `FieldCommand` | plant/grow | ground (cultivated) | grid from your cell; `area=coords` = stored rectangle, `area=patch` = the cultivated patch you stand on | `Pickable` crops, `FieldAnchor`, `CropSpacing`, `FieldPatch` (flood fill, patch sampler), `GridMath.RectCells`, `Kit.Coords` | crops in the world | 40 000 cells, 2 500 crops | `map=1` (grid from your cell only) | 7.2, 7.7 (`ask=` area and crop) |
+| cultivate | world | `CultivateCommand` | terrain | ground | grid from your cell; `area=coords` = stored rectangle (world X/Z) | hoe piece `cultivate` (`Prefabs.Get`, one `Instantiate` per cell; not `TerrainStamp`), `GridMath.RectCells`, `Kit.Coords` | terrain change saved | 2 500 (`area=coords`: refused as a whole) | - | 7.1, 7.6 |
+| harvest | world | `HarvestCommand` | give item (picks crops) | crops (`Pickable`) on cultivated ground | the cultivated patch you stand on | vanilla `Pickable.Interact` per ripe `Pickable` (`CanBePicked`), `FieldPatch.Sample` | crops picked (replanting is `field`), drops on the ground at each crop | 2 500 picks, 40 000 soil samples | - | 7.8 |
 | repair | world | `RepairCommand` | modify object | building pieces | crosshair or radius | `WearNTear` health | piece health | radius | `report=1` | 6.5.1, 6.5.3, 6.5.5, 6.5.7 |
 | refill | world | `RefillCommand` | modify object | fireplaces, smelters | crosshair or radius | `Fireplace`/`Smelter` fuel | fuel levels | radius | - | 6.5.2, 6.5.4, 6.5.6, 6.5.7 |
 | groundlevel | world | `GroundLevelCommand` | terrain | ground | radius around you | hoe piece `raise` via `TerrainStamp`; `avoid=1` keeps away from player-built pieces (`Kit.Constructions`), `shrink=1` levels a smaller circle | terrain change saved | radius 12; the game's ±8 m clamp named in the answer | - | 6.1.1-6.1.5 (`avoid=1`) |
@@ -84,6 +85,8 @@ Before deciding, read this catalog, the nearest command's page and its source in
 | "ring of frost clouds around me" | `slime` | damage+status / enemies / ring / `Aoe` cloud | borderline: `slime&cloud=<frost prefab>` vs a new `HarmEffect`; recommend extending slime (`cloud=` exists) |
 | "push enemies away in a circle" | `earthquake` | push / enemies / rings / `Aoe` slam | exists: `op=earthquake&noStones=1` (spell 3.1) |
 | "stone wall circle without the slam" | `earthquake` stones | place object / ground / ring / `HarmEffect.Ring` | borderline: `earthquake` option vs a new command reusing `Ring`; recommend new, the effect differs |
+| "plant food between my two points, or on the whole patch" | `field`, `cultivate` | plant or terrain / ground / stored rectangle or patch instead of from your cell / `Pickable`, hoe piece | extend: `area=coords` (both) and `area=patch` (field), opt-in; the default grid from your cell is unchanged |
+| "harvest the whole patch" | `field` (same soil, opposite effect) | give item / ripe crops / the patch / `Pickable.Interact` | new (`harvest`, feature World): a different effect on the same patch; shares `FieldPatch` with field, picks as by hand (drops, no items straight to the inventory) |
 | "plant mushrooms in a field" | `field` | plant / cultivated ground / grid / `Pickable` | extend or exists: `field&prefab=<Pickable_Mushroom*>` when the prefab is a crop |
 | "make birches 3x" | `scale` | same | exists: `op=scale&filter=Birch&factor=3` |
 | "refill fires and repair walls at once" | `refill`, `repair` | modify object / pieces / radius | exists as a chained preset (spell 6.5.7) |

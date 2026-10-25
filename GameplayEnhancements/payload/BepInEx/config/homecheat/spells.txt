@@ -109,12 +109,9 @@
 7.3 | Oak grove | op=plant&prefab=Oak_Sapling&rows=3&perrow=5&scale=3
 7.4 | Place wall | op=place&prefab=woodwall&perrow=3
 7.5 | Place campfire | op=place&prefab=fire_pit
-# real form (W2-world-field): 7.6 | Cultivate start-end | op=cultivate&area=coords
-7.6 | Cultivate start-end (soon) | @dummy
-# real form (W2-world-field): 7.7 | Plant food... | op=field&area={area}&prefab={crop} | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
-7.7 | Plant food... (soon) | @dummy | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
-# real form (W2-world-field): 7.8 | Harvest patch | op=harvest
-7.8 | Harvest patch (soon) | @dummy
+7.6 | Cultivate start-end | op=cultivate&area=coords
+7.7 | Plant food... | op=field&area={area}&prefab={crop} | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
+7.8 | Harvest patch | op=harvest
 # real form (W3-world-plant): 7.9 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1 | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
 7.9 | Plant trees... (soon) | @dummy | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
 8 | Construct

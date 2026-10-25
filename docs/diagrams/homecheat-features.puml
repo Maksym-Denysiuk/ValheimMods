@@ -44,11 +44,17 @@ package "world  (HomeCheat.Features.WorldCommands)" as world {
   class InspectCommand
   class ScaleCommand
   class CoordCommand
+  class HarvestCommand
   class FieldAnchor <<internal static>> {
     +AheadOfPlayer(p, a, spacing) : Anchor
   }
   class CropSpacing <<internal static>> {
     +Minimum(crop, out source) : float
+  }
+  class FieldPatch <<internal>> {
+    +{static} Connected(soil, row, colFrom, colTo, out startSoil) : bool[,]
+    +{static} Sample(at) : FieldPatch
+    +Contains(pos) : bool
   }
   class TerrainStamp <<internal static>> {
     +At(prefab, pos, rLevel, rPaint)
@@ -127,6 +133,7 @@ CommandBase <|-- PathCommand
 CommandBase <|-- InspectCommand
 CommandBase <|-- ScaleCommand
 CommandBase <|-- CoordCommand
+CommandBase <|-- HarvestCommand
 CommandBase <|-- CheatStateCommand
 CommandBase <|-- CheatInfoCommand
 CommandBase <|-- HealCommand
@@ -147,6 +154,8 @@ CommandBase <|-- ShipCommand
 FieldCommand ..> FieldAnchor
 CultivateCommand ..> FieldAnchor
 FieldCommand ..> CropSpacing
+FieldCommand ..> FieldPatch : flood fill, area=patch
+HarvestCommand ..> FieldPatch : Sample
 FieldAnchor ..> KitAnchor : builds
 PlantCommand ..> KitAnchor : AtAim
 TransformCommand ..> TransformState : AddComponent (local player)
