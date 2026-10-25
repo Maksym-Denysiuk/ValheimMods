@@ -55,6 +55,8 @@ namespace HomeCheat.Features.Construction
         const int MaxVertices = 6000;       // about 77 x 77 m
         const float LegacyWait = 1f;        // seconds after removing old hoe stamps: the terrain rebuilds without them
         const float LegacyMargin = 4f;      // old hoe stamps this far around the levelled box are removed too (their smoothing reaches in)
+        const float GroundMiss = 0.05f;     // a ground step with more vertices than this share off target stops the build
+        const float ItemMargin = 2f;        // undo items=1: dropped items this far around the build's box
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
 
         GroundJob lastGround;
@@ -86,14 +88,14 @@ namespace HomeCheat.Features.Construction
                 return "construct step=list | step=preview&name=<construction> [at=aim|self|x,z|x,y,z] [yaw=<world degrees, default your facing snapped to 22.5>]"
                     + " [ground=auto|fit|flatten|pillars|none (auto: on terrain = fit; on a piece or rock = none. fit = flatten the footprint + " + (int)FlattenMargin
                     + " m to the base, then raise the terrain under every 1 m column whose lowest piece hangs " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0)
-                    + " m up; flatten = only the levelling; both pole the gaps left; pillars = poles only)]"
+                    + " m up (pieces that need ground: stone, other non-wood, loose objects); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
                     + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only)"
                     + " | step=place&name=<construction> (direct, no preview; same keys)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
-                    + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
+                    + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=status | step=undo [id=<build id, default the last>] [items=0 (1 = also the items dropped inside the build's box + 2 m)] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
                     + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, " + MaxVertices + " levelled vertices, " + MaxPoles + " poles, list " + MaxList;
             }
@@ -373,10 +375,27 @@ namespace HomeCheat.Features.Construction
             long me = p.GetPlayerID();
             Tally t = new Tally();
             string buildName = e.Name;
-            bool poles = ground == "flatten" || ground == "fit" || ground == "pillars";
+            // poles only on request (lessons 2026-10-25: wood stands on its own posts; stone on a wooden pole breaks anyway)
+            bool poles = ground == "pillars";
             List<string> notes = new List<string>();
+            GroundJob ready = g;
             Action build = delegate
             {
+                // measure before building (lessons 2026-10-25: the levelling failed silently three times): a ground step that
+                // missed more than GroundMiss of its vertices stops here with its report, and nothing is placed
+                if (ready != null)
+                {
+                    float miss;
+                    string flat = Flatness(ready, out miss);
+                    HomeApi.Log("construct: " + buildName + " " + flat);
+                    if (miss > GroundMiss)
+                    {
+                        string msg = "construct: " + buildName + " not built, the ground is not ready (" + flat + "); see LogOutput.log for terrain errors";
+                        HomeApi.LogError(msg);
+                        Notify.Center(msg);
+                        return;
+                    }
+                }
                 if (poles) AddPoles(jobs, baseY, t, notes);
                 Run(jobs, id, yaw, buildName, me, t, notes);
             };
@@ -557,7 +576,7 @@ namespace HomeCheat.Features.Construction
             return pl.Name + ": " + e.PieceCount + " pieces" + (skipped > 0 ? " (" + skipped + " unknown, skipped)" : "") + ", " + Fmt.F(x1 - x0, 1) + " x " + Fmt.F(z1 - z0, 1)
                 + " x " + Fmt.F(y1 - y0, 1) + " m, yaw " + Fmt.F(pl.Yaw, 1) + ", base " + Fmt.F(pl.BaseY, 2) + " on the " + pl.BaseText + ", " + floorText
                 + ", ground " + pl.Ground + (pl.Ground == "fit" ? " (the footprint + " + (int)FlattenMargin + " m levelled to the base, then the terrain raised under every column whose lowest piece hangs "
-                    + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0) + " m up, poles under gaps left)" : pl.Ground == "flatten" ?" (the footprint + " + (int)FlattenMargin + " m levelled to the base, poles under gaps left)" : pl.Ground == "pillars" ? " (poles under gaps, terrain unchanged)" : " (unchanged)");
+                    + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0) + " m up under stone and other ground-needing pieces)" : pl.Ground == "flatten" ? " (the footprint + " + (int)FlattenMargin + " m levelled flat to the base)" : pl.Ground == "pillars" ? " (poles under gaps, terrain unchanged)" : " (unchanged)");
         }
 
         string Preview(Args a)
@@ -753,6 +772,14 @@ namespace HomeCheat.Features.Construction
         // how close the terrain came to the targets: within 5 cm, the largest miss, and where
         static string Flatness(GroundJob g)
         {
+            float miss;
+            return Flatness(g, out miss);
+        }
+
+        // miss = the share of vertices more than 5 cm off their target (0..1)
+        static string Flatness(GroundJob g, out float miss)
+        {
+            miss = 0f;
             if (g == null || g.Targets == null || g.Targets.Count == 0) return "no levelled ground in this session";
             int ok = 0, high = 0, low = 0;
             float worst = 0f;
@@ -763,6 +790,7 @@ namespace HomeCheat.Features.Construction
                 if (Mathf.Abs(d) <= 0.05f) ok++; else if (d > 0f) high++; else low++;
                 if (Mathf.Abs(d) > Mathf.Abs(worst)) { worst = d; at = v; }
             }
+            miss = 1f - (float)ok / g.Targets.Count;
             return "ground: " + ok + " of " + g.Targets.Count + " vertices within 5 cm of their target (" + g.Raised + " raised above the base " + Fmt.F(g.BaseY, 2) + "), "
                 + high + " too high, " + low + " too low" + (Mathf.Abs(worst) > 0.05f ? ", worst " + Fmt.F(worst, 2) + " m at " + Fmt.F(at.x, 0) + "," + Fmt.F(at.z, 0) : "");
         }
@@ -1101,8 +1129,14 @@ namespace HomeCheat.Features.Construction
             List<ZNetView> pieces;
             if (!g.TryGetValue(id, out pieces) || pieces.Count == 0)
                 throw new CommandException("no loaded pieces of build " + id + ": go near it (op=construct&step=status)");
+            bool items = a.Flag("items", false);
+            Bounds box = new Bounds(pieces[0].transform.position, Vector3.zero);
+            foreach (ZNetView nv in pieces) if (nv != null) box.Encapsulate(nv.transform.position);
+            box.Expand(new Vector3(ItemMargin * 2f, ItemMargin * 2f + 8f, ItemMargin * 2f));   // broken pieces drop and roll: a margin, and below
+            List<ItemDrop> drops = items ? Drops(box) : new List<ItemDrop>();
             if (!a.Flag("confirm", false))
-                return "would remove " + pieces.Count + " piece(s) of build " + id + " near " + Fmt.Vec(pieces[0].transform.position) + ": add confirm=1 (the ground stays as it is)";
+                return "would remove " + pieces.Count + " piece(s) of build " + id + " near " + Fmt.Vec(pieces[0].transform.position)
+                    + (items ? " and " + drops.Count + " dropped item(s) inside its box + " + Fmt.F(ItemMargin, 0) + " m" : "") + ": add confirm=1 (the ground stays as it is)";
             int removed = 0;
             foreach (ZNetView nv in pieces)
             {
@@ -1111,8 +1145,28 @@ namespace HomeCheat.Features.Construction
                 ZNetScene.instance.Destroy(nv.gameObject);
                 removed++;
             }
+            int cleared = 0;
+            foreach (ItemDrop d in drops)
+            {
+                if (d == null) continue;
+                ZNetView dn = d.GetComponent<ZNetView>();
+                if (dn == null || !dn.IsValid()) continue;
+                dn.ClaimOwnership();
+                ZNetScene.instance.Destroy(d.gameObject);
+                cleared++;
+            }
             if (id == lastId) { lastId = ""; lastName = ""; lastPlaced = 0; }
-            return "removed " + removed + " piece(s) of build " + id + " (loaded pieces only; the ground stays as it is)";
+            return "removed " + removed + " piece(s) of build " + id + (items ? " and " + cleared + " dropped item(s) inside its box" : "") + " (loaded pieces only; the ground stays as it is)";
+        }
+
+        // items lying on the ground inside a box (the debris of broken pieces; lessons 2026-10-25: the world-wide earthquake
+        // clearitems=1 also took the player's own items)
+        static List<ItemDrop> Drops(Bounds box)
+        {
+            List<ItemDrop> found = new List<ItemDrop>();
+            foreach (ItemDrop d in UnityEngine.Object.FindObjectsOfType<ItemDrop>())
+                if (d != null && box.Contains(d.transform.position)) found.Add(d);
+            return found;
         }
     }
 }
