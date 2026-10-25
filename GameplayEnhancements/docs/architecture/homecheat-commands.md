@@ -5,7 +5,7 @@ description: HomeCheat command catalog (2026-10-25) - every command once, with i
 
 # HomeCheat command catalog
 
-One row per command (38: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
+One row per command (39: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
 
 `scripts/commands-check.js` of the `valheim-spells-craft` skill compares this table with the code, the index and the spell file; keep one row per command name.
 
@@ -60,6 +60,7 @@ One row per command (38: `override string Name` in `GameplayEnhancements/src/`).
 | keybinds | keybinds | `KeybindsCommand` | UI/input | self | none | Harmony patches (`ConnectPanel` key, F9 hints) | key behaviour while loaded | - | `status=1` | - |
 | ship | ship | `ShipCommand` | form/movement | the ship you are on, steering or sitting (host only) | none | `Ship.GetLocalShip`, instance fields `m_sailForceFactor` and `m_backwardForce` (x speed from the originals), `ZNetView.ClaimOwnership` when another PC owns the ship | none saved; the ship sails faster for everyone on it; ship ownership (physics) moves to this PC; `OnUnload` restores | speed 10 (refused above) | `status=1` | 4.10-4.13 |
 | dome | dome | `DomeCommand` | place object (protect) | ground, a zone between two points (host only) | centre and radius from two points (`from=coords` = `Kit.Coords` start/end, or `from=x,z&to=x,z`); one ward, or a hex group without gaps | vanilla `guard_stone` (`PrivateArea`) created as by the hammer (`Piece.SetCreator`, `PrivateArea.Setup`, `WearNTear.OnPlaced`), refusals via `Kit.Constructions`, `Ground.IsBlocked`, water level and other creators' ward ZDOs; host sync of the ward ZDOs (`s_enabled`, permitted list) every 2 s, postfix `Player.OnSpawned` | wards saved with the world, ZDO mark `hc_dome` (+ centre, radius, count, state signature); with `cost=1` the materials; the ZDO owner of every group ward moves to the host when it syncs | radius 150 m, 50 wards (refused above) | `step=list`, `preview=1` (read-only); `step=remove` needs `confirm=1` | 3.5.3-3.5.5, 6.6.3-6.6.5 |
+| trap | traps | `TrapCommand` | damage + place object (a trap that waits) | everyone near the trap: you, other players, enemies, tamed, bosses (host only; Maksym's decision 2026-10-25) | matrix on the ground at the crosshair or `at=self` (`perrow` x `rows`, `spacing`) | vanilla `Trap` prefab as the look (`piece_trap_troll`), kept inert through its ZDO state; host watcher (`Later` 0.2 s, `Player.OnSpawned` postfix) over `Character.GetAllCharacters`; blast = `Character.Damage` with an item's damage (`BowAshlands` x2), no attacker, `HitType.EnemyHit`; kinds in `TrapKind` | trap objects in the world until they go off, expire (5 min) or are removed; ZDO marks `hc_trap`, `hc_trap_end`, `hc_trap_arm` and the trap's settings; damage to whoever is in the blast | 50 live, `perrow`/`rows` 9, `life` 3600 s, `trigger` 5 m, `blast` 10 m, `mult` 10, remove radius 100 m | `list=1`, `type=probe&filter=trap` (read-only); `remove=1[&radius=]` | 2.11, 2.12 |
 
 ## Exists, extend or new
 
@@ -102,4 +103,5 @@ Before deciding, read this catalog, the nearest command's page and its source in
 | "kill the mobs after the test" | `killmobs` | test helper | exists; never a kill mode of the command under test |
 | "show green lights on me" | `visualeffect` | visual only | not a command: catalog entry via `/valheim-spell-fx` |
 | "turn into a wolf" | `transform` | form / self / on self / model swap | extend: new form in `TransformCommand.Candidates` and `TransformState` |
+| "mines that blow up on whoever steps on them" | `spellshot` (matrix), none for waiting | damage + place object / everyone near / grid at the crosshair / vanilla `Trap` look, own watcher | new (`trap`, kind `type=mine`, built 2026-10-25): one placement for every trap kind, the electric fence planned as `type=fence`; design assumed, Maksym reviews |
 | "protection dome like the trader" | none | place + protect / zone / two points / ward | new (`dome`, built 2026-10-25: vanilla wards, a group for a large zone; requirements kept privately in HomeOS) |
