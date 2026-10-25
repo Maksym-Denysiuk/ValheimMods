@@ -30,6 +30,8 @@ Under Wards placed one line says what the pick means: for New the zone from the 
 - `op=dome&step=apply&group=new|<n>[&allow=<name>,<name>][&status=active|deactivated|deleted]` is the window's Apply as a command (tests, scripts): without `allow=` a group keeps its list (New: only you), without `status=` it keeps its state (New: active); an unknown name is refused with the known names.
 - **Monsters**: parked by Maksym's decision (2026-10-25, "wards are vanilla"). The research that led there: the trader camp keeps monsters out with an `EffectArea` of type `NoMonsters` that every game registers locally (`EffectArea.Awake`: its collider's bounds, a static list); `MonsterAI.UpdateAI` (untamed only) flees from a target inside the area and flees from the area's centre when itself within the bounds plus 8 m. Only the game that owns a creature runs its AI, and no networked vanilla prefab carries a working `NoMonsters` area (only `piece_shieldgenerator` / `charred_shieldgenerator`, switched off and never switched on by game code), so it cannot reach creatures run by another player's vanilla game. What the wards already do on every game: `guard_stone` carries a `PlayerBase` area of 20 m, and `SpawnSystem.IsSpawnPointGood` skips natural spawns inside one.
 
+**Show domes (test aid, Maksym 2026-10-25, "just for now, to test")**: the row Show domes (Hidden / Visible) switches at once, without Apply; `op=dome&step=show[&alpha=0.1][&on=0]` is the same as a command. Visible draws a see-through half-sphere (10 %, `Sprites/Default`, no culling, no collider) over every **active** dome ward, centred on the ward with its own area radius (the loaded `PrivateArea`; a far ward: its saved position and the prefab radius), a colour of its own per ward; a deactivated ward has none. While on, the host's 2 s sync redraws it when a ward appears, goes or is switched; leaving the world or `op=reload` hides it. It is drawn **on this PC only**, so it breaks R0 on purpose: a view for checking coverage, never on by itself. The real protection is a column (horizontal distance), not a sphere.
+
 The window is drawn on this PC only (an interface, not world graphics, R0 holds). While it is open `TextInput.IsVisible` returns true (postfix in `DomePatches`), so the cursor is free and the player stands still, as with the spell form.
 
 ## Card
@@ -70,7 +72,8 @@ The window is drawn on this PC only (an interface, not world graphics, R0 holds)
 | Form | What it does |
 |---|---|
 | `op=dome&step=menu` | the ward menu (section Ward menu): the one spell-bar entry |
-| `op=dome&step=apply&group=new|<n>[&allow=<names>][&status=active|deactivated|deleted]` | the menu's Apply as a command |
+| `op=dome&step=apply&group=new|<n>[&allow=<names>][&status=active|deactivated|deleted][&partial=0]` | the menu's Apply as a command |
+| `op=dome&step=show[&alpha=0.1][&on=0]` | test aid, this PC only: see-through domes over the active wards, one line per ward in the answer |
 | `op=dome&step=mark` (twice) | stand on a point on one edge, then on the opposite edge; the second answer shows the centre, the radius and how many wards it needs. Same points as `op=coord&set=start` / `end` |
 | `op=dome&from=coords` (or `step=build&from=coords`) | builds the dome between the coord start and end points |
 | `op=dome&from=x,z&to=x,z` | the same between two typed points (X and Z, the ground plane) |
@@ -155,6 +158,10 @@ World `ClaudeTest`, hosted on this PC; after the first test pass (section In-gam
 | `op=dome&step=menu` | `dome menu opened: 1 group(s) of yours, 2 known player(s)` | window as designed: New / Group-1, Claude (you) greyed ticked, Claude2, Active / Deactivated / Deleted (greyed for New), the New line names the zone; Maksym: "all good" | pass |
 | Protect and Lights > Shield, New, Active, Place (zone centre -388,127, radius 33.7 m) | `2 of 7 ward spot(s) cannot take a ward, nothing placed ...` (cut off in the window) | the preview named them: two edge spots on water; 7 wards for a zone barely wider than one ward was too many: fixed with the 3 / 4 ward rings, the error line now wraps, Blocked spots row added | fail, fixed |
 | `op=dome&step=build&from=coords&preview=1` (same zone, new build) | `preview: 3 ward(s) would be placed (centre -387.8,127.1, radius 33.7 m ...)` | all three on land | pass |
+| window: New, Active, Place (same zone) | `dome Group-2 (d044abe31): placed 3 ward(s) (centre -387.8,127.1, radius 33.7 m ...); group of 3 ward(s), active, 0 allowed` | | pass |
+| window: Group-1, Deleted | `removed Group-1: 1 ward(s)` | | pass |
+| window: Group-2, tick Claude2, Apply; then Deactivated | `Group-2: 3 ward(s) active, allowed: you, Claude2` / `... deactivated ...`; list `on 0/3, permitted 1` | | pass |
+| `op=dome&step=show` | `... 3 sphere(s) over the active wards, radius 32 m ...`, `Group-2 ward at -371.0,30.8,127.1, radius 32.0 m (its own)` and two more | the spot of each ward as placed | pass |
 | `op=spells&reload=1` after the spell-file change | `56 spells, 21 titles, 5 pins; 0 bad lines` | Protect and Lights > Shield, Build > Shield | pass |
 
 Offline: the 3 / 4 ward rings cover with every ward moved by the slack in a random direction (20 tries per radius, ward radius 20 and 32 m); the lattice at `Fill` 0.95 covers every zone radius 5-150 m for ward radius 10, 20 and 32 m without a gap, and a second overlapping zone with its covered spots left out still covers itself (a scratch Node port of `DomeLayout`; exes are blocked on this PC).
