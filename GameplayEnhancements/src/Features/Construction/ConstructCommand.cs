@@ -10,22 +10,43 @@ using UnityEngine;
 namespace HomeCheat.Features.Construction
 {
     // construct: builds a saved blueprint (BepInEx/config/homecheat/blueprints/) as if the player had built it with the hammer.
-    // Milestone 1 (Maksym 2026-10-25): list, place at the crosshair, status, undo. The preview pillars, the flattening, the
-    // material swap and the panel follow (card docs/Backlog/construct.md).
+    // Milestone 1 (Maksym 2026-10-25): list, place, continue, support, status, undo. The preview pillars, the material swap and
+    // the panel follow (card docs/Backlog/construct.md).
     // Placement: the centre of the footprint at the crosshair (or at your feet), turned to your facing snapped to 22.5°, the
-    // lowest piece pivot on the ground there (card A5, no flattening yet). Pieces go bottom-up in batches, so what carries a
-    // piece stands before it; every piece gets the creator and OnPlaced as in Player.PlacePiece and the ZDO mark hc_construct.
+    // lowest collider bottom on the aimed surface (on the terrain without a hit). The ground step depends on that base
+    // (Maksym 2026-10-25: stacking stairs must not raise the ground): on terrain the footprint is levelled to the base first and
+    // gaps left under the bottom pieces get core-wood poles; on a piece or a rock nothing is changed, the support comes from it.
+    // continue=1 stacks the next copy exactly on the build under the crosshair, by the blueprint's own repeat (BlueprintRepeat).
+    // Pieces go bottom-up in batches; every piece gets the creator and OnPlaced as in Player.PlacePiece and the ZDO mark
+    // hc_construct with its build's origin, turn and name, so continue and undo find it again.
     public sealed class ConstructCommand : CommandBase
     {
         const int MaxPieces = 4000;
         const float MaxSide = 64f;          // metres, the larger side of the footprint
         const int MaxList = 50;
+        const int MaxCopies = 20;           // continue=1&count=
         const int BatchSize = 100;          // pieces per step
         const float BatchGap = 0.1f;        // seconds between steps
-        const float CheckAfter = 5f;        // seconds after the last step: how many still stand
+        const float CheckAfter = 5f;        // seconds after the last step: how many stand, how well supported
         const float BuildingMargin = 1f;    // keep-away from player-built pieces, metres past the build's half diagonal
         const float UndoRadius = 100f;      // a build without id= is looked for within this distance
-        public const string KeyBuild = "hc_construct";   // ZDO mark: the build id <name>-<yyyyMMddHHmmss>
+        const float LowestBand = 1f;        // pieces with a pivot this close to the lowest one are measured for the bottom
+        const float BaseBand = 0.3f;        // a piece whose bottom is this close to the base rests on the ground
+        const float FlattenMargin = 1f;     // metres levelled around the footprint
+        const float AreaStamp = 3f, AreaStep = 4f;   // groundlevel area=coords: 3 m stamps every 4 m cover a rectangle
+        const int MaxStamps = 1600;
+        const int StampBatch = 50;
+        const float Settle = 1f;            // seconds after the last stamp before pieces go down (terrain rebuild)
+        const float GapTolerance = 0.15f;   // a bottom piece this far above the surface below it gets a pole column
+        const float ColumnSpacing = 1f;     // one column per metre
+        const int MaxPoles = 600;
+        const int MaxPolesPerColumn = 10;
+        const string Pole = "wood_pole_log_4";
+        const string FlattenTool = "raise";
+        public const string KeyBuild = "hc_construct";          // ZDO mark: the build id <name>-<yyyyMMddHHmmss>
+        public const string KeyOrigin = "hc_construct_o";       // the copy's origin (Vector3), for continue=1
+        public const string KeyYaw = "hc_construct_yaw";
+        public const string KeyName = "hc_construct_name";
 
         string lastId = "", lastName = "";
         int lastPlaced;
@@ -33,14 +54,15 @@ namespace HomeCheat.Features.Construction
         sealed class Job
         {
             public GameObject Prefab;
-            public BlueprintPiece Piece;
+            public BlueprintPiece Piece;    // null for a support pole
             public Vector3 Pos;
             public Quaternion Rot;
+            public Vector3 Origin;          // of its copy
         }
 
         sealed class Tally
         {
-            public int Placed, Scaled, Signs, ExtraIgnored, Invalid;
+            public int Placed, Scaled, Signs, ExtraIgnored, Invalid, Poles;
         }
 
         public override string Name { get { return "construct"; } }
@@ -49,9 +71,12 @@ namespace HomeCheat.Features.Construction
             get
             {
                 return "construct step=list | step=place&name=<construction> [at=aim|self] [yaw=<world degrees, default your facing snapped to 22.5>]"
-                    + " [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
+                    + " [ground=auto|flatten|pillars|none (auto: on terrain = flatten the footprint + " + (int)FlattenMargin + " m to the base and pole the gaps; on a piece or rock = none)]"
+                    + " [overlap=0 (1 = build even with player-built pieces inside the footprint)]"
+                    + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
+                    + " | step=support [id=<default the last>] (read-only) | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
-                    + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, list " + MaxList;
+                    + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, " + MaxStamps + " flatten stamps, " + MaxPoles + " poles, list " + MaxList;
             }
         }
 
@@ -66,10 +91,11 @@ namespace HomeCheat.Features.Construction
         {
             string step = a.Str("step", "").ToLowerInvariant();
             if (step == "list") return List();
-            if (step == "place") return Place(a);
+            if (step == "place") return a.Flag("continue", false) ? Continue(a) : Place(a);
+            if (step == "support") return Support(a);
             if (step == "status") return Status();
             if (step == "undo") return Undo(a);
-            throw new CommandException("step= list, place, status or undo (op=help&cmd=construct)");
+            throw new CommandException("step= list, place, support, status or undo (op=help&cmd=construct)");
         }
 
         string List()
@@ -89,6 +115,9 @@ namespace HomeCheat.Features.Construction
                   .Append(e.Parts.Count).Append(e.Parts.Count == 1 ? " part, " : " parts, ").Append(e.PieceCount).Append(" pieces, ")
                   .Append(Fmt.F(x1 - x0, 1)).Append(" x ").Append(Fmt.F(z1 - z0, 1)).Append(" x ").Append(Fmt.F(y1 - y0, 1)).Append(" m");
                 if (e.Parts.Count == 1 && !string.IsNullOrEmpty(e.Parts[0].Creator)) sb.Append(", by ").Append(e.Parts[0].Creator);
+                float dx, dy, dz;
+                int m;
+                if (BlueprintRepeat.Find(e, out dx, out dy, out dz, out m)) sb.Append(", stacks (continue=1, +").Append(Fmt.F(dy, 2)).Append(" m a copy)");
                 if (e.BadLines > 0) sb.Append(", ").Append(e.BadLines).Append(" bad line(s)");
                 if (canCheck)
                 {
@@ -111,19 +140,69 @@ namespace HomeCheat.Features.Construction
             return missing;
         }
 
+        static BlueprintEntry Require(string name)
+        {
+            List<BlueprintEntry> all = BlueprintLibrary.Scan(Dir);
+            BlueprintEntry e = BlueprintLibrary.Find(all, name);
+            if (e != null) return e;
+            List<string> names = new List<string>();
+            foreach (BlueprintEntry x in all) names.Add(x.Name);
+            throw new CommandException("no construction '" + name + "' (have: " + (names.Count == 0 ? "none" : string.Join(", ", names.ToArray())) + ")");
+        }
+
+        static Vector3 Centre(BlueprintEntry e)
+        {
+            float x0, x1, y0, y1, z0, z1;
+            e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
+            return new Vector3((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f);
+        }
+
+        // the pieces of one copy: world position = origin + turn * (blueprint position - centre)
+        static int AddJobs(List<Job> jobs, BlueprintEntry e, Vector3 origin, Quaternion turn, HashSet<BlueprintPiece> skip, List<string> missing)
+        {
+            Vector3 centre = Centre(e);
+            int skipped = 0;
+            foreach (Blueprint b in e.Parts)
+                foreach (BlueprintPiece pc in b.Pieces)
+                {
+                    if (skip != null && skip.Contains(pc)) continue;
+                    GameObject prefab = Prefabs.Get(pc.Prefab);
+                    if (prefab == null) { skipped++; if (!missing.Contains(pc.Prefab)) missing.Add(pc.Prefab); continue; }
+                    Job j = new Job();
+                    j.Prefab = prefab;
+                    j.Piece = pc;
+                    j.Pos = origin + turn * (new Vector3(pc.X, pc.Y, pc.Z) - centre);
+                    j.Rot = turn * new Quaternion(pc.Qx, pc.Qy, pc.Qz, pc.Qw);
+                    j.Origin = origin;
+                    jobs.Add(j);
+                }
+            return skipped;
+        }
+
+        // collider bottom of a job (pivot when it cannot be measured)
+        static float Bottom(Job j)
+        {
+            float lo, hi;
+            return PieceGhost.Measure(j.Prefab, j.Rot, out lo, out hi) ? j.Pos.y + lo : j.Pos.y;
+        }
+
+        static bool AimHit(out RaycastHit hit)
+        {
+            hit = new RaycastHit();
+            Camera cam = Camera.main;
+            return cam != null && Physics.Raycast(cam.transform.position, cam.transform.forward, out hit, 60f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore);
+        }
+
+        static bool IsTerrain(Collider c)
+        {
+            return c != null && (c.GetComponent<Heightmap>() != null || LayerMask.LayerToName(c.gameObject.layer) == "terrain");
+        }
+
         string Place(Args a)
         {
             Host.RequireServer();
             Player p = Players.Local;
-            string name = a.Required("name", "op=construct&step=list shows the names");
-            List<BlueprintEntry> all = BlueprintLibrary.Scan(Dir);
-            BlueprintEntry e = BlueprintLibrary.Find(all, name);
-            if (e == null)
-            {
-                List<string> names = new List<string>();
-                foreach (BlueprintEntry x in all) names.Add(x.Name);
-                throw new CommandException("no construction '" + name + "' (have: " + (names.Count == 0 ? "none" : string.Join(", ", names.ToArray())) + ")");
-            }
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
             int count = Caps.Check("pieces", e.PieceCount, MaxPieces);
             if (count == 0) throw new CommandException(e.Name + " has no pieces");
             float x0, x1, y0, y1, z0, z1;
@@ -131,14 +210,17 @@ namespace HomeCheat.Features.Construction
             Caps.Check("footprint", Mathf.Max(x1 - x0, z1 - z0), MaxSide);
 
             string at = a.Str("at", "aim").ToLowerInvariant();
-            bool aimed = true;
-            Vector3 anchor;
-            if (at == "self") anchor = p.transform.position;
-            else if (at == "aim") anchor = Aim.Point(p, out aimed);
-            else throw new CommandException("at must be aim or self");
-            // a crosshair hit stands on the surface it hit (a rock, a floor); otherwise on the terrain (Maksym 2026-10-25)
-            bool onSurface = at == "aim" && aimed;
-            float groundY = onSurface ? anchor.y : Ground.Height(anchor);
+            if (at != "aim" && at != "self") throw new CommandException("at must be aim or self");
+            string ground = a.Str("ground", "auto").ToLowerInvariant();
+            if (ground != "auto" && ground != "flatten" && ground != "pillars" && ground != "none") throw new CommandException("ground must be auto, flatten, pillars or none");
+            RaycastHit hit = new RaycastHit();
+            bool aimed = at == "aim" && AimHit(out hit);
+            Vector3 anchor = at == "self" ? p.transform.position : (aimed ? hit.point : p.transform.position + p.transform.forward * 8f);
+            bool onTerrain = !aimed || IsTerrain(hit.collider);
+            float baseY = aimed ? anchor.y : Ground.Height(anchor);
+            string baseText = aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
+                : (at == "self" ? "terrain at your feet" : "terrain 8 m ahead (no crosshair hit)");
+            if (ground == "auto") ground = onTerrain ? "flatten" : "none";
 
             float yaw;
             if (a.Has("yaw")) yaw = a.Float("yaw", 0f);
@@ -150,96 +232,270 @@ namespace HomeCheat.Features.Construction
             yaw = Mathf.Repeat(yaw, 360f);
             Quaternion turn = Quaternion.Euler(0f, yaw, 0f);
 
-            // the footprint centre goes to the anchor, the lowest pivot to the ground
-            Vector3 centre = new Vector3((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f);
-            Vector3 origin = new Vector3(anchor.x, groundY, anchor.z);
+            List<Job> jobs = new List<Job>();
+            List<string> missing = new List<string>();
+            int skipped = AddJobs(jobs, e, new Vector3(anchor.x, baseY, anchor.z), turn, null, missing);
+            if (jobs.Count == 0) throw new CommandException("none of the " + count + " pieces is a prefab this game knows (" + string.Join(" ", missing.ToArray()) + ")");
+
+            // the lowest collider bottom (not pivot) goes on the base
+            float lowPivot = float.MaxValue;
+            foreach (Job j in jobs) if (j.Pos.y < lowPivot) lowPivot = j.Pos.y;
+            float lowest = float.MaxValue;
+            foreach (Job j in jobs) if (j.Pos.y <= lowPivot + LowestBand) lowest = Mathf.Min(lowest, Bottom(j));
+            float lift = baseY - lowest;
+            Vector3 origin = new Vector3(anchor.x, baseY + lift, anchor.z);
+            foreach (Job j in jobs) { j.Pos.y += lift; j.Origin = origin; }
 
             if (!a.Flag("overlap", false))
             {
-                Vector3 mid = origin + Vector3.up * ((y1 - y0) * 0.5f);
+                Vector3 mid = new Vector3(anchor.x, baseY + (y1 - y0) * 0.5f, anchor.z);
                 float reach = 0.5f * Mathf.Sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0) + (y1 - y0) * (y1 - y0)) + BuildingMargin;
                 Piece nearest;
                 int n = Constructions.Near(mid, reach, out nearest);
                 if (n > 0)
                     throw new CommandException(n + " player-built piece(s) inside the footprint, nearest " + Constructions.Describe(nearest, mid)
-                        + ": aim elsewhere or add overlap=1");
+                        + ": aim elsewhere, stack with continue=1, or add overlap=1");
             }
 
-            List<Job> jobs = new List<Job>();
-            List<string> missing = new List<string>();
-            int skipped = 0;
-            foreach (Blueprint b in e.Parts)
-                foreach (BlueprintPiece pc in b.Pieces)
+            // flatten: the box of every piece pivot + margin levelled to the base, before anything is placed
+            float delay = 0f;
+            int stamps = 0;
+            if (ground == "flatten")
+            {
+                float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
+                foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
+                ax -= FlattenMargin; az -= FlattenMargin; bx += FlattenMargin; bz += FlattenMargin;
+                int cols, rows;
+                GridMath.RectSize(ax, az, bx, bz, AreaStep, out cols, out rows);
+                Caps.Check("stamps", cols * rows, MaxStamps);
+                GameObject tool = Prefabs.Require(FlattenTool, "(the hoe's raise piece)");
+                TerrainModifier tm = tool.GetComponent<TerrainModifier>();
+                if (tm == null) throw new CommandException(FlattenTool + " has no TerrainModifier");
+                float off = Refl.GetFloat(tm, "m_levelOffset", 0f);
+                List<Vector3> todo = new List<Vector3>();
+                foreach (GridPoint pt in GridMath.RectCells(ax, az, bx, bz, AreaStep, MaxStamps)) todo.Add(new Vector3(pt.X, baseY - off, pt.Z));
+                stamps = todo.Count;
+                int nb = (todo.Count + StampBatch - 1) / StampBatch;
+                for (int b = 0; b < nb; b++)
                 {
-                    GameObject prefab = Prefabs.Get(pc.Prefab);
-                    if (prefab == null) { skipped++; if (!missing.Contains(pc.Prefab)) missing.Add(pc.Prefab); continue; }
-                    Job j = new Job();
-                    j.Prefab = prefab;
-                    j.Piece = pc;
-                    j.Pos = origin + turn * (new Vector3(pc.X, pc.Y, pc.Z) - centre);
-                    j.Rot = turn * new Quaternion(pc.Qx, pc.Qy, pc.Qz, pc.Qw);
-                    jobs.Add(j);
+                    int from = b * StampBatch, to = Mathf.Min(todo.Count, from + StampBatch);
+                    Action stamp = delegate { for (int i = from; i < to; i++) TerrainStamp.At(tool, todo[i], AreaStamp, 0f); };
+                    if (b == 0) stamp(); else Later(b * BatchGap, stamp);
                 }
-            if (jobs.Count == 0) throw new CommandException("none of the " + count + " pieces is a prefab this game knows (" + string.Join(" ", missing.ToArray()) + ")");
-            jobs.Sort(delegate (Job l, Job r) { return l.Pos.y.CompareTo(r.Pos.y); });
+                delay = (nb - 1) * BatchGap + Settle;
+            }
 
             string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             long me = p.GetPlayerID();
             Tally t = new Tally();
+            string buildName = e.Name;
+            bool poles = ground == "flatten" || ground == "pillars";
+            List<string> notes = new List<string>();
+            Action build = delegate
+            {
+                if (poles) AddPoles(jobs, baseY, t, notes);
+                Run(jobs, id, yaw, buildName, me, t, notes);
+            };
+            if (delay <= 0f) build(); else Later(delay, build);
+            lastId = id; lastName = e.Name; lastPlaced = jobs.Count;
+
+            return (delay <= 0f && jobs.Count <= BatchSize ? "placed " + t.Placed : "placing " + jobs.Count) + " of " + e.Name + " (" + count + " in the blueprint"
+                + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
+                + " at " + Fmt.Vec(origin) + " on the " + baseText + " (base " + Fmt.F(baseY, 2) + ", terrain " + Fmt.F(Ground.Height(anchor), 2) + ")"
+                + ", ground " + ground + (stamps > 0 ? " (" + stamps + " stamps, pieces after " + Fmt.F(delay, 1) + " s)" : "")
+                + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
+                + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
+                + "; standing and support in " + Fmt.F(delay + CheckAfter, 0) + " s (op=construct&step=support)";
+        }
+
+        // continue=1: the next copy (or count= copies) on the build under the crosshair, shifted by the blueprint's repeat
+        string Continue(Args a)
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            RaycastHit hit;
+            if (!Aim.SolidHit(60f, out hit)) throw new CommandException("aim at the top of the build to continue (nothing solid under the crosshair)");
+            ZNetView below = hit.collider.GetComponentInParent<ZNetView>();
+            if (below == null || !below.IsValid() || below.GetZDO().GetString(KeyBuild, "").Length == 0)
+                throw new CommandException("aim at a piece of a construct build (" + Prefabs.BaseName(hit.collider.transform.root.gameObject) + " is not one)");
+            ZDO z = below.GetZDO();
+            string fromId = z.GetString(KeyBuild, "");
+            Vector3 o0 = z.GetVec3(KeyOrigin, Vector3.zero);
+            float yaw = z.GetFloat(KeyYaw, 0f);
+            string name = a.Str("name", z.GetString(KeyName, ""));
+            if (name.Length == 0 || o0 == Vector3.zero) throw new CommandException("build " + fromId + " was placed before continue=1 existed: it has no origin to stack on; undo it and place it again");
+            BlueprintEntry e = Require(name);
+            float dx, dy, dz;
+            int matched;
+            if (!BlueprintRepeat.Find(e, out dx, out dy, out dz, out matched))
+                throw new CommandException(e.Name + " does not stack: its top layer does not repeat its bottom layer");
+            int copies = Caps.Check("count", a.Int("count", 1), MaxCopies);
+            if (copies < 1) throw new CommandException("count must be 1.." + MaxCopies);
+            HashSet<BlueprintPiece> shared = BlueprintRepeat.Shared(e, dx, dy, dz);
+            Caps.Check("pieces", (e.PieceCount - shared.Count) * copies, MaxPieces);
+
+            Quaternion turn = Quaternion.Euler(0f, yaw, 0f);
+            Vector3 shift = turn * new Vector3(dx, dy, dz);
+            List<Job> jobs = new List<Job>();
+            List<string> missing = new List<string>();
+            int skipped = 0;
+            for (int c = 1; c <= copies; c++) skipped += AddJobs(jobs, e, o0 + shift * c, turn, shared, missing);
+
+            // the copy above must be free: a construct piece of the same prefab already there means this is not the top
+            Dictionary<string, List<Vector3>> existing = new Dictionary<string, List<Vector3>>();
+            foreach (ZNetView nv in Loaded(""))
+            {
+                string pn = Prefabs.BaseName(nv.gameObject);
+                List<Vector3> l;
+                if (!existing.TryGetValue(pn, out l)) { l = new List<Vector3>(); existing[pn] = l; }
+                l.Add(nv.transform.position);
+            }
+            foreach (Job j in jobs)
+            {
+                List<Vector3> l;
+                if (!existing.TryGetValue(j.Prefab.name, out l)) continue;
+                foreach (Vector3 v in l)
+                    if ((v - j.Pos).sqrMagnitude < 0.01f)
+                        throw new CommandException("a copy already stands above " + fromId + " (" + j.Prefab.name + " at " + Fmt.Vec(v) + "): aim at the top copy");
+            }
+
+            string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+            Tally t = new Tally();
+            Run(jobs, id, yaw, e.Name, p.GetPlayerID(), t, new List<string>());
+            lastId = id; lastName = e.Name; lastPlaced = jobs.Count;
+            return (jobs.Count <= BatchSize ? "placed " + t.Placed : "placing " + jobs.Count) + " of " + e.Name + " in " + copies + " cop" + (copies == 1 ? "y" : "ies")
+                + " on " + fromId + " (shift " + Fmt.F(dx, 2) + "," + Fmt.F(dy, 2) + "," + Fmt.F(dz, 2) + " a copy, " + shared.Count + " shared landing piece(s) not placed twice"
+                + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
+                + ", top now at " + Fmt.F(o0.y + shift.y * copies, 1) + ", ground unchanged, id " + id
+                + "; standing and support in " + Fmt.F(CheckAfter, 0) + " s (op=construct&step=support)";
+        }
+
+        // core-wood poles under every bottom piece that does not reach the surface below it (after the flattening settled)
+        static void AddPoles(List<Job> jobs, float baseY, Tally t, List<string> notes)
+        {
+            GameObject pole = Prefabs.Get(Pole);
+            float lo, hi;
+            if (pole == null || !PieceGhost.Measure(pole, Quaternion.identity, out lo, out hi) || hi - lo < 0.5f) { notes.Add("no poles: " + Pole + " could not be measured"); return; }
+            float len = hi - lo;
+            List<Vector3> columns = new List<Vector3>();
+            List<Job> add = new List<Job>();
+            int noSurface = 0, capped = 0;
+            foreach (Job j in jobs)
+            {
+                if (j.Piece == null) continue;
+                float bottom = Bottom(j);
+                if (bottom > baseY + BaseBand) continue;
+                RaycastHit h;
+                if (!Physics.Raycast(new Vector3(j.Pos.x, bottom + 0.3f, j.Pos.z), Vector3.down, out h, 64f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore)) { noSurface++; continue; }
+                if (bottom - h.point.y <= GapTolerance) continue;
+                bool near = false;
+                foreach (Vector3 c in columns) if (new Vector2(c.x - j.Pos.x, c.z - j.Pos.z).sqrMagnitude < ColumnSpacing * ColumnSpacing) { near = true; break; }
+                if (near) continue;
+                columns.Add(j.Pos);
+                for (int k = 0; k < MaxPolesPerColumn; k++)
+                {
+                    if (t.Poles + add.Count >= MaxPoles) { capped++; break; }
+                    float poleBottom = bottom - (k + 1) * len;
+                    Job pj = new Job();
+                    pj.Prefab = pole;
+                    pj.Pos = new Vector3(j.Pos.x, poleBottom - lo, j.Pos.z);
+                    pj.Rot = Quaternion.identity;
+                    pj.Origin = j.Origin;
+                    add.Add(pj);
+                    if (poleBottom <= h.point.y) break;
+                }
+            }
+            jobs.AddRange(add);
+            t.Poles = add.Count;
+            if (noSurface > 0) notes.Add(noSurface + " bottom piece(s) with no surface within 64 m below");
+            if (capped > 0) notes.Add("poles capped at " + MaxPoles);
+        }
+
+        // places the jobs bottom-up in batches, then reports standing and support
+        void Run(List<Job> jobs, string id, float yaw, string name, long me, Tally t, List<string> notes)
+        {
+            jobs.Sort(delegate (Job l, Job r) { return l.Pos.y.CompareTo(r.Pos.y); });
             int batches = (jobs.Count + BatchSize - 1) / BatchSize;
             for (int bi = 0; bi < batches; bi++)
             {
                 int from = bi * BatchSize, to = Mathf.Min(jobs.Count, from + BatchSize);
-                Action stepAct = delegate { for (int i = from; i < to; i++) PlaceOne(jobs[i], id, me, t); };
+                Action stepAct = delegate { for (int i = from; i < to; i++) PlaceOne(jobs[i], id, yaw, name, me, t); };
                 if (bi == 0) stepAct(); else Later(bi * BatchGap, stepAct);
             }
-            string buildName = e.Name;
-            int total = jobs.Count;
             Later((batches - 1) * BatchGap + CheckAfter, delegate
             {
-                int standing = Loaded(id).Count;
-                string msg = "construct: " + buildName + " " + standing + " of " + t.Placed + " standing";
-                HomeApi.Log(msg + " (id " + id + ", " + total + " planned)");
+                string msg = "construct: " + name + " " + SupportLine(id, t.Placed) + (t.Poles > 0 ? ", " + t.Poles + " poles" : "")
+                    + (notes.Count > 0 ? "; " + string.Join("; ", notes.ToArray()) : "");
+                HomeApi.Log(msg + " (id " + id + ")");
                 Notify.Center(msg);
             });
-            lastId = id; lastName = e.Name; lastPlaced = total;
-
-            return (batches == 1 ? "placed " + t.Placed : "placing " + total) + " of " + e.Name + " (" + count + " in the blueprint"
-                + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
-                + " at " + Fmt.Vec(origin) + (at == "aim" ? (aimed ? " (crosshair surface, terrain there " + Fmt.F(Ground.Height(anchor), 1) + ")" : " (no crosshair hit, 8 m ahead, on the terrain)") : " (your position, on the terrain)")
-                + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
-                + (batches > 1 ? ", " + batches + " batches over " + Fmt.F((batches - 1) * BatchGap, 1) + " s" : "")
-                + (t.Scaled > 0 ? ", " + t.Scaled + " scaled" : "") + (t.Signs > 0 ? ", " + t.Signs + " sign text(s)" : "")
-                + (t.ExtraIgnored > 0 ? ", extra data of " + t.ExtraIgnored + " piece(s) ignored" : "")
-                + "; standing count in " + Fmt.F(CheckAfter, 0) + " s (op=construct&step=status)";
         }
 
         // one piece the way Player.PlacePiece makes it: creator, OnPlaced; no place effect per piece
-        static void PlaceOne(Job j, string id, long me, Tally t)
+        static void PlaceOne(Job j, string id, float yaw, string name, long me, Tally t)
         {
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(j.Prefab, j.Pos, j.Rot);
             ZNetView nv = go.GetComponent<ZNetView>();
             if (nv == null || !nv.IsValid()) { UnityEngine.Object.Destroy(go); t.Invalid++; return; }
-            nv.GetZDO().Set(KeyBuild, id);
+            ZDO z = nv.GetZDO();
+            z.Set(KeyBuild, id);
+            z.Set(KeyOrigin, j.Origin);
+            z.Set(KeyYaw, yaw);
+            z.Set(KeyName, name);
             BlueprintPiece pc = j.Piece;
-            if (Mathf.Abs(pc.Sx - 1f) > 0.001f || Mathf.Abs(pc.Sy - 1f) > 0.001f || Mathf.Abs(pc.Sz - 1f) > 0.001f)
+            if (pc != null && (Mathf.Abs(pc.Sx - 1f) > 0.001f || Mathf.Abs(pc.Sy - 1f) > 0.001f || Mathf.Abs(pc.Sz - 1f) > 0.001f))
             {
                 Vector3 s = new Vector3(pc.Sx, pc.Sy, pc.Sz);
                 go.transform.localScale = s;
-                nv.GetZDO().Set(Trees.ScaleKey, s);
+                z.Set(Trees.ScaleKey, s);
                 t.Scaled++;
             }
             Piece piece = go.GetComponent<Piece>();
             if (piece != null) piece.SetCreator(me, PlatformManager.DistributionPlatform.LocalUser.PlatformUserID);
             WearNTear wnt = go.GetComponent<WearNTear>();
             if (wnt != null) wnt.OnPlaced();
-            if (!string.IsNullOrEmpty(pc.Extra))
+            if (pc != null && !string.IsNullOrEmpty(pc.Extra))
             {
                 Sign sign = go.GetComponent<Sign>();
                 if (sign != null) { sign.SetText(pc.Extra); t.Signs++; }
                 else t.ExtraIgnored++;
             }
             t.Placed++;
+        }
+
+        // the hammer's support colour, 0..1 (private in 1.0.20: GetSupport against the material's min and max support)
+        static readonly System.Reflection.MethodInfo SupportValue = typeof(WearNTear).GetMethod("GetSupportColorValue",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+
+        // "<standing> of <placed> standing; support: n full, n good, n weak, n critical (weakest <prefab> 12%)"
+        static string SupportLine(string id, int placed)
+        {
+            List<ZNetView> pieces = Loaded(id);
+            int grounded = 0, full = 0, good = 0, weak = 0, critical = 0;
+            float worst = 2f;
+            string worstName = "";
+            foreach (ZNetView nv in pieces)
+            {
+                WearNTear w = nv.GetComponent<WearNTear>();
+                if (w == null || SupportValue == null) continue;
+                float v;
+                try { v = (float)SupportValue.Invoke(w, null); }
+                catch (Exception) { continue; }
+                // -1 = at the material's maximum (the hammer's blue): the piece rests on the ground or a rock (IL 1.0.20)
+                if (v < 0f) { grounded++; continue; }
+                if (v >= 0.99f) full++; else if (v >= 0.5f) good++; else if (v >= 0.25f) weak++; else critical++;
+                if (v < worst) { worst = v; worstName = Prefabs.BaseName(nv.gameObject); }
+            }
+            return pieces.Count + " of " + (placed > 0 ? placed : pieces.Count) + " standing; support " + grounded + " grounded, " + full + " full, " + good + " good, " + weak + " weak, " + critical + " critical"
+                + (worstName.Length > 0 ? " (weakest " + worstName + " " + Mathf.RoundToInt(worst * 100f) + "%)" : "");
+        }
+
+        string Support(Args a)
+        {
+            Host.RequireWorld();
+            string id = a.Str("id", lastId);
+            if (id.Length == 0) throw new CommandException("no build in this session: add id= (op=construct&step=status lists the loaded ones)");
+            return "build " + id + ": " + SupportLine(id, 0) + " (loaded pieces; grounded = rests on the ground or a rock, then full / good / weak / critical as the hammer colours them)";
         }
 
         // loaded objects with the build mark: of one build, or of every build when id is empty
