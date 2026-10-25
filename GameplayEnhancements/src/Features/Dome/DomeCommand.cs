@@ -25,6 +25,7 @@ namespace HomeCheat.Features.Dome
         const float RescanSeconds = 30f;   // how often the host looks for dome wards again (built or removed elsewhere)
         const int MaxListed = 8;           // spots named in an answer
         const float MaxBeach = 0.5f;       // a ward may stand on a beach whose ground is up to this far below the water line (Maksym 2026-10-25)
+        const float BuryGap = 0.3f;        // bury=1: the top of the ward model this far under the ground (Maksym 2026-10-25: all wards under the ground)
         const float SlideMax = 0.5f;       // partial=1: a blocked ward slides toward the zone centre by up to this x the ward radius
         const float SlideStep = 1f;        // ... in steps of this many metres (Maksym 2026-10-25)
 
@@ -40,7 +41,7 @@ namespace HomeCheat.Features.Dome
         public DomeCommand()
         {
             SubAction("step", "step=mark [point=start|end] (stand on a point: first the start, then the end; uses the coord points)"
-                + " | step=build from=coords|x,z [to=x,z] [cost=0] [partial=0] [preview=0] (as without step)"
+                + " | step=build from=coords|x,z [to=x,z] [cost=0] [partial=0] [preview=0] [bury=1 (0 = on the surface, with the water / building / slope checks)] (as without step)"
                 + " | step=list (every dome: centre, radius, wards, on/off, permitted)"
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
                 + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
@@ -117,7 +118,8 @@ namespace HomeCheat.Features.Dome
             public Vector3 Pos;
             public bool Ok;
             public string Why;
-            public bool Slid;      // partial=1: moved toward the zone centre off a blocked spot (the outer edge loses some cover)
+            public bool Slid;
+            public bool Buried;    // placed under the ground (bury=1, the menu): no surface check, the ward only reaches sideways anyway      // partial=1: moved toward the zone centre off a blocked spot (the outer edge loses some cover)
         }
 
         string Build(Args a)
@@ -135,7 +137,7 @@ namespace HomeCheat.Features.Dome
                 s = ParseXZ("from", from);
                 e = ParseXZ("to", a.Required("to", "to=x,z (the point on the opposite edge)"));
             }
-            return PlaceZone(s, e, a.Flag("cost", false), a.Flag("partial", false), a.Flag("preview", false), null);
+            return PlaceZone(s, e, a.Flag("cost", false), a.Flag("partial", false), a.Flag("preview", false), null, a.Flag("bury", true));
         }
 
         // covers the circle between s and e plus 10 % (DomeLayout.Margin) with wards of the caller. Lattice spots whose cell your
@@ -143,7 +145,7 @@ namespace HomeCheat.Features.Dome
         // join that group (several touched: they merge into the lowest number), else they form a new group.
         // wanted: the state of a new group (the menu's Allowed and Status); null = the first new ward's own state.
         // Joining a group keeps the group's on/off; its permitted list gains the wanted players.
-        internal string PlaceZone(Vector3 s, Vector3 e, bool cost, bool partial, bool preview, WardState wanted)
+        internal string PlaceZone(Vector3 s, Vector3 e, bool cost, bool partial, bool preview, WardState wanted, bool bury)
         {
             Host.RequireServer();
             Player p = Players.Local;
@@ -180,8 +182,8 @@ namespace HomeCheat.Features.Dome
             int bad = 0;
             foreach (DomePoint lp in lattice)
             {
-                Spot sp = FindSpot(lp, slack, me, wr, allWards);
-                if (!sp.Ok && partial) Slide(sp, cx, cz, wr * SlideMax, me, wr, allWards);
+                Spot sp = bury ? BurySpot(lp, me, wr, allWards) : FindSpot(lp, slack, me, wr, allWards);
+                if (!sp.Ok && partial && !bury) Slide(sp, cx, cz, wr * SlideMax, me, wr, allWards);
                 if (!sp.Ok) bad++;
                 spots.Add(sp);
             }
@@ -232,7 +234,7 @@ namespace HomeCheat.Features.Dome
             foreach (Spot sp in spots)
             {
                 if (!sp.Ok) continue;
-                ZDO z = Place(prefab, sp.Pos, rot, me, profileName);
+                ZDO z = Place(prefab, sp.Pos, rot, me, profileName, sp.Buried);
                 if (z == null) continue;
                 z.Set(DomeWards.KeyDome, id);
                 z.Set(DomeWards.KeyNo, no);
@@ -390,7 +392,7 @@ namespace HomeCheat.Features.Dome
             if (no == 0)
             {
                 if (status == "deleted") throw new CommandException("New cannot be Deleted: pick Active or Deactivated");
-                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), false, partial, false, st);
+                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), false, partial, false, st, true);
             }
             Rescan();
             string id = null;
@@ -466,7 +468,7 @@ namespace HomeCheat.Features.Dome
                     Vector3 at = pa != null ? pa.transform.position : z.GetPosition();
                     wl.Append("\n  ").Append(GroupName(kv.Key)).Append(" ward at ").Append(Fmt.Vec(at)).Append(", radius ")
                         .Append(Fmt.F(pa != null ? pa.m_radius : WardArea(true).m_radius, 1)).Append(" m").Append(pa != null ? " (its own)" : " (prefab, not loaded)")
-                        .Append(z.GetBool(ZDOVars.s_enabled, false) ? "" : ", deactivated: not drawn");
+                        .Append(", health ").Append(Fmt.F(z.GetFloat(ZDOVars.s_health, -1f), 0)).Append(z.GetBool(ZDOVars.s_enabled, false) ? "" : ", deactivated: not drawn");
                 }
             return "dome show (test aid, only on this PC): " + n + " sphere(s) over the active wards, radius " + Fmt.F(WardArea(true).m_radius, 0) + " m in " + groups.Count + " group(s), a colour per ward, " + Fmt.F(alpha * 100f, 0) + " % visible; op=dome&step=show&on=0 removes them" + wl;
         }
@@ -497,6 +499,25 @@ namespace HomeCheat.Features.Dome
         }
 
         // the vanilla ward's PrivateArea on its prefab (its radius is the asset's value, read live)
+        // bury=1: the lattice point exactly, so the cover is whole; only an unloaded terrain or another player's ward area refuses
+        Spot BurySpot(DomePoint lp, long me, float wr, List<ZDO> allWards)
+        {
+            Spot sp = new Spot();
+            sp.Lattice = lp;
+            Vector3 pos = new Vector3(lp.X, 0f, lp.Z);
+            if (Heightmap.FindHeightmap(pos) == null) { sp.Why = "terrain not loaded here (stand nearer the zone)"; return sp; }
+            foreach (ZDO w in allWards)
+            {
+                long creator = DomeWards.Creator(w);
+                if (creator == me || creator == 0L) continue;
+                float d = DomeWards.DistanceXZ(w.GetPosition(), pos);
+                if (d < wr * 2f) { sp.Why = "overlaps another player's ward area (ward at " + Fmt.F(w.GetPosition().x, 1) + "," + Fmt.F(w.GetPosition().z, 1) + ", " + Fmt.F(d, 1) + " m)"; return sp; }
+            }
+            pos.y = Ground.Height(pos);
+            sp.Pos = pos; sp.Ok = true; sp.Buried = true;
+            return sp;
+        }
+
         static PrivateArea WardArea(bool require)
         {
             GameObject prefab = require ? Prefabs.Require(DomeWards.WardPrefab, "(the vanilla ward)") : Prefabs.Get(DomeWards.WardPrefab);
@@ -609,11 +630,20 @@ namespace HomeCheat.Features.Dome
         }
 
         // creates the ward the way Player.PlacePiece does: creator, creator name, OnPlaced, place effect
-        static ZDO Place(GameObject prefab, Vector3 pos, Quaternion rot, long me, string profileName)
+        static ZDO Place(GameObject prefab, Vector3 pos, Quaternion rot, long me, string profileName, bool bury)
         {
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(prefab, pos, rot);
             ZNetView nv = go.GetComponent<ZNetView>();
             if (nv == null || !nv.IsValid()) { UnityEngine.Object.Destroy(go); return null; }
+            if (bury)
+            {
+                // sink it until the top of its model is BuryGap under the ground; the ZDO gets the same position, so every
+                // client creates it there (a piece has no transform sync)
+                Bounds b = new Bounds(go.transform.position, Vector3.zero);
+                foreach (Renderer r in go.GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
+                go.transform.position += Vector3.up * (pos.y - BuryGap - b.max.y);
+                nv.GetZDO().SetPosition(go.transform.position);
+            }
             Piece piece = go.GetComponent<Piece>();
             if (piece != null) piece.SetCreator(me, PlatformManager.DistributionPlatform.LocalUser.PlatformUserID);
             PrivateArea area = go.GetComponent<PrivateArea>();
@@ -656,7 +686,8 @@ namespace HomeCheat.Features.Dome
                 if (++n > MaxListed) { sb.Append("\n  ... and ").Append(CountOk(spots) - MaxListed).Append(" more"); break; }
                 float moved = DomeWards.DistanceXZ(sp.Pos, new Vector3(sp.Lattice.X, 0f, sp.Lattice.Z));
                 sb.Append("\n  ").Append(preview ? "would place at " : "ward at ").Append(Fmt.Vec(sp.Pos));
-                if (sp.Slid) sb.Append(" (slid ").Append(Fmt.F(moved, 1)).Append(" m toward the centre off a blocked spot: less cover at the outer edge)");
+                if (sp.Buried) sb.Append(" (under the ground)");
+                else if (sp.Slid) sb.Append(" (slid ").Append(Fmt.F(moved, 1)).Append(" m toward the centre off a blocked spot: less cover at the outer edge)");
                 else if (moved > 0.01f) sb.Append(" (moved ").Append(Fmt.F(moved, 1)).Append(" m from a blocked spot)");
             }
             return sb.ToString();
