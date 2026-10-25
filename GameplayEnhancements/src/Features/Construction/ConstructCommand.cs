@@ -62,6 +62,7 @@ namespace HomeCheat.Features.Construction
         const float PlinthTile = 2f;        // the stone foundation's tile: one 2 x 2 m floor
         const int MaxPlinth = 1500, MaxPlinthWalls = 12;
         const float ClearMargin = 1f, ClearBelow = 3f;   // clear the space: around the pieces' box, and under the base
+        const float ClearReach = 10f;       // objects with a pivot this far outside the box are checked for a body reaching in
         const float GroundMiss = 0.05f;     // a ground step with more vertices than this share off target stops the build
         const float ItemMargin = 2f;        // undo items=1: dropped items this far around the build's box
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
@@ -97,14 +98,14 @@ namespace HomeCheat.Features.Construction
                 return "construct step=list | step=preview&name=<construction> [at=aim|self|x,z|x,y,z] [yaw=<world degrees, default your facing snapped to 22.5>]"
                     + " [ground=auto|fit|flatten|pillars|none (auto: on terrain, a rock, tree or bush = fit; on a player-built piece = none. fit = flatten the footprint + " + (int)FlattenMargin
                     + " m to the base, then raise the terrain under every 1 m column whose lowest piece hangs " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0)
-                    + " m up (pieces that need ground: stone, other non-wood, loose objects); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
+                    + " m up (pieces that need ground: stone, other non-wood, loose objects; not non-wood resting on non-wood straight down to the ground); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)] [material=blueprint|<family> (step=materials lists them)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre, and the plan's doors at their place, on poles where they hang; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
                     + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only) | step=materials&name= (read-only)"
                     + " | step=place&name=<construction> (direct, no preview; same keys)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
-                    + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=status | step=undo [id=<build id, default the last>] [items=0 (1 = also the items dropped inside the build's box + 2 m)] [confirm=1]"
+                    + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=clear [id=] (read-only: the world's objects still in the build's clearing box, pivot or body, and the build's own loose objects) | step=fit&name=<construction> [at=] [yaw=] (read-only: what ground=fit would raise here, with and without the carried rule, against the terrain now) | step=status | step=undo [id=<build id, default the last>] [items=0 (1 = also the items dropped inside the build's box + 2 m)] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
                     + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, " + MaxVertices + " levelled vertices, " + MaxPoles + " poles, list " + MaxList;
             }
@@ -169,7 +170,9 @@ namespace HomeCheat.Features.Construction
             if (step == "materials") return Materials(a);
             if (step == "status") return Status();
             if (step == "undo") return Undo(a);
-            throw new CommandException("step= list, preview, rotate, start, remove, place, support, status or undo (op=help&cmd=construct)");
+            if (step == "clear") return ClearReport(a);
+            if (step == "fit") return FitReport(a);
+            throw new CommandException("step= list, preview, rotate, start, remove, place, level, support, ground, flatness, clear, fit, materials, status or undo (op=help&cmd=construct)");
         }
 
         string List()
@@ -432,7 +435,7 @@ namespace HomeCheat.Features.Construction
             // the ground first (flatten: flat at the base; fit: also raised under hanging pieces), then the pieces
             float delay = 0f;
             GroundJob g = null;
-            if (ground == "flatten" || ground == "fit") { g = PrepareGround(jobs, baseY, ground == "fit"); delay = g.Ready; }
+            if (ground == "flatten" || ground == "fit") { g = PrepareGround(jobs, baseY, yaw, ground == "fit"); delay = g.Ready; }
 
             string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             long me = p.GetPlayerID();
@@ -475,7 +478,7 @@ namespace HomeCheat.Features.Construction
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
                 + " at " + Fmt.Vec(origin) + " on the " + baseText + " (base " + Fmt.F(baseY, 2) + ", terrain " + Fmt.F(Ground.Height(anchor), 2) + ")"
                 + ", " + floorText
-                + ", ground " + ground + (g != null ? " (" + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "") + g.Targets.Count + " vertices levelled, " + g.Raised + " raised, pieces after " + Fmt.F(delay, 1) + " s)" : "")
+                + ", ground " + ground + (g != null ? " (" + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "") + g.Targets.Count + " vertices levelled, " + g.Raised + " raised, " + g.Carried + " non-wood pieces carried by non-wood, pieces after " + Fmt.F(delay, 1) + " s)" : "")
                 + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
                 + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
@@ -508,7 +511,7 @@ namespace HomeCheat.Features.Construction
             string floorText;
             List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
             if (jobs.Count == 0) throw new CommandException("none of the pieces is a prefab this game knows");
-            GroundJob g = PrepareGround(jobs, pl.BaseY, pl.Ground == "fit");
+            GroundJob g = PrepareGround(jobs, pl.BaseY, pl.Yaw, pl.Ground == "fit");
             string mode = pl.Ground;
             Later(g.Ready + Settle, delegate
             {
@@ -524,7 +527,7 @@ namespace HomeCheat.Features.Construction
             pl.PillarId = "";
             SavePlan(pl);
             return "levelling for " + e.Name + " (" + mode + "): base " + Fmt.F(pl.BaseY, 2) + " on the " + pl.BaseText + ", " + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "")
-                + g.Targets.Count + " vertices, " + g.Raised + " raised; done in " + Fmt.F(g.Ready, 1) + " s, flatness report " + Fmt.F(Settle, 0) + " s later (or step=flatness)."
+                + g.Targets.Count + " vertices, " + g.Raised + " raised, " + g.Carried + " non-wood pieces carried by non-wood; done in " + Fmt.F(g.Ready, 1) + " s, flatness report " + Fmt.F(Settle, 0) + " s later (or step=flatness)."
                 + " The plan is kept with ground=none: step=start&confirm=1 builds on this ground";
         }
 
@@ -857,22 +860,44 @@ namespace HomeCheat.Features.Construction
         // one raise stamp per 1 m column whose lowest piece (collider bottom; pivot for bushes, stones and other non-pieces)
         // hangs FitMin..FitMax above the base, levelled to that bottom; lower columns first, so a higher stamp's smoothing wins
         // the target height of every terrain vertex under the build (FitField): every piece's collider box over the 1 m cells it
-        // covers (bushes, stones and other non-pieces as a 0.5 m square at their pivot); fit=false = flat at the base
-        static List<Vector3> GroundTargets(List<Job> jobs, float baseY, bool fit, float ax, float az, float bx, float bz, out int raised)
+        // covers (bushes, stones and other non-pieces as a 0.5 m square at their pivot); fit=false = flat at the base.
+        // Non-wood pieces resting on non-wood pieces that have a foot of their own need no ground under them (FitField.Carried;
+        // portal hub 2026-10-25: a stone plaza on stone walls got its lower level filled with earth). Carried is measured on
+        // boxes in the build's own frame (turned back by yaw), where the blueprint's pieces stay axis-aligned
+        static List<Vector3> GroundTargets(List<Job> jobs, float baseY, float yaw, bool fit, float ax, float az, float bx, float bz, out int raised, out int carriedCount)
         {
-            List<FitField.Box> boxes = new List<FitField.Box>();
+            return GroundTargets(jobs, baseY, yaw, fit, true, ax, az, bx, bz, out raised, out carriedCount);
+        }
+
+        static int lastCarriers;   // the last GroundTargets: its non-wood building pieces
+
+        // carryRule=false: the rule before 2026-10-25 21:40 (every non-wood piece needs ground), for step=fit's comparison
+        static List<Vector3> GroundTargets(List<Job> jobs, float baseY, float yaw, bool fit, bool carryRule, float ax, float az, float bx, float bz, out int raised, out int carriedCount)
+        {
+            List<FitField.Box> boxes = new List<FitField.Box>(), local = new List<FitField.Box>();
+            Quaternion inv = Quaternion.Inverse(Quaternion.Euler(0f, yaw, 0f));
             foreach (Job j in jobs)
             {
                 if (j.Piece == null) continue;
                 Vector3 lo, hi;
-                bool needs = NeedsGround(j.Prefab);
+                bool needs = NeedsGround(j.Prefab), carries = Carries(j.Prefab);
                 if (PieceGhost.Box(j.Prefab, j.Rot, out lo, out hi))
-                    boxes.Add(new FitField.Box(j.Pos.x + lo.x, j.Pos.x + hi.x, j.Pos.z + lo.z, j.Pos.z + hi.z, j.Pos.y + lo.y, needs));
+                    boxes.Add(new FitField.Box(j.Pos.x + lo.x, j.Pos.x + hi.x, j.Pos.z + lo.z, j.Pos.z + hi.z, j.Pos.y + lo.y, j.Pos.y + hi.y, needs, carries));
                 else
-                    boxes.Add(new FitField.Box(j.Pos.x - 0.25f, j.Pos.x + 0.25f, j.Pos.z - 0.25f, j.Pos.z + 0.25f, j.Pos.y, needs));
+                    boxes.Add(new FitField.Box(j.Pos.x - 0.25f, j.Pos.x + 0.25f, j.Pos.z - 0.25f, j.Pos.z + 0.25f, j.Pos.y, j.Pos.y, needs, false));
+                Vector3 lp = inv * (j.Pos - j.Origin);
+                if (PieceGhost.Box(j.Prefab, inv * j.Rot, out lo, out hi))
+                    local.Add(new FitField.Box(lp.x + lo.x, lp.x + hi.x, lp.z + lo.z, lp.z + hi.z, j.Pos.y + lo.y, j.Pos.y + hi.y, needs, carries));
+                else
+                    local.Add(new FitField.Box(lp.x - 0.25f, lp.x + 0.25f, lp.z - 0.25f, lp.z + 0.25f, j.Pos.y, j.Pos.y, needs, false));
             }
+            bool[] carried = fit && carryRule ? FitField.Carried(local) : null;
+            lastCarriers = 0;
+            foreach (FitField.Box b in local) if (b.Carries) lastCarriers++;
+            carriedCount = 0;
+            if (carried != null) foreach (bool c in carried) if (c) carriedCount++;
             List<Vector3> verts = new List<Vector3>();
-            foreach (float[] v in FitField.Vertices(boxes, baseY, FitMin, FitMax, fit, ax, az, bx, bz, MaxVertices, out raised)) verts.Add(new Vector3(v[0], v[1], v[2]));
+            foreach (float[] v in FitField.Vertices(boxes, carried, baseY, FitMin, FitMax, fit, ax, az, bx, bz, MaxVertices, out raised)) verts.Add(new Vector3(v[0], v[1], v[2]));
             return verts;
         }
 
@@ -935,39 +960,162 @@ namespace HomeCheat.Features.Construction
         // clear the space (Maksym 2026-10-25: "before placing the real construction, clear the space from existing objects"):
         // inside the box of the pieces (+ ClearMargin around, from ClearBelow under the base to ClearMargin over the top) the
         // world's own objects go: trees, logs, stumps and rocks, bushes, pickables, saplings, items on the ground. Never players,
-        // creatures, player-built pieces (those refuse the build before this) or this command's own marked objects
+        // creatures, player-built pieces (those refuse the build before this) or this command's own marked objects. An object
+        // goes when its pivot is in the box or its body reaches in: its colliders, and a tree's renderers (the crown). Portal hub
+        // 2026-10-25: trees and rocks at the edge stayed, their pivots just outside the box
+        // The box reaches ClearBelow under the lowest piece, the stone foundation on a slope included (portal hub 2026-10-25:
+        // trees on the slope under the foundation stayed)
         static string ClearSpace(List<Job> jobs, float baseY)
         {
+            List<Vector3> pivots = new List<Vector3>();
+            float low = baseY;
+            foreach (Job j in jobs) { pivots.Add(j.Pos); low = Mathf.Min(low, j.Pos.y); }
+            return ClearIn(ClearBox(pivots, low - ClearBelow), true, null);
+        }
+
+        // the box to clear around a set of piece pivots: ClearMargin around and over the top, down to bottom
+        static Bounds ClearBox(List<Vector3> pivots, float bottom)
+        {
             float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue, top = float.MinValue;
-            foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); top = Mathf.Max(top, j.Pos.y); }
+            foreach (Vector3 p in pivots) { ax = Mathf.Min(ax, p.x); az = Mathf.Min(az, p.z); bx = Mathf.Max(bx, p.x); bz = Mathf.Max(bz, p.z); top = Mathf.Max(top, p.y); }
             Bounds box = new Bounds();
-            box.SetMinMax(new Vector3(ax - ClearMargin, baseY - ClearBelow, az - ClearMargin), new Vector3(bx + ClearMargin, top + ClearMargin, bz + ClearMargin));
+            box.SetMinMax(new Vector3(ax - ClearMargin, bottom, az - ClearMargin), new Vector3(bx + ClearMargin, top + ClearMargin, bz + ClearMargin));
+            return box;
+        }
+
+        // the world's own objects in the box (pivot inside, or body reaching in), by kind; remove=true destroys them. found
+        // (when given, read-only) collects "<prefab> at x,z (pivot|body)" of what is left
+        static string ClearIn(Bounds box, bool remove, List<string> found)
+        {
+            Bounds near = box;
+            near.Expand(new Vector3(2f * ClearReach, 0f, 2f * ClearReach));
             Dictionary<string, int> kinds = new Dictionary<string, int>();
-            int n = 0;
+            int n = 0, byBody = 0;
             foreach (ZNetView nv in UnityEngine.Object.FindObjectsOfType<ZNetView>())
             {
-                if (nv == null || !nv.IsValid() || !box.Contains(nv.transform.position)) continue;
+                if (nv == null || !nv.IsValid()) continue;
+                Vector3 pos = nv.transform.position;
+                if (pos.x < near.min.x || pos.x > near.max.x || pos.z < near.min.z || pos.z > near.max.z) continue;
                 GameObject go = nv.gameObject;
                 if (go.GetComponent<Character>() != null) continue;
                 ZDO z = nv.GetZDO();
                 if (z.GetString(KeyBuild, "").Length > 0 || z.GetString(KeyPillar, "").Length > 0) continue;
                 Piece pc = go.GetComponent<Piece>();
                 if (pc != null && pc.IsPlacedByPlayer()) continue;
-                string kind = go.GetComponent<TreeBase>() != null ? "trees" : go.GetComponent<TreeLog>() != null ? "logs"
+                bool tree = go.GetComponent<TreeBase>() != null;
+                string kind = tree ? "trees" : go.GetComponent<TreeLog>() != null ? "logs"
                     : go.GetComponent<MineRock5>() != null || go.GetComponent<MineRock>() != null ? "rocks" : go.GetComponent<Destructible>() != null ? "stumps, rocks and bushes"
                     : go.GetComponent<Pickable>() != null ? "pickables" : go.GetComponent<Plant>() != null ? "saplings" : go.GetComponent<ItemDrop>() != null ? "items" : "";
                 if (kind.Length == 0) continue;
-                nv.ClaimOwnership();
-                ZNetScene.instance.Destroy(go);
+                bool pivot = box.Contains(pos);
+                if (!pivot && !Reaches(go, box, tree)) continue;
+                if (!pivot) byBody++;
+                if (remove)
+                {
+                    nv.ClaimOwnership();
+                    ZNetScene.instance.Destroy(go);
+                }
+                else if (found != null && found.Count < 8) found.Add(Prefabs.BaseName(go) + " at " + Fmt.F(pos.x, 1) + "," + Fmt.F(pos.z, 1) + " (" + (pivot ? "pivot" : "body") + ")");
                 int c;
                 kinds.TryGetValue(kind, out c);
                 kinds[kind] = c + 1;
                 n++;
             }
-            if (n == 0) return "space clear: nothing to remove";
+            if (n == 0) return remove ? "space clear: nothing to remove" : "no world objects in the box";
             List<string> parts = new List<string>();
             foreach (KeyValuePair<string, int> kv in kinds) parts.Add(kv.Value + " " + kv.Key);
-            return "space cleared: " + n + " object(s) removed (" + string.Join(", ", parts.ToArray()) + ")";
+            return (remove ? "space cleared: " + n + " object(s) removed (" : n + " world object(s) in the box (") + string.Join(", ", parts.ToArray()) + "; " + byBody + " by body only, pivot outside)";
+        }
+
+        // the object's body reaches into the box: a solid collider, or for a tree also a renderer (its crown)
+        static bool Reaches(GameObject go, Bounds box, bool tree)
+        {
+            foreach (Collider c in go.GetComponentsInChildren<Collider>())
+                if (c != null && c.enabled && !c.isTrigger && c.bounds.Intersects(box)) return true;
+            if (tree)
+                foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+                    if (r != null && (r is MeshRenderer || r is SkinnedMeshRenderer) && r.bounds.Intersects(box)) return true;
+            return false;
+        }
+
+        // step=fit (read-only): the ground step ground=fit would do here, without doing it: how many vertices it raises with
+        // and without the carried rule, and how far the terrain is now from those targets (portal hub 2026-10-25: measure the
+        // fix before levelling again)
+        string FitReport(Args a)
+        {
+            Host.RequireWorld();
+            Player p = Players.Local;
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
+            Plan pl = MakePlan(a, p, e);
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
+            if (jobs.Count == 0) throw new CommandException("none of the pieces is a prefab this game knows");
+            float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
+            foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
+            ax -= FlattenMargin; az -= FlattenMargin; bx += FlattenMargin; bz += FlattenMargin;
+            int raised, carried, raisedOld, none;
+            List<Vector3> old = GroundTargets(jobs, pl.BaseY, pl.Yaw, true, false, ax, az, bx, bz, out raisedOld, out none);
+            List<Vector3> targets = GroundTargets(jobs, pl.BaseY, pl.Yaw, true, true, ax, az, bx, bz, out raised, out carried);
+            int deep = 0, deepOld = 0;   // raised more than 1 m: earth filling a level, not ground under a wall's foot
+            foreach (Vector3 v in targets) if (v.y > pl.BaseY + 1f) deep++;
+            foreach (Vector3 v in old) if (v.y > pl.BaseY + 1f) deepOld++;
+            int ok = 0, high = 0, low = 0;
+            float worstHigh = 0f;
+            foreach (Vector3 v in targets)
+            {
+                float d = Ground.Height(v) - v.y;
+                if (Mathf.Abs(d) <= 0.05f) ok++; else if (d > 0f) { high++; worstHigh = Mathf.Max(worstHigh, d); } else low++;
+            }
+            int zones, foreign;
+            TerrainLevel.Owners(ax, az, bx, bz, out zones, out foreign);
+            StringBuilder hs = new StringBuilder();
+            hs.Append("; terrain zones ").Append(zones).Append(", ").Append(foreign).Append(" owned by another peer (their level operations are dropped)");
+            List<Vector3> highs = new List<Vector3>();
+            foreach (Vector3 v in targets) if (Ground.Height(v) - v.y > 0.05f) highs.Add(v);
+            highs.Sort(delegate (Vector3 l, Vector3 r) { return (Ground.Height(r) - r.y).CompareTo(Ground.Height(l) - l.y); });
+            for (int i = 0; i < highs.Count && i < 3; i++)
+                hs.Append("; ").Append(Fmt.F(highs[i].x, 0)).Append(",").Append(Fmt.F(highs[i].z, 0)).Append(" terrain ").Append(Fmt.F(Ground.Height(highs[i]), 2))
+                  .Append(" target ").Append(Fmt.F(highs[i].y, 2)).Append(" world ground ").Append(WorldGenerator.instance != null ? Fmt.F(WorldGenerator.instance.GetHeight(highs[i].x, highs[i].z), 2) : "?");
+            return "fit for " + e.Name + " at " + Fmt.Vec(origin) + " yaw " + Fmt.F(pl.Yaw, 1) + " (base " + Fmt.F(pl.BaseY, 2) + "): " + targets.Count + " vertices, " + raised + " raised, " + deep + " of them more than 1 m ("
+                + raisedOld + " and " + deepOld + " without the carried rule), " + carried + " of " + lastCarriers + " non-wood building pieces resting on non-wood with a foot of its own (no ground of their own); the terrain now: " + ok + " within 5 cm of these targets, "
+                + high + " higher" + (high > 0 ? " (worst +" + Fmt.F(worstHigh, 2) + " m)" : "") + ", " + low + " lower" + hs + ". Nothing changed (read-only)";
+        }
+
+        // step=clear (read-only): the world's objects still in a build's clearing box (its piece pivots + ClearMargin, from
+        // ClearBelow under its lowest piece), and the build's own loose objects (the blueprint's bushes, pickables, animals)
+        string ClearReport(Args a)
+        {
+            Host.RequireWorld();
+            string id = a.Str("id", lastId);
+            if (id.Length == 0) throw new CommandException("no build in this session: add id= (op=construct&step=status lists the loaded ones)");
+            List<ZNetView> pieces = Loaded(id);
+            if (pieces.Count == 0) throw new CommandException("no loaded pieces of build " + id + ": go near it (op=construct&step=status)");
+            List<Vector3> pivots = new List<Vector3>();
+            float low = float.MaxValue;
+            Dictionary<string, int> own = new Dictionary<string, int>();
+            foreach (ZNetView nv in pieces)
+            {
+                Vector3 p = nv.transform.position;
+                // only pieces and pickables size the box: the portal hub's seagull (a RandomFlyingBird with a Destructible, no
+                // Character) flies off
+                if (nv.GetComponent<Piece>() != null || nv.GetComponent<Pickable>() != null) { pivots.Add(p); low = Mathf.Min(low, p.y); }
+                if (nv.GetComponent<WearNTear>() != null) continue;
+                string pn = Prefabs.BaseName(nv.gameObject);
+                int c;
+                own.TryGetValue(pn, out c);
+                own[pn] = c + 1;
+            }
+            List<string> found = new List<string>();
+            Bounds box = ClearBox(pivots, low - ClearBelow);
+            string line = ClearIn(box, false, found);
+            StringBuilder sb = new StringBuilder();
+            foreach (KeyValuePair<string, int> kv in own) sb.Append(sb.Length == 0 ? "" : ", ").Append(kv.Key).Append(" ").Append(kv.Value);
+            return "clearing box of " + id + " (x " + Fmt.F(box.min.x, 1) + ".." + Fmt.F(box.max.x, 1) + ", z " + Fmt.F(box.min.z, 1) + ".." + Fmt.F(box.max.z, 1)
+                + ", y " + Fmt.F(box.min.y, 1) + ".." + Fmt.F(box.max.y, 1) + "): " + line + (found.Count > 0 ? "; " + string.Join("; ", found.ToArray()) : "")
+                + (sb.Length > 0 ? "; the build's own loose objects (from the blueprint, not the world's): " + sb : "");
         }
 
         // a piece that must rest on the ground: no WearNTear (bushes, pickable stones), or a material other than wood (stone,
@@ -980,16 +1128,22 @@ namespace HomeCheat.Features.Construction
             return m != "Wood" && m != "HardWood";
         }
 
+        // a building piece of a non-wood material: it carries the non-wood piece resting on it (FitField.Carried)
+        static bool Carries(GameObject prefab)
+        {
+            return prefab.GetComponent<WearNTear>() != null && NeedsGround(prefab);
+        }
+
         // the ground step of a build: the old hoe stamps in the box removed, a moment for the terrain to rebuild, then one level
         // operation per vertex (TerrainLevel.Vertex). Ready = seconds until the ground is done
         sealed class GroundJob
         {
-            public int Legacy, Raised;
+            public int Legacy, Raised, Carried, Claimed;
             public float Ready, BaseY;
             public List<Vector3> Targets;
         }
 
-        GroundJob PrepareGround(List<Job> jobs, float baseY, bool fit)
+        GroundJob PrepareGround(List<Job> jobs, float baseY, float yaw, bool fit)
         {
             float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
             foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
@@ -998,14 +1152,18 @@ namespace HomeCheat.Features.Construction
             GroundJob g = new GroundJob();
             g.BaseY = baseY;
             g.Legacy = TerrainLevel.RemoveLegacy(ax - LegacyMargin, az - LegacyMargin, bx + LegacyMargin, bz + LegacyMargin);
-            g.Targets = GroundTargets(jobs, baseY, fit, ax, az, bx, bz, out g.Raised);
+            g.Claimed = TerrainLevel.Claim(ax, az, bx, bz);
+            if (g.Claimed > 0) HomeApi.Log("construct: took over " + g.Claimed + " terrain zone(s) owned by another peer, so the level operations land there");
+            g.Targets = GroundTargets(jobs, baseY, yaw, fit, ax, az, bx, bz, out g.Raised, out g.Carried);
             List<Vector3> todo = g.Targets;
             int nb = (todo.Count + VertexBatch - 1) / VertexBatch;
             float first = g.Legacy > 0 ? LegacyWait : PillarClear;
             for (int b = 0; b < nb; b++)
             {
                 int from = b * VertexBatch, to = Mathf.Min(todo.Count, from + VertexBatch);
-                Later(first + b * BatchGap, delegate { for (int i = from; i < to; i++) TerrainLevel.Vertex(todo[i].x, todo[i].z, todo[i].y); });
+                // the other peer takes its zones back within seconds: claimed again before every batch
+                float zx0 = ax, zz0 = az, zx1 = bx, zz1 = bz;
+                Later(first + b * BatchGap, delegate { TerrainLevel.Claim(zx0, zz0, zx1, zz1); for (int i = from; i < to; i++) TerrainLevel.Vertex(todo[i].x, todo[i].z, todo[i].y); });
             }
             g.Ready = first + Mathf.Max(0, nb - 1) * BatchGap + Settle;
             lastGround = g;

@@ -7,7 +7,8 @@
 // The operation travels as its prefab's name hash: the terrain owner reads the settings back from the TerrainOp registered
 // under that hash in ObjectDB.m_terrainOpsByHash (Settings.Serialize / Deserialize; an unregistered one is cancelled with "Failed to
 // deserialize TerrainOp settings"). No vanilla prefab levels one vertex, so one template is registered here; the level
-// height comes from each operation's own position. This PC must own the zone (it hosts the world).
+// height comes from each operation's own position. This PC must own the zone's TerrainComp, or the operation is dropped
+// without a log line (RPC_ApplyOperation returns unless IsOwner): Claim takes it over before a ground step.
 using System.Collections.Generic;
 using HomeCheat.Kit;
 using UnityEngine;
@@ -57,6 +58,40 @@ namespace HomeCheat.Features.Construction
             GameObject go = (GameObject)Object.Instantiate(template, new Vector3(x, y, z), Quaternion.identity);
             go.name = PrefabName;
             go.SetActive(true);
+        }
+
+        // the terrain zones over the rectangle, and how many of their TerrainComps this PC does not own (TerrainComp.
+        // RPC_ApplyOperation returns at once unless the receiver owns it, IL 1.0.20)
+        public static void Owners(float ax, float az, float bx, float bz, out int zones, out int foreign)
+        {
+            Zones(ax, az, bx, bz, false, out zones, out foreign);
+        }
+
+        // claim=true: this PC takes the TerrainComps it does not own, so the level operations land (portal hub 2026-10-25: 3 of
+        // its 4 zones were owned by another peer and every operation there was dropped silently). The commands are host only
+        public static int Claim(float ax, float az, float bx, float bz)
+        {
+            int zones, foreign;
+            Zones(ax, az, bx, bz, true, out zones, out foreign);
+            return foreign;
+        }
+
+        static void Zones(float ax, float az, float bx, float bz, bool claim, out int zones, out int foreign)
+        {
+            zones = 0; foreign = 0;
+            List<Heightmap> maps = new List<Heightmap>();
+            Vector3 c = new Vector3((ax + bx) * 0.5f, 0f, (az + bz) * 0.5f);
+            Heightmap.FindHeightmap(c, 0.5f * Mathf.Sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)), maps);
+            foreach (Heightmap hm in maps)
+            {
+                if (hm == null) continue;
+                zones++;
+                TerrainComp tc = hm.GetAndCreateTerrainCompiler();
+                ZNetView nv = tc != null ? tc.GetComponent<ZNetView>() : null;
+                if (nv == null || !nv.IsValid() || nv.IsOwner()) continue;
+                foreign++;
+                if (claim) nv.ClaimOwnership();
+            }
         }
 
         // the old hoe stamps (TerrainModifier objects) whose centre lies in the rectangle: removed, so they stop overriding
