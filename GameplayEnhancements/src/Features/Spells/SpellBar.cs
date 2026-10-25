@@ -453,7 +453,6 @@ namespace HomeCheat.Features.Spells
                 try { SpellPatches.Apply(false); } catch (Exception e) { HomeApi.Log("spells: unpatch failed: " + e.Message); }
                 return;
             }
-            if (!err) Toast(s.Label + ": " + res, false);
         }
 
         // toast text: the first line, except for results that start with progress lines (earthquake: "stage 0 ..."), then the last line
@@ -480,9 +479,14 @@ namespace HomeCheat.Features.Spells
             return HomeApi.Exec(form);
         }
 
-        // the bar's messages in the game's style, in the middle of the screen (Kit.Notify); a command's own ERROR answer is already
-        // shown there by the core (CommandBase.Run), so an error result of a cast is not shown twice
-        void Toast(string t, bool err) { HomeCheat.Kit.Notify.Center(t); }
+        // the bar's messages in the game's style, in the middle of the screen (Kit.Notify), failures only (Maksym 2026-10-25: "show
+        // notifications to user only in case of fails"): an unanswered question, a changed cheat flag; results, hints and pin notes
+        // go to LogOutput.log only. A command's own ERROR answer is shown by the core (CommandBase.Run), so it is not shown twice.
+        void Toast(string t, bool err)
+        {
+            if (!err) { if (t.Length > 0) HomeApi.Log("spells: " + t); return; }
+            HomeCheat.Kit.Notify.Center(t);
+        }
 
         // ---- cheat-state snapshot (read only), compared before/after every cast -------------------------------------------------
 

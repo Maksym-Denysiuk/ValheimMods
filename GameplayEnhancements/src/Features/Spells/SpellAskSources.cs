@@ -9,7 +9,9 @@ namespace HomeCheat.Features.Spells
     //   @players  players online (only you when this PC does not host the world)
     //   @crops    Pickable_* crops that grow from a Plant (value = the Pickable_ prefab, as field prefab= takes it)
     //   @trees    *_Sapling prefabs with a Plant (value = the sapling, as plant prefab= takes it)
-    //   @prefabs  creatures (non-player Character) and items by ItemDrop item type, as categories (Group)
+    //   @prefabs  creatures (non-player Character), items by ItemDrop item type, and constructions (Maksym 2026-10-25): the pieces of
+    //             the build tools' piece tables (hammer and the like; terrain tools and saplings left out) by piece category, ships
+    //             as their own group, as categories (Group)
     // Read only: nothing in the world is changed.
     internal static class SpellAskSources
     {
@@ -87,6 +89,25 @@ namespace HomeCheat.Features.Spells
                     if (d == null || d.m_itemData == null || d.m_itemData.m_shared == null) continue;
                     r.Add(new SpellAskOption(g.name, g.name, "Items: " + d.m_itemData.m_shared.m_itemType));
                 }
+            if (ObjectDB.instance != null)
+            {
+                HashSet<string> seen = new HashSet<string>();
+                foreach (GameObject g in ObjectDB.instance.m_items)
+                {
+                    ItemDrop d = g != null ? g.GetComponent<ItemDrop>() : null;
+                    PieceTable t = d != null && d.m_itemData != null && d.m_itemData.m_shared != null ? d.m_itemData.m_shared.m_buildPieces : null;
+                    if (t == null || t.m_pieces == null) continue;
+                    foreach (GameObject pc in t.m_pieces)
+                    {
+                        if (pc == null || !seen.Add(pc.name)) continue;
+                        Piece piece = pc.GetComponent<Piece>();
+                        if (piece == null || pc.GetComponent<ZNetView>() == null) continue;
+                        if (pc.GetComponent<TerrainOp>() != null || pc.GetComponent<Plant>() != null) continue;   // hoe, cultivator
+                        string grp = pc.GetComponent<Ship>() != null ? "Constructions: Ships" : "Constructions: " + piece.m_category;
+                        r.Add(new SpellAskOption(pc.name, pc.name, grp));
+                    }
+                }
+            }
         }
     }
 }

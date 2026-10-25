@@ -1,2 +1,4 @@
 # Vector2i (Inventory.AddItem overloads, harvest collect=1)
 assembly_utils.dll
+# PlatformUserID (Piece.SetCreator, spawn of constructions, as dome)
+Splatform.dll
