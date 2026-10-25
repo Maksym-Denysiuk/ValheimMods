@@ -81,6 +81,8 @@
 6.5.2 | Refill | op=refill&aim=0&radius=50
 6.6 | Shield | op=dome&step=menu
 6.7 | Construct
+6.7.1 | Construction... | op=construct&panel=1
+6.7.2 | Construction status | op=construct&step=status
 6.8 | Despawn | op=despawn
 7 | Field
 7.1 | Cultivate... | op=cultivate&area={area}&rows={rows}&perrow={perrow} | ask=area:*From_me=self,Start-end=coords ask=rows:1,*3,5,7,9 ask=perrow/Items_in_row:1,3,*5,7,9

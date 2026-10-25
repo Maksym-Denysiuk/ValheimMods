@@ -501,9 +501,11 @@ namespace HomeCheat.Features.Construction
             string mode = pl.Ground;
             Later(g.Ready + Settle, delegate
             {
-                string msg = "construct: level " + mode + " done; " + Flatness(g);
+                // the screen shows failures only (architecture doc, Notifications): a ground that missed its targets
+                float miss;
+                string msg = "construct: level " + mode + " done; " + Flatness(g, out miss, null);
                 HomeApi.Log(msg);
-                Notify.Center(msg);
+                if (miss > GroundMiss) Notify.Error(msg);
             });
             Plan old = LoadPlan(pl.World);
             if (old != null) RemovePillars(old.PillarId);
@@ -1084,14 +1086,14 @@ namespace HomeCheat.Features.Construction
                 string msg = "construct: " + name + " " + SupportLine(id, t.Placed) + (t.Poles > 0 ? ", " + t.Poles + " poles" : "")
                     + (notes.Count > 0 ? "; " + string.Join("; ", notes.ToArray()) : "") + "; support still settling, final in " + Fmt.F(SettleCheck - CheckAfter, 0) + " s";
                 HomeApi.Log(msg + " (id " + id + ")");
-                Notify.Center(msg);
             });
             Later(last + SettleCheck, delegate
             {
                 lastBroken = Broken(jobs);
                 string msg = "construct: " + name + " settled: " + SupportLine(id, t.Placed);
                 HomeApi.Log(msg + "; " + lastBroken + " (id " + id + ")");
-                Notify.Center(msg + "; " + lastBroken);
+                // on screen only when something broke (failures only); the full report stays in the log and step=support
+                if (lastBroken != "nothing broke") Notify.Error("construct: " + name + ": " + lastBroken);
             });
         }
 

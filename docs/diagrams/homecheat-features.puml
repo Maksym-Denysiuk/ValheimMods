@@ -138,9 +138,17 @@ package "dome" as dm {
 package "despawn" as ds {
   class DespawnCommand
 }
-package "construction  (being built)" as cn {
+package "construction" as cn {
   class ConstructCommand
   class BlueprintLibrary
+  class BlueprintParse
+  class BlueprintRepeat
+  class PieceGhost
+  class TerrainLevel
+  class FitField
+  class MaterialSwap
+  class ConstructPanel
+  class ConstructPatches
 }
 package "traps" as tr {
   class TrapCommand
@@ -192,7 +200,12 @@ DomeCommand ..> DomeShow : test-aid domes
 CommandBase <|-- DespawnCommand
 AttackCommand <|-- TrapCommand
 CommandBase <|-- ConstructCommand
-ConstructCommand ..> BlueprintLibrary : blueprints
+ConstructCommand ..> BlueprintLibrary : blueprints (a folder = versions)
+ConstructCommand ..> TerrainLevel : one TerrainOp per vertex
+ConstructCommand ..> FitField : ground under stone
+ConstructCommand ..> PieceGhost : real piece size
+ConstructCommand ..> MaterialSwap : families
+ConstructPanel ..> ConstructCommand : op=construct forms
 TrapCommand ..> TrapFxSets : blast looks
 TrapCommand ..> TrapKind : kind table
 TrapCommand ..> TrapWeapon : blast damage

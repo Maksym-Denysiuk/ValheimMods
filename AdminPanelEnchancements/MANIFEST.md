@@ -1,6 +1,6 @@
 # AdminPanelEnchancements: manifest
 
-Built 2026-10-25 18:27 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 20:26 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 No binaries: the kick-ban patch is applied to the game's own DLL on the target PC, the backup settings are registry values.
 

@@ -1,58 +1,85 @@
-# construct: build a saved blueprint, with a pillar preview and a panel
+---
+description: construct command of the HomeCheat Valheim plugin (2026-10-25) - builds a saved PlanBuild or InfinityHammer blueprint as if built with the hammer - a list of constructions (a folder = versions of one), a preview with marker columns and torches, a panel, material families, the ground levelled exactly per terrain vertex and raised under stone, a stone foundation where the game's 8 m terrain limit stops, the space cleared, stacking of repeating blueprints, support and breakage reports, undo with the dropped items; tested in game with stairs, the gumdrop house and the portal hub
+---
+# construct (blueprints, feature Construction)
 
-Status: building (milestone 1: place at the crosshair)
-Verdict: new
-Nearest: `place` (any prefab at the crosshair, no creator), `dome` (vanilla piece as if built with the hammer, ZDO mark, `step=` stages, `confirm=1`), `groundlevel area=coords` (batched rectangle flattening, `TerrainStamp`); catalog rows, pages and sources read: yes
-Fingerprint: effect place object (a whole build) + terrain / target ground / placement crosshair or self, rotated to the player / mechanism the blueprint's prefabs placed as by the hammer (`Piece.SetCreator`, `WearNTear.OnPlaced`), hoe pieces for the flattening
+Built and tested 2026-10-25 on Valheim 1.0.20, BepInEx 5.4.2351, in the test world `ClaudeTest` on the host `MDENYSIUK-PERS`. Own game and own world only. Source: [src/Features/Construction/](../../src/Features/Construction/), DLL `HomeCheat.Cmd.construction.v<stamp>.dll`. Spell bar: `6.7.1 Construction...` (the panel), `6.7.2 Construction status`.
 
-## What it does
-- Trigger: `op=construct&step=<list|place|status|undo>` (milestone 1); later `preview|rotate|start|remove` and `panel=1`. Spell bar under the existing `6.7 | Construct` title in Build: `6.7.1 Construction...` (`op=construct&panel=1`), `6.7.2 Construction status` (`op=construct&step=status`), added in milestone 2.
-- Inputs: `.blueprint` files (PlanBuild text format: `#Name`, `#Creator`, `#Description`, `#Category`, `#SnapPoints`, `#Pieces`; one piece per line `prefab;category;x;y;z;qx;qy;qz;qw;"extra";sx;sy;sz`) in `BepInEx/config/homecheat/blueprints/`. A file there = one construction; a subfolder = one construction whose files are its versions (A2 corrected 2026-10-25: the gumdrop files are one house twice); the largest is built unless `name=<folder>/<version>`. The files stay in the game folder, never in this repository (other creators' content).
-- Targets: self off, enemies off, tamed off, other players off, bosses off: no character is touched.
-- Placement: the centre of the build's footprint at the crosshair (`at=aim`, default) or at your feet (`at=self`); turned to your facing, snapped to 22.5° (`yaw=` world degrees overrides); the lowest piece pivot of the build on the surface the crosshair hits (a rock, a floor), or on the terrain without a hit and with `at=self` (ASSUMPTION A5, milestone 1 without flattening).
-- Magnitude: the whole build; `material=blueprint` (milestone 2: family swap, ASSUMPTION A4).
-- Persists in the world: every placed piece, ZDO mark `hc_construct` = build id (`<name>-<yyyyMMddHHmmss>`); milestone 2: marker pillars (`hc_construct_pillar`), terrain change, `BepInEx/config/homecheat/construct.state`.
-- Who sees it: everyone (networked pieces spawned on the host). The panel (milestone 2): this PC only.
-- Visual reference: the blueprint's own pieces; pillars `wood_pole_log_4` (ASSUMPTION A3).
-- Probes: `op=construct&step=list` (pieces, parts, footprint, missing prefabs per construction), `op=list&filter=_67` (the `*_67` pieces of the gumdrop files), `op=inspect&prefab=wood_pole_log_4`.
-- Defaults: `step=place&name=<n>` works with only the name (`at=aim`, yaw from your facing).
-- Caps: 4 000 pieces per construction, footprint 64 m per side (both refused, `Caps.Check`), 50 constructions in a list (more named as "first 50 of n").
-- Refusals: host only (`Host.RequireServer`); a player-built piece within the footprint circle + 1 m (`Constructions.Near`) unless the opt-in `overlap=1`; an unknown name (the answer lists the names).
-- Undo: `op=construct&step=undo&confirm=1` removes the pieces of the last build (or `id=<build id>`); without `confirm=1` the answer says what it would remove. The hammer works too: the pieces are yours.
+## Goal
 
-## How it is built
-- Feature folder: `src/Features/Construction/` (new, DLL `construction`); class `ConstructCommand : CommandBase`.
-- Files: `ConstructCommand.cs` (steps), `Blueprint.cs` + `BlueprintPiece.cs` + `BlueprintParse.cs` (Unity-free reader, tested in a scratch console build: selftest covers only `Core/Pure`), `BlueprintLibrary.cs` (scans the folder), `refs.txt` (`Splatform.dll` for `SetCreator`).
-- OnLoad needs: nothing (milestone 1). Timers: `Later` batches of 100 pieces 0.1 s apart, bottom-up, and a check 5 s after the last batch. OnWorldExit: forgets the last build in memory (the pieces keep their ZDO mark).
-- Kit reused: `Host.RequireServer`, `Players.Local`, `Aim.Point`, `Ground.Height`, `Prefabs.Get`, `Constructions.Near/Describe`, `Caps.Check`, `Trees.SetScale`, `Notify.Center`, `Fmt`; the hammer steps copied from `DomeCommand.Place`.
-- Core change: none.
-- Guards: `Host.RequireServer()` first, `Players.Local`, `const` caps, ZDO mark on every piece, `confirm=1` on `undo`.
-- Docs: page `docs/HomeCheat-plugin/construct.md`, index row, catalog row and a worked example; architecture doc Feature notes, Extension points (a feature-owned panel, A1), Parameter conventions (`step=list|place|preview|start|remove|undo`, `panel=1`).
+Before: a blueprint downloaded for PlanBuild or InfinityHammer could not be used without those mods. After: the file goes into `BepInEx/config/homecheat/blueprints/`, the panel lists it, a preview shows where it will stand, and on confirm the ground is prepared and the construction is placed piece by piece as if built with the hammer, then reported: how many pieces stand, how well supported, what broke and why.
 
-## Milestone 2 (the rest of the card, after milestone 1 passes in game)
-- `step=preview` places 5 columns of 5 `wood_pole_log_4` at the corners of the turned footprint and its centre (ASSUMPTION A3); `step=rotate&by=` moves them; `step=remove` takes them down; the plan is kept in `construct.state` per world (one active plan, A6).
-- `step=start&confirm=1`: pillars removed, the footprint + 1 m levelled to the ground height under the centre (3 m stamps every 4 m in batches, `TerrainStamp` copied from World, a promotion candidate), then the pieces as in milestone 1; resume after leaving the world mid-build.
-- Material swap (A4): `blueprint` or a family (darkwood, stone, woodiron ...) where the same shape exists; the others stay and are counted.
-- `ConstructPanel` (A1): own IMGUI panel opened by `op=construct&panel=1`: list, material, the state block read from `construct.state`, buttons by state; every button calls `op=construct&step=...`.
+## Result (2026-10-25)
 
-## Open questions
-Questions were not answered in the planning session (2026-10-25); the recommended answers were taken and are reviewed by Maksym:
-1. A1 panel: own construct panel, a logged exception to the "choices through `ask=`" rule (stateful flow). ASSUMPTION.
-2. A2 a folder of blueprints: parts placed together around one origin, optional `group.txt` offsets. ASSUMPTION.
-3. A3 pillars: 5 columns x 5 core-wood 4 m poles. ASSUMPTION.
-4. A4 material: piece-family swap, building free; `cost=1` shows the bill only. ASSUMPTION.
-5. A5 height: the lowest piece pivot on the ground under the centre; flattening to that height (milestone 2). ASSUMPTION.
+| Construction | Pieces | Result |
+|---|---|---|
+| EarlySpiralStairs (ChunQue) | 65 | on terrain, on a rock, and three copies stacked with `continue=1`: every piece standing, 0 weak |
+| gumdrop endgame (Brueplint, the larger of two versions) | 1 989 | 1 975 standing on levelled and raised ground: 14 broke, all stone decor (12 `Placeable_Stone`, 2 `stone_fence`); 64 on flat ground only |
+| portal hub (Modestypooh, InfinityHammer) | 2 059 | every hub piece standing; 57 floors and 54 walls of stone foundation where the ground could not be raised, 5 of them broke at a 9 m drop; 90 objects cleared first |
 
-## Test plan (milestone 1)
-1. `op=cheatstate` (before).
-2. `op=construct&step=list` -> `2 construction(s)`: EarlySpiralStairs (1 part, 65 pieces, 3.6 x 3.8 x 3.9 m), brueplint-gumdropboth (2 parts, 3 466 pieces) with its missing prefabs named.
-3. Aim at open flat ground, `op=construct&step=place&name=EarlySpiralStairs` -> `placed 65 of EarlySpiralStairs ...`; 5 s later the centre message `... 65 of 65 standing`. Look: on the crosshair, turned to you, steps in order, the first step on the ground, nothing falls.
-4. `op=construct&step=status` -> the build id, 65 standing.
-5. The same place again -> refused, naming a piece of the stairs; with `&overlap=1` it builds.
-6. `op=construct&step=undo` -> `would remove 65 ...`; `&confirm=1` -> removed.
-7. `op=cheatstate` (after); no new `HomeCheat` errors in `LogOutput.log`.
+## Use
 
-## Test log
+| Step | Form | What happens |
+|---|---|---|
+| list | `op=construct&step=list` | every construction: pieces, footprint, versions of a folder, "stacks" for a repeating blueprint, missing prefabs |
+| panel | `op=construct&panel=1` (spell 6.7.1) | the panel: constructions and versions, material, ground, the state of the plan, one button per step; every button sends the forms below |
+| preview | `op=construct&step=preview&name=<n>[&material=][&ground=][&base=][&at=][&yaw=]` | 5 columns of 5 core-wood poles with a ground torch at the corners and the centre of the turned footprint; the plan is kept per world in `construct.state`; nothing else changes |
+| rotate | `op=construct&step=rotate&by=90` | turns the plan, moves the columns |
+| start | `op=construct&step=start&confirm=1` | columns down, ground step, ground check, stone foundation, the space cleared, the pieces placed; a stopped start puts the plan and columns back |
+| remove | `op=construct&step=remove` | columns down, plan dropped, nothing built |
+| place | `op=construct&step=place&name=<n>[keys as preview]` | the same build without a preview |
+| level | `op=construct&step=level&name=<n>[&ground=flatten|fit][keys]` | the ground step alone, measured; the plan is kept with `ground=none` |
+| continue | `op=construct&step=place&continue=1[&count=1..20][&material=]` | aim at a build of a repeating blueprint: the next copy stacks on it by the blueprint's own repeat, the ground is not touched |
+| reports | `step=status`, `step=support[&id=]`, `step=ground[&id=]`, `step=flatness`, `step=materials&name=` | read-only: plan and builds; support colours and the weak pieces by prefab, plus the last breakage; terrain under every 1 m cell; the last ground step against its targets; the material families |
+| undo | `op=construct&step=undo[&id=][&items=1]&confirm=1` | removes a build's loaded pieces (with `items=1` also the items dropped inside its box + 2 m); without `confirm=1` it only says what it would remove; the ground stays |
+
+Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x,z|x,y,z`; `yaw=` world degrees (default your facing, snapped to 22.5); `ground=auto` (default: on terrain `fit`, on a piece or rock `none`) `|fit|flatten|pillars|none`; `base=floor` (default) `|lowest`; `material=blueprint` (default) `|<family>`; `overlap=1` builds over player-built pieces. Caps (refused): 4 000 pieces, 64 m a side, 6 000 levelled vertices, 20 copies, 50 listed; the foundation stops at 1 500 pieces.
+
+## Files and settings
+
+- Blueprints: `BepInEx/config/homecheat/blueprints/` (game folder, never this repository: other creators' content). A file = one construction; a folder = the versions of one construction.
+- Formats read: PlanBuild (`#Name`, `#Creator`, `#Description`, `#Category`, `#SnapPoints`, `#Pieces`, a line `prefab;category;x;y;z;qx;qy;qz;qw;"text";sx;sy;sz`) and InfinityHammer (headers `#Center`, `#Coordinates`, `#Rotation`; a 14th field with the object's saved data in base64, counted, not applied). The text field goes to signs and to portal tags (`TextReceiver`).
+- State: `BepInEx/config/homecheat/construct.state`, one plan per world. Every placed object carries the ZDO keys `hc_construct` (build id), `hc_construct_o`, `hc_construct_yaw`, `hc_construct_name`; preview columns `hc_construct_pillar`.
+
+## How it works
+
+1. **Layout.** The footprint's centre goes to the anchor, turned by the yaw. The **ground floor** (the lowest 0.25 m level of pivots with at least 5 % of the pieces) sits with its collider bottom, measured on a hammer-style ghost (`PieceGhost`), on the base; pieces below it are foundations and sink.
+2. **Ground** (`fit`). The old hoe stamps in the box are removed (they are `TerrainModifier` objects that return at the prefab radius after a reload), then one registered single-vertex `TerrainOp` per terrain vertex sets the target: the base, or the smooth surface (`FitField`) under pieces that need ground (no WearNTear, or a material other than wood), never above a piece. One operation per vertex: nothing stacks, a repeat changes nothing.
+3. **Check.** The terrain is measured against every target. More than 5 % off stops the build. Vertices more than 8 m from the world's own ground (the game's limit) get a **stone foundation**: 2 x 2 m `stone_floor_2x2` tiles turned with the build, `stone_wall_2x1` stacked under each down to the real ground.
+4. **Clear the space.** Inside the pieces' box + 1 m, from 3 m under the base: trees, logs, rocks, stumps, bushes, pickables, saplings and items go. Never characters, player-built pieces or own marks.
+5. **Pieces** bottom-up in batches of 100 every 0.1 s, each with `Piece.SetCreator` and `WearNTear.OnPlaced` as `Player.PlacePiece` does. Support is reported at 5 s (settling) and 30 s (settled) with the broken pieces by prefab and reason (no ground under it, resting on pieces that gave way, on the ground).
+
+## What failed first
+
+The full story and the lessons are in HomeOS `references/ValheimModWork/construct-lessons-learned.md`. In short: the ground floor stood on its own foundation posts in the air; per-column terrain stamps made spikes; the hoe pieces' stamps shrank after a reload; own terrain operations were cancelled until registered in `ObjectDB.m_terrainOpsByHash`, and square ones stacked; the two gumdrop files are one house in two versions and stood inside each other; only stone needs ground; the 8 m terrain limit at a slope. Each was found by a measurement (`step=ground`, `step=flatness`, the breakage report, an alignment search), not by a guess.
+
+## Change procedure
+
+Code in `src/Features/Construction/`; `bash src/build.sh construction`; `op=reload`; test with the forms above, cheat state before and after. Unity-free parts (`BlueprintParse`, `BlueprintRepeat`, `FitField`) are tested in a scratch console build or in memory (PowerShell `Add-Type`; Smart App Control blocks new scratch exes): selftest covers only `Core/Pure`.
+
+## Undo
+
+`op=construct&step=undo&items=1&confirm=1` (the last build, or `id=`), or the hammer: the pieces are yours. The terrain is not restored. Preview columns: `step=remove`.
+
+## Open
+
+- `Placeable_Stone` (a Pickable + Piece + WearNTear decor stone): about a third vanish, some on the ground; cause not found.
+- The stone foundation breaks where the drop is about 9 m (5 of 111 pieces at the portal hub).
+- Resume after leaving the world in the middle of a large build: not built (builds finish in seconds).
+- Families such as `loot`, `rug`, `scale` (furniture prefixes) are offered where a shape matches.
+
+## Decisions (the card's assumptions)
+
+| # | Decision | Status |
+|---|---|---|
+| A1 | own panel in the feature (a stateful flow), not `ask=` | built; logged as an exception to the "choices through `ask=`" rule |
+| A2 | a folder = parts around one origin | corrected 2026-10-25: a folder holds versions; the largest is built unless named |
+| A3 | preview: 5 columns of 5 core-wood poles | built; a ground torch on each (Maksym) |
+| A4 | material = a family swap, building free | built; `cost=` not built |
+| A5 | the lowest piece on the base | replaced: the ground floor on the base, foundations sink, the ground fitted under stone |
+| A6 | one plan per world, blueprints outside the repository | built |
+
+## Test log (2026-10-25)
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
 | 2026-10-25 17:24 | `bash src/build.sh construction` | `construction: built and staged HomeCheat.Cmd.construction.v20261025172406.dll` | compiled, not loaded yet (another session was testing in game) | pass |
