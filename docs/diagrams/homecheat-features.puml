@@ -1,0 +1,156 @@
+@startuml homecheat-features
+' HomeCheat feature DLLs: one package = one Features/<Feature> folder = one HomeCheat.Cmd.<feature>.v<stamp>.dll.
+' 28 feature commands + 6 built-ins = 34. Checked against src/Features on 2026-10-25.
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+left to right direction
+
+abstract class CommandBase <<core>>
+abstract class HarmEffect <<core>>
+class "Kit.Anchor" as KitAnchor <<core>>
+CommandBase <|-- HarmEffect
+
+package "core built-ins  (HomeCheat.dll, HomeCheat.Builtins, internal sealed)" as core {
+  class PingCommand
+  class StatusCommand
+  class ReloadCommand
+  class CommandsCommand
+  class HelpCommand
+  class HarmEffectCommand
+}
+CommandBase <|-- PingCommand
+CommandBase <|-- StatusCommand
+CommandBase <|-- ReloadCommand
+CommandBase <|-- CommandsCommand
+CommandBase <|-- HelpCommand
+CommandBase <|-- HarmEffectCommand
+HarmEffectCommand ..> HarmEffect : kind=<name>
+
+package "world  (HomeCheat.Features.WorldCommands)" as world {
+  class GiveCommand
+  class SpawnCommand
+  class ListCommand
+  class PlaceCommand
+  class PlantCommand
+  class FieldCommand
+  class CultivateCommand
+  class RepairCommand
+  class RefillCommand
+  class GroundLevelCommand
+  class PathCommand
+  class InspectCommand
+  class ScaleCommand
+  class FieldAnchor <<internal static>> {
+    +AheadOfPlayer(p, a, spacing) : Anchor
+  }
+  class CropSpacing <<internal static>> {
+    +Minimum(crop, out source) : float
+  }
+  class TerrainStamp <<internal static>> {
+    +At(prefab, pos, rLevel, rPaint)
+  }
+}
+
+package "diag" as diag {
+  class CheatStateCommand
+  class CheatInfoCommand
+}
+
+package "heal" as heal {
+  class HealCommand
+  class CleanseCommand
+  class BlessCommand
+}
+
+package "earthquake" as eq {
+  class EarthquakeEffect
+}
+package "slime" as sl {
+  class SlimeEffect
+}
+package "spellshot" as ss {
+  class SpellShotCommand
+}
+package "spells  (see homecheat-spells)" as sp {
+  class SpellsCommand
+}
+package "transform  (HomeCheat.Features.TransformCommands)" as tr {
+  class TransformCommand
+  class TransformState <<MonoBehaviour>>
+  class TransformRemote <<MonoBehaviour>>
+  class TransformLanding <<MonoBehaviour>>
+}
+package "hidebody" as hb {
+  class HideBodyCommand {
+    ~{static} Current : HideBodyCommand
+  }
+  class HideBodySendZdosPatch <<HarmonyPatch ZDOMan.SendZDOs>>
+  class HideBodyPlayerListPatch <<HarmonyPatch ZNet.SendPlayerList>>
+  class HideBodySyncDataPatch <<HarmonyPatch ZNet.SendServerSyncPlayerData>>
+  class PublicPositionGuard <<internal>>
+}
+package "keybinds" as kb {
+  class KeybindsCommand {
+    ~{static} Current : KeybindsCommand
+  }
+  class ConnectPanelKeyPatch <<HarmonyPatch ConnectPanel.Update>>
+  class KeyHintsF9Patch <<HarmonyPatch KeyHints.Update>>
+}
+package "killmobs" as km {
+  class KillMobsCommand
+}
+package "visualeffect" as ve {
+  class VisualEffectCommand
+}
+package "fxdump" as fd {
+  class FxDumpCommand
+}
+
+CommandBase <|-- GiveCommand
+CommandBase <|-- SpawnCommand
+CommandBase <|-- ListCommand
+CommandBase <|-- PlaceCommand
+CommandBase <|-- PlantCommand
+CommandBase <|-- FieldCommand
+CommandBase <|-- CultivateCommand
+CommandBase <|-- RepairCommand
+CommandBase <|-- RefillCommand
+CommandBase <|-- GroundLevelCommand
+CommandBase <|-- PathCommand
+CommandBase <|-- InspectCommand
+CommandBase <|-- ScaleCommand
+CommandBase <|-- CheatStateCommand
+CommandBase <|-- CheatInfoCommand
+CommandBase <|-- HealCommand
+CommandBase <|-- CleanseCommand
+CommandBase <|-- BlessCommand
+HarmEffect <|-- EarthquakeEffect
+HarmEffect <|-- SlimeEffect
+CommandBase <|-- SpellShotCommand
+CommandBase <|-- SpellsCommand
+CommandBase <|-- TransformCommand
+CommandBase <|-- HideBodyCommand
+CommandBase <|-- KeybindsCommand
+CommandBase <|-- KillMobsCommand
+CommandBase <|-- VisualEffectCommand
+CommandBase <|-- FxDumpCommand
+
+FieldCommand ..> FieldAnchor
+CultivateCommand ..> FieldAnchor
+FieldCommand ..> CropSpacing
+FieldAnchor ..> KitAnchor : builds
+PlantCommand ..> KitAnchor : AtAim
+TransformCommand ..> TransformState : AddComponent (local player)
+TransformCommand ..> TransformRemote : AddComponent (other players)
+TransformState ..> TransformLanding : AddComponent
+HideBodyCommand ..> HideBodySendZdosPatch : Patches.Apply
+HideBodyCommand ..> HideBodyPlayerListPatch : Patches.Apply
+HideBodyCommand ..> HideBodySyncDataPatch : Patches.Apply
+HideBodySendZdosPatch ..> HideBodyCommand : Current
+KeybindsCommand ..> ConnectPanelKeyPatch : Patches.Apply
+KeybindsCommand ..> KeyHintsF9Patch : Patches.Apply
+ConnectPanelKeyPatch ..> KeybindsCommand : Current
+@enduml

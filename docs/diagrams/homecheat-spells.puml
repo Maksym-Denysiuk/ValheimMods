@@ -1,0 +1,105 @@
+@startuml homecheat-spells
+' The spells feature DLL (HomeCheat.Features.Spells). Checked against src/Features/Spells on 2026-10-25.
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+hide empty members
+left to right direction
+
+abstract class CommandBase <<core>>
+class PatchSet <<core>>
+class HomeApi <<core, static>> {
+  +Exec(form) : string
+}
+interface IRadialConfig <<game, Valheim.UI>>
+
+class SpellsCommand <<sealed>> {
+  -settings : SpellsSettings
+  #OnLoad()
+  #OnUnload()
+  #Execute(a) : string
+  -Bar() : SpellBar
+}
+class SpellsSettings <<internal sealed>> {
+  +{static} Current : SpellsSettings
+  +Enabled : bool
+  +Placeholder : bool
+  +ConsumedFrame : int
+  +Bar : SpellBar
+  +Patches : PatchSet
+  +Patched : bool
+  +{static} On : bool
+  +{static} ActiveBar : SpellBar
+  +{static} ActiveFile : string
+  +{static} TurnOff()
+  +Load()
+  +Save()
+}
+class SpellBar <<MonoBehaviour>> {
+  -file : SpellFile
+  ~Root() : SpellRootConfig
+  +LoadFile(report) : string
+  +OpenRadial() : string
+  +Status() : string
+  +Baseline()
+  -Update()
+  -OnGUI()
+  -CastSpell(s, shift, pinKey)
+  -{static} Exec(form) : string
+}
+class SpellFile <<internal sealed>> {
+  +Pins : Dictionary<string,Spell>
+  +GroupAt(slot) : SpellGroup
+  +Load(report) : string
+  -Parse(text) : string
+  +SaveOverrides()
+  +ResetPins() : string
+  +ResetFile() : string
+  +List() : string
+  +SetPin(key, spellId) : string
+  +FindSpell(id) : Spell
+}
+class SpellGroup <<internal sealed>> {
+  +Title : string
+  +Direct : Spell
+  +Entries : Spell[9]
+}
+class Spell <<internal sealed>> {
+  +Slot, Entry : int
+  +Label, Cmd, Shift, Pin : string
+  +Sticky : bool
+}
+class SpellPatches <<public static>> {
+  +OpenPrefix(ref config) : bool
+  +HotbarPrefix(index) : bool
+  ~EnsureApplied()
+  ~Apply(on) : string
+  ~OpenVanilla(radial)
+}
+class SpellRootConfig <<internal sealed>>
+class SpellHotbarConfig <<internal sealed>>
+class SpellGroupConfig <<internal sealed>>
+class SpellLeafConfig <<internal sealed>>
+
+CommandBase <|-- SpellsCommand
+SpellsCommand *-- SpellsSettings : new in OnLoad
+SpellsCommand *-- SpellBar : Own(GameObject HomeCheat_SpellBar)
+SpellsSettings --> SpellBar : Bar
+SpellsSettings --> PatchSet : the command's Patches
+SpellBar *-- SpellFile
+SpellFile *-- "8" SpellGroup
+SpellGroup o-- "0..9" Spell
+SpellBar ..> SpellPatches : Update -> EnsureApplied
+SpellsCommand ..> SpellPatches : OnLoad -> EnsureApplied, enabled= -> Apply
+SpellPatches ..> SpellsSettings : Current
+SpellPatches ..> PatchSet : Patch(method, prefix, null)
+SpellBar ..> HomeApi : Exec(spell.Cmd) per ";;" part
+IRadialConfig <|.. SpellRootConfig
+IRadialConfig <|.. SpellHotbarConfig
+IRadialConfig <|.. SpellGroupConfig
+IRadialConfig <|.. SpellLeafConfig
+SpellBar ..> SpellRootConfig : Root()
+SpellRootConfig ..> SpellHotbarConfig
+SpellRootConfig ..> SpellGroupConfig
+SpellBar ..> SpellLeafConfig
+@enduml

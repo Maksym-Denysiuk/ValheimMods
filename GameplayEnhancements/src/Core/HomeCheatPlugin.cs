@@ -1,4 +1,4 @@
-// HomeCheat - BepInEx client plugin for Maksym's own Valheim game and world. Architecture: docs/HomeCheat-plugin/architecture.md.
+// HomeCheat - BepInEx client plugin for Maksym's own Valheim game and world. Architecture: docs/homecheat-architecture.md (repo root).
 // This class only wires the services: file inbox -> dispatcher -> registry of commands (built-ins + command DLLs), timers.
 // It never calls the console cheat path (Terminal/Console commands), on purpose. No network port.
 // C# 5 (csc 4.0): no ?., no $"", no expression bodies.

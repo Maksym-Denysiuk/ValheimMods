@@ -1,0 +1,166 @@
+@startuml homecheat-core
+' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25.
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+set separator none
+
+package "HomeCheat (Contracts)" {
+  class HomeCheatPlugin <<BaseUnityPlugin>> {
+    -registry : CommandRegistry
+    -scheduler : Scheduler
+    -inbox : FileInboxChannel
+    -Awake() : creates services and CommandDispatcher
+    -Update()
+  }
+  class HomeApi <<static>> {
+    ~Dispatcher : CommandDispatcher
+    ~Registry : CommandRegistry
+    ~Timers : Scheduler
+    +Scheduler : Scheduler {readOnly}
+    +Exec(form : string) : string
+    +Log(msg : string)
+    +LogError(msg : string)
+  }
+  interface IHomeCommand {
+    +Name : string
+    +Help : string
+    +Run(a : Dictionary<string,string>) : string
+  }
+  interface ICommandLifecycle {
+    +Load()
+    +Unload()
+  }
+  abstract class CommandBase {
+    +{abstract} Name : string
+    #{abstract} Usage : string
+    +Help : string
+    +Run(raw) : string
+    #{abstract} Execute(a : Args) : string
+    #SubAction(key, help, run : Func<Args,string>)
+    #SubFlag(key, help, run : Func<Args,string>)
+    #OnLoad()
+    #OnUnload()
+    #Patches : PatchSet
+    #Own(go : GameObject) : GameObject
+    +Later(seconds : float, act : Action)
+  }
+  abstract class HarmEffect {
+    #{static} Target(a : Args) : Player
+    +{static} Ring(center, ringRadius, itemDiameter, startAngleDeg) : List<Vector3>
+  }
+  class PatchSet <<sealed>> {
+    +Id : string
+    +Apply(patchClass : Type)
+    +Patch(target, prefix, postfix)
+    +RemoveAll()
+    +PatchedMethods() : List<MethodBase>
+    +IsActive : bool
+    +Describe() : string
+  }
+}
+
+package "HomeCheat (Pure, no Unity; also in SelfTest)" {
+  class Args <<sealed>> {
+    +Raw : Dictionary {copy}
+    +Has(key) : bool
+    +Str(key, def) : string
+    +Int(key, def) : int
+    +Float(key, def) : float
+    +Flag(key, def) : bool
+    +Required(key, hint) : string
+    +{static} IsTrue(v) : bool
+  }
+  class CommandException <<sealed>>
+  class FormParser <<static>> {
+    +Parse(body) : Dictionary
+  }
+  class BuildStamp <<static>> {
+    +TryParse(fileName, out feature, out stamp) : bool
+    +FileName(feature, when) : string
+  }
+  class GridMath <<static>> {
+    +CentreColumn(cols) : float
+    +Offset(row, col, centre, spacing, out along, out across)
+  }
+}
+
+package "HomeCheat.Services" {
+  class CommandRegistry <<internal>> {
+    +CoreFeature = "core"
+    +Directory : string
+    +RegisterBuiltin(c : IHomeCommand)
+    +TryGet(name, out c) : bool
+    +FeatureOf(name) : string
+    +Names() : List<string>
+    +All() : List<IHomeCommand>
+    +Reload() : string
+    +Describe() : string
+    -LoadFeature(...)
+    -UnloadFeature(...)
+  }
+  class CommandDispatcher <<internal>> {
+    +Exec(form) : string
+    +Dispatch(a) : string
+  }
+  class FileInboxChannel <<internal>> {
+    +Inbox : string
+    +Poll()
+    -Answer(name, result)
+  }
+  class Scheduler <<public>> {
+    +Later(owner, seconds, act)
+    +CancelOwner(owner) : int
+    +Pending : int
+    ~Tick()
+  }
+}
+
+package "HomeCheat.Kit (static helpers)" {
+  class Players <<static>>
+  class Aim <<static>>
+  class Ground <<static>>
+  class Masks <<static>>
+  class Anchor <<sealed>> {
+    +Origin, Fwd, Right : Vector3
+    +Aimed : bool
+    +{static} AtAim(p) : Anchor
+    +{static} FromArgs(p, a) : Anchor
+    +Cell(row, col, centre, spacing) : Vector3
+  }
+  class Prefabs <<static>>
+  class Fx <<static>>
+  class Trees <<static>>
+  class Refl <<static>>
+  class Fmt <<static>>
+}
+
+package "HomeCheat.Builtins" {
+  class TreeScalePatch <<HarmonyPatch ZNetView.Awake>>
+  note "6 built-in commands (internal sealed):\nping status reload commands help harmeffect\nsee homecheat-features" as NB
+}
+
+HomeCheatPlugin *-- Scheduler
+HomeCheatPlugin *-- CommandRegistry
+HomeCheatPlugin *-- FileInboxChannel
+HomeCheatPlugin ..> HomeApi : sets sinks and services
+TreeScalePatch <.. HomeCheatPlugin : Harmony com.homeos.homecheat
+FileInboxChannel ..> CommandDispatcher : handler = dispatcher.Exec
+CommandDispatcher --> CommandRegistry : op lookup
+CommandDispatcher ..> FormParser
+IHomeCommand "*" --o CommandRegistry : byName, per feature
+CommandRegistry ..> BuildStamp : newest file per feature
+HomeApi --> CommandDispatcher
+HomeApi --> Scheduler
+
+IHomeCommand <|.. CommandBase
+ICommandLifecycle <|.. CommandBase
+CommandBase <|-- HarmEffect
+CommandBase *-- "0..1" PatchSet : lazy, com.homeos.homecheat.<name>
+CommandBase ..> Args : builds per Run
+CommandBase ..> Scheduler : timers owned by this
+
+TreeScalePatch ..> Trees
+@enduml
