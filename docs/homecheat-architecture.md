@@ -9,7 +9,7 @@ Restructured 2026-10-25 from one 880-line plugin class plus flat command files. 
 
 | DLL | Holds | Changes need |
 |---|---|---|
-| `BepInEx/plugins/HomeCheat.dll` (core) | contracts, services, shared helpers (`Kit`), six built-ins, the tree-scale load patch | a game restart: BepInEx loads it once |
+| `BepInEx/plugins/HomeCheat.dll` (core) | contracts, services, shared helpers (`Kit`), six built-ins, two core patches (tree scale on load, clean-up on world exit) | a game restart: BepInEx loads it once |
 | `BepInEx/homecheat-commands/HomeCheat.Cmd.<feature>.v<yyyyMMddHHmmss>.dll` (one per feature) | the commands of one feature folder | `op=reload`, no restart |
 
 Rules:
@@ -25,16 +25,17 @@ HomeCheat.dll (core)                                      HomeCheat.Cmd.<feature
                       CommandBase, HarmEffect, PatchSet,                         + FieldAnchor CropSpacing TerrainStamp
                       HomeApi                              Features/Diag         cheatstate cheatinfo
  Pure (no Unity)      Args, CommandException, FormParser,  Features/Earthquake   earthquake      (HarmEffect)
-                      BuildStamp, GridMath                 Features/Slime        slime           (HarmEffect)
- Services             CommandRegistry, CommandDispatcher,  Features/Spellshot    spellshot
-                      FileInboxChannel, Scheduler          Features/Heal         heal cleanse bless
- Kit                  Players, Aim, Ground, Masks,         Features/Spells       spells (bar, radial, spell file, patches)
-                      Anchor, Prefabs, Fx, Trees, Refl,    Features/Transform    transform + TransformState/Remote/Landing
-                      Fmt                                  Features/HideBody     hidebody + 3 patches, PublicPositionGuard
- Builtins             ping status reload commands help     Features/KillMobs     killmobs
-                      harmeffect, TreeScalePatch           Features/VisualEffect visualeffect
-                                                           Features/FxDump       fxdump
-                                                           Features/Keybinds     keybinds + 2 patches
+                      BuildStamp, GridMath, GridPoint,     Features/Slime        slime           (HarmEffect)
+                      GridRoute, GridCell, PointStore      Features/Spellshot    spellshot
+ Services             CommandRegistry, CommandDispatcher,  Features/Heal         heal cleanse bless
+                      FileInboxChannel, Scheduler          Features/Spells       spells (bar, radial, spell file, patches)
+ Kit                  Players, Aim, Ground, Masks,         Features/Transform    transform + TransformState/Remote/Landing
+                      Anchor, Prefabs, Fx, Trees, Refl,    Features/HideBody     hidebody + 3 patches, PublicPositionGuard
+                      Fmt, Host, Coords, Constructions,    Features/KillMobs     killmobs
+                      Caps                                 Features/VisualEffect visualeffect
+ Builtins             ping status reload commands help     Features/FxDump       fxdump
+                      harmeffect, TreeScalePatch,          Features/Keybinds     keybinds + 2 patches
+                      WorldExitPatch
 ```
 
 Flow of one command: `BepInEx/config/homecheat/inbox/<name>.cmd` -> `FileInboxChannel` (poll 0.5 s, at most 20 files per poll, main thread) -> `CommandDispatcher` (form -> parameters, `op` lower-cased -> command) -> `CommandRegistry` lookup -> `CommandBase.Run` (sub-action or `Execute`) -> answer text -> `outbox/<name>.out` (written as `.tmp`, then moved).
@@ -65,23 +66,27 @@ A cast goes `SpellBar.CastSpell` -> the spell's `Cmd` from the spell file (the S
 
 | Class | Role |
 |---|---|
-| `HomeCheatPlugin` | BepInEx entry point. Creates the services and the dispatcher, fills `HomeApi`, hands the loaded `HomeCheat` assembly to the command DLLs (`AssemblyResolve`), applies the core `TreeScalePatch`, registers the built-ins, loads the feature DLLs, ticks the scheduler and polls the inbox. Nothing else. |
+| `HomeCheatPlugin` | BepInEx entry point. Creates the services and the dispatcher, fills `HomeApi`, hands the loaded `HomeCheat` assembly to the command DLLs (`AssemblyResolve`), applies the core patches `TreeScalePatch` and `WorldExitPatch`, registers the built-ins, loads the feature DLLs, ticks the scheduler and polls the inbox. Nothing else. |
 | `CommandRegistry` | every command by name and the feature that provides it; loads the newest build per feature from bytes (the file is never locked), unloads the build it replaces, refuses a name another feature already owns (the rest of that DLL still loads); the feature name `core` is reserved for the built-ins |
 | `CommandDispatcher` | form text -> parameters -> command -> answer; main thread only |
 | `FileInboxChannel` | the file channel (`inbox/*.cmd` -> `outbox/*.out`); no network port |
-| `Scheduler` | main-thread timers with an owner, on `Time.time` (they wait while the game is paused); unloading the owner cancels its timers |
+| `Scheduler` | main-thread timers with an owner, on `Time.time` (they wait while the game is paused); unloading the owner cancels its timers, leaving the world cancels all of them (`CancelAll`) |
+| `WorldExitPatch` | core postfix on `ZNetScene.OnDestroy` (logout, lost connection, quit); calls `CommandRegistry.WorldExit`: each command's `OnWorldExit`, its timers and its `OwnInWorld` objects are cleared, then any timer left |
 | `HomeApi` | the one static entry point for feature code: `Exec`, `Log`, `LogError`, `Scheduler` |
 | `Args` | typed parameters: `Str`, `Int`, `Float` (InvariantCulture), `Flag` (1/true/yes/aim; empty or missing = the default), `Has`, `Required` (throws), `Raw` (a copy, to forward to another command) |
 | `CommandBase` | base of every command (below) |
 | `HarmEffect` | base of effects aimed at a player: `Target(a)`, `Ring(...)`; reachable as `op=harmeffect&kind=<name>` too |
 | `PatchSet` | the Harmony patches of one command under one id (`com.homeos.homecheat.<command>`); applied per patch class (`Apply`) or per method found by reflection (`Patch`), removed on unload |
+| `Kit.Host` | world and host guards: `RequireWorld()` (net scene, zones and ObjectDB loaded; returns the world name), `RequireServer()` (also: this game hosts the world), `IsServer` |
+| `Kit.Coords` + `PointStore` | named points per world (`start`, `end`, any name) in `BepInEx/config/homecheat/coords.state`; in the core so they survive feature reloads; the text format and limits are the Unity-free `PointStore` (64 points per world, names up to 32 letters, digits, `_`, `-`) |
+| `GridRoute` | A* on an integer grid (8 neighbours, no corner cutting, start and end always passable, grids over `MaxCells` = 40 000 refused); `Corners` turns the cells into the polyline to stamp along |
 
 ## Inherit or compose
 
 OOP is used, but shallow. Unity and Valheim are built from components, and their types are not ours to subclass. The exceptions are `BaseUnityPlugin` (the plugin), `MonoBehaviour` (`SpellBar`, `TransformState`, `TransformRemote`, `TransformLanding`) and the game's `IRadialConfig` (the four `Spell*Config` classes).
 
 - **Inherit** when something is a kind of command with a shared lifecycle: every command derives from `CommandBase`; player-targeted effects derive from `HarmEffect : CommandBase`. Concrete commands are `sealed`. Nothing goes deeper than two levels.
-- **Compose** when a command *has* something: Harmony patches (`Patches`), a GameObject (`Own(...)`), timers (`Later(...)`), effects (`Kit.Fx`), a grid (`Kit.Anchor`), a spell file (`SpellFile` inside the spell bar).
+- **Compose** when a command *has* something: Harmony patches (`Patches`), a GameObject (`Own(...)` until unload, `OwnInWorld(...)` until the player leaves the world), timers (`Later(...)`), effects (`Kit.Fx`), a grid (`Kit.Anchor`), a spell file (`SpellFile` inside the spell bar).
 
 `CommandBase` is a template method. `RepairCommand` (shortened) shows every part:
 
@@ -118,9 +123,12 @@ public sealed class RepairCommand : CommandBase
 
 Built-ins are registered once by the plugin and get `OnLoad()` at that moment; they are never replaced.
 
+Leaving the world (logout, a lost connection, quit) is a second, smaller clean-up. The core's `WorldExitPatch` is a postfix on `ZNetScene.OnDestroy`, which runs on every exit (`Game.Logout` is not enough: it can wait on a disk-space dialog, and a client that loses its host never calls it; checked with `il-reader.js` on 1.0.20). It asks the registry to call `WorldExit` on every command: `OnWorldExit()` first, then the command's timers are cancelled and its `OwnInWorld(...)` objects destroyed; last, the scheduler cancels every timer that is left, whatever its owner. Patches and `Own(...)` objects stay, because the next world uses them again (the spell bar is an `Own` object that lives across worlds). The net scene is going away, so world objects are destroyed locally: a networked object's ZDO stays in the save, which is why persistent objects carry a ZDO mark for a later `clear=1`. Log line: `world exit: <n> commands, <n> timers and objects cleared, <n> other timers cancelled`.
+
 State lives in instance fields. Harmony patch classes are static, so they reach the loaded command through `static <Command> Current`, set in `OnLoad` and cleared in `OnUnload`; a patch does nothing while `Current` is null. Example: `KeybindsCommand.Current`, `HideBodyCommand.Current`, `SpellsSettings.Current`.
 
 Consequences to know:
+- Leaving the world cancels every pending timer: an effect started in one world never finishes in the next. Earthquake stones placed just before then stay until `clear=1`, as after a reload.
 - A reload cancels the pending timers of the old build. Earthquake stones placed before the reload then never break on their own; `op=earthquake&clear=1` removes them (they are marked in their ZDO).
 - `transform` takes its components off the players on unload, so a new build starts from the human form.
 - `hidebody` switches itself off on unload and on quit.
@@ -202,8 +210,17 @@ Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead 
 | a non-public game field | `Refl.Get/Set/GetFloat/SetFloat/GetStatic/Field` (missing member = default, never a crash) |
 | object or tree scale saved with the world | `Trees.SetScale(inst, scale)` (ZDO key `scale`), `Trees.ApplyScale(tree, factor)` |
 | numbers in answers | `Fmt.Vec(v)`, `Fmt.F(f, digits)` |
-| a delayed action bound to the command | `Later(seconds, act)` on `CommandBase` (cancelled on unload) |
-| a GameObject removed on unload | `Own(go)` on `CommandBase` |
+| a world must be loaded | `Host.RequireWorld()` (throws `no world loaded ...` in the menu or while loading; returns the world name) |
+| this game must host the world (other players, shared world data) | `Host.RequireServer()` (throws `host only: ...`); `Host.IsServer` to branch |
+| a point the player stored earlier (CoordStart, CoordEnd, any name) | `Coords.Get(name, out pos)`, `Coords.Require(name)` (throws with the `op=coord&set=<name>` hint), `Coords.Set`, `Clear`, `ClearAll`, `Names`; `Coords.Start` / `Coords.End` name the pair; kept per world in `coords.state` |
+| player-built pieces near a spot (keep away from buildings) | `Constructions.Near(pos, radius, out nearest)` (count and the closest), `Constructions.All(pos, radius)`, `Constructions.Describe(piece, from)` for the answer (`wood_wall at 3.2 m`); distance is to the piece's pivot, so pass your radius plus a margin |
+| cells of a rectangle between two points (edges along world X and Z) | `GridMath.RectSize(...)`, `GridMath.RectCells(ax, az, bx, bz, spacing, max)` (Pure: centred, both edges included, at most `max`; compare with `RectSize` to report a cap) |
+| a route around obstacles on a grid | `GridRoute.Find(width, height, blocked, start, end, out path)` (Pure: A*, 8 neighbours, cap 40 000 cells; `Found`, `NoRoute`, `OverCap`, `Invalid`), `GridRoute.Corners(path)` |
+| a cap on a count or size | `Caps.Check(name, value, max)` (refuses: `<name>=<v> is over the cap <max>`), `Caps.Clamp(name, value, max, out note)` (lowers it; put `note` in the first answer line) |
+| a delayed action bound to the command | `Later(seconds, act)` on `CommandBase` (cancelled on unload and when the player leaves the world) |
+| a GameObject removed on unload | `Own(go)` on `CommandBase` (stays across worlds) |
+| a GameObject removed when the player leaves the world (or on unload) | `OwnInWorld(go)` on `CommandBase` |
+| your own clean-up when the player leaves the world | override `OnWorldExit()` on `CommandBase` |
 | Harmony patches removed on unload | `Patches.Apply(typeof(X))`, `Patches.Patch(method, prefix, postfix)` on `CommandBase` |
 | run another command | `HomeApi.Exec("op=...")` |
 | log | `HomeApi.Log`, `HomeApi.LogError` |
@@ -222,7 +239,7 @@ Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead 
 From Git Bash. The game folder defaults to `/d/steam/steamapps/common/Valheim`; set `VALHEIM_DIR=/c/...` for another install path. Builds go to `${TMPDIR:-/tmp}/homecheat-build` first and are then copied into the game; csc's CS0618 (obsolete game API) warnings are hidden.
 
 ```bash
-bash src/build.sh selftest     # Core/Pure + SelfTest only, no game references: form parser, Args, build stamps, grid math; exit 0 = all passed
+bash src/build.sh selftest     # Core/Pure + SelfTest only, no game references: form parser, Args, build stamps, grid math, rectangles, routes, point store; exit 0 = all passed
 bash src/build.sh core         # BepInEx/plugins/HomeCheat.dll; refuses while valheim.exe runs
 bash src/build.sh <feature>    # e.g. heal (folder name, any case); stages HomeCheat.Cmd.heal.v<stamp>.dll, then op=reload
 bash src/build.sh all          # core (if the game is closed) and every feature
@@ -246,24 +263,25 @@ Where new behaviour goes, from the smallest change to the largest. Prefer the fi
 | a new effect centred on a player (rings, clouds, slams) | `public sealed class <Name>Effect : HarmEffect` | new `src/Features/<Name>/` | `Target(a)`, `Ring(...)`; also reachable as `op=harmeffect&kind=<name>` |
 | any other new command | `public sealed class <Name>Command : CommandBase` | an existing feature folder when it shares helpers with it (World: grid and terrain commands), else a new folder | steps in "Add a command" |
 | behaviour the game decides internally (UI, network sync, input) | a Harmony patch class applied through `Patches` | the command's feature folder | `static Current` for state; UI patches only once a world is loaded (see spells) |
+| clean-up when the player leaves the world | override `OnWorldExit()`; own world objects with `OwnInWorld(...)` | the command's class | timers are cancelled for you; `Own` objects and patches stay |
 | a helper two features need | move it to `src/Core/Kit/` | core | core change: one owner, rebuild `core`, game restart |
 | a new channel, registry or lifecycle behaviour | core services | `src/Core/Services/`, `src/Core/Contracts/` | core change, as above |
 
 ## Safety guards
 
-What protects the game today, and what is still planned. Planned items go into the core in one pass (phase 4 wave 0 of the work plan); until then a new command carries the listed check itself.
+What protects the game today. The wave 0 core pass (2026-10-25) put the host guard, the world check, the cap helper and the world-exit clean-up into the core; `confirm=1` for destructive actions is still per command. The last column is what a new command does.
 
-| Guard | State | Where today | A new command until the core pass |
+| Guard | State | Where today | A new command |
 |---|---|---|---|
 | no console cheat path (`Terminal`, `Console`, god/ghost/fly, no-cost, profile cheat fields are never written) | in place | plugin header; `Features/Diag` only reads them | never write these members |
 | no network port: commands only from the local inbox | in place | `FileInboxChannel` | - |
 | main thread only | in place | `CommandDispatcher` | - |
-| other players only when this game hosts the world | per feature | `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111` | check `ZNet.instance.IsServer()` before touching another player or shared world data |
+| other players only when this game hosts the world | in place: `Kit.Host.RequireServer()`; older features keep their own check | `Kit/Host.cs`; `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111` | `Host.RequireServer()` before touching another player or shared world data |
 | spell bar only in single player or a world this PC hosts | in place | `SpellBar.cs:405` (`Exec`: every cast stops with an error when `ZNet.instance` is missing or not the server) | a command cast from the spell bar inherits it; a command sent through the inbox does not, so it still needs the check above |
-| world loaded | partly | `Players.Local`, `Prefabs.Require` throw a clear error; nothing checks `ZNetScene`/`ObjectDB`/`ZoneSystem` in general | get the player through `Players.Local` first; check `ObjectDB.instance` when items or status effects are used (`BlessCommand`) |
-| caps on counts and sizes | per feature | `cultivate` 2 500, `field` 40 000 examined / 2 500 planted, `place` 400, `plant` 400, `path` 400 stamps, `spellshot` 81 shots and 300 strike points per volley, `groundlevel` radius 12, `list` 200 | a `const` cap, stated in `Usage`, reported in the answer when it applied |
+| world loaded | in place | `Kit.Host.RequireWorld()` checks `ZNet`, `ZNetScene`, `ZoneSystem` and `ObjectDB`; `Players.Local`, `Prefabs.Require` throw a clear error too | `Host.RequireWorld()` (or `RequireServer()`) first, then `Players.Local` |
+| caps on counts and sizes | in place: `Kit.Caps.Check` / `Clamp`; the values stay per command | `cultivate` 2 500, `field` 40 000 examined / 2 500 planted, `place` 400, `plant` 400, `path` 400 stamps, `spellshot` 81 shots and 300 strike points per volley, `groundlevel` radius 12, `list` 200 | a `const` cap, stated in `Usage`, applied with `Caps.Check` (refuse) or `Caps.Clamp` (lower, note in the answer) |
 | timers and objects of a replaced build | in place | `CommandBase` (`ICommandLifecycle.Unload`): timers cancelled, patches removed, owned objects destroyed | use `Later`, `Own`, `Patches` only |
-| timers and objects when the player leaves the world | missing | `Scheduler` runs on `Time.time`, nothing listens for logout | mark persistent objects in their ZDO (earthquake `hc_earthquake`) so a `clear=1` finds them later |
+| timers and objects when the player leaves the world | in place | `WorldExitPatch` (`ZNetScene.OnDestroy`) -> `CommandRegistry.WorldExit`: every timer cancelled, `OwnInWorld` objects destroyed, `OnWorldExit` called | `Later`, `OwnInWorld`; mark persistent objects in their ZDO (earthquake `hc_earthquake`) so a `clear=1` finds them later |
 | destructive or world-wide actions need `confirm=1` | missing | earthquake `kill=` and `clearitems=1` act at once | require `confirm=1` and a radius with a default |
 
 ## Test aids
@@ -280,7 +298,6 @@ What protects the game today, and what is still planned. Planned items go into t
 | `slime` defaults to `hurtself=1`: the clouds hit every player and NPC outside the gap, the target too when it leaves the gap | `SlimeEffect.cs:73` | a widened default hit a second player on 2026-10-24; the target model asks for opt-in |
 | `earthquake` defaults to `players=1` (pushes other players and tamed creatures) | `EarthquakeEffect.cs:71` | same rule: other players should be opt-in |
 | `earthquake` carries test aids `kill=<radius>` and `clearitems=1`, without `confirm=1`; `slime` carries `heal=1`, `keephealed=`, `healstats=1` | `EarthquakeEffect.cs:41,52`, `SlimeEffect.cs:38-51` | test aids belong in `killmobs`/`heal`; destructive actions need `confirm=1` |
-| timers and temporary objects survive leaving the world | `Scheduler` | an effect started in one world can finish in the next |
-| no host guard in the core | - | each feature repeats the `IsServer` check |
+| older features repeat their own `IsServer` check instead of `Host.RequireServer()` | `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111` | same result; move to the Kit guard when the feature is next changed |
 | older answers format numbers with the PC's culture (`ToString("F1")`) | World and Earthquake answers | a comma may appear instead of a point |
 | `cheatinfo` is a discovery leftover (code review: delete) | `Features/Diag/CheatInfoCommand.cs` | - |

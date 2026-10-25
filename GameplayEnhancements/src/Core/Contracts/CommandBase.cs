@@ -1,6 +1,8 @@
 // Base of every command. Template method: Run builds Args, tries the sub-actions in registration order, else Execute.
 // A CommandException becomes "ERROR: <message>"; any other exception is logged with its stack trace and answered the same way.
 // What a command owns (Harmony patches, GameObjects, timers) is released in Unload, after OnUnload, even when OnUnload throws.
+// Leaving the world (the core's WorldExitPatch) cancels its timers and destroys what it owns with OwnInWorld, after OnWorldExit;
+// patches and Own(...) objects stay until the command is unloaded (the spell bar lives across worlds).
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -19,6 +21,7 @@ namespace HomeCheat
 
         readonly List<SubActionEntry> subActions = new List<SubActionEntry>();
         readonly List<GameObject> owned = new List<GameObject>();
+        readonly List<GameObject> ownedInWorld = new List<GameObject>();
         PatchSet patches;
 
         public abstract string Name { get; }
@@ -75,6 +78,9 @@ namespace HomeCheat
         protected virtual void OnLoad() { }
         protected virtual void OnUnload() { }
 
+        // the player left the world (logout, disconnect, quit); runs before the timers and world objects are cleared
+        protected virtual void OnWorldExit() { }
+
         void ICommandLifecycle.Load() { OnLoad(); }
 
         void ICommandLifecycle.Unload()
@@ -87,7 +93,26 @@ namespace HomeCheat
                 if (patches != null) patches.RemoveAll();
                 foreach (GameObject go in owned) if (go != null) UnityEngine.Object.Destroy(go);
                 owned.Clear();
+                foreach (GameObject go in ownedInWorld) if (go != null) Kit.Fx.Destroy(go);
+                ownedInWorld.Clear();
             }
+        }
+
+        // called by the registry when the world's net scene is destroyed; returns timers cancelled + objects removed.
+        // The net scene is going away, so world objects are destroyed locally: a networked object's ZDO stays in the save
+        // (mark it in its ZDO so a clear=1 finds it in the next session).
+        internal int WorldExit()
+        {
+            int n = 0;
+            try { OnWorldExit(); }
+            catch (Exception e) { HomeApi.LogError(Name + ": OnWorldExit: " + e); }
+            finally
+            {
+                n += HomeApi.Scheduler.CancelOwner(this);
+                foreach (GameObject go in ownedInWorld) if (go != null) { UnityEngine.Object.Destroy(go); n++; }
+                ownedInWorld.Clear();
+            }
+            return n;
         }
 
         // ---- owned resources ------------------------------------------------------------------------
@@ -109,7 +134,14 @@ namespace HomeCheat
             return go;
         }
 
-        // runs on the main thread after 'seconds' (0 = next frame); cancelled when this command is unloaded
+        // destroyed when the player leaves the world, or on unload, whichever comes first
+        protected GameObject OwnInWorld(GameObject go)
+        {
+            if (go != null) ownedInWorld.Add(go);
+            return go;
+        }
+
+        // runs on the main thread after 'seconds' (0 = next frame); cancelled when this command is unloaded or the world is left
         public void Later(float seconds, Action act)
         {
             HomeApi.Scheduler.Later(this, seconds, act);

@@ -181,6 +181,22 @@ namespace HomeCheat.Services
             sb.Append("unloaded ").Append(old.Name).Append(" (").Append(old.File).Append(")\n");
         }
 
+        // the player left the world: every command clears its timers and world objects (CommandBase.WorldExit), then any timer
+        // left by another owner is cancelled. Patches and Own(...) objects stay: the next world uses them again.
+        public string WorldExit(Scheduler scheduler)
+        {
+            int cleared = 0, commands = 0;
+            foreach (IHomeCommand c in All())
+            {
+                CommandBase cb = c as CommandBase;
+                if (cb == null) continue;
+                try { cleared += cb.WorldExit(); commands++; }
+                catch (Exception e) { HomeApi.LogError("WorldExit " + c.Name + ": " + e); }
+            }
+            int rest = scheduler != null ? scheduler.CancelAll() : 0;
+            return "world exit: " + commands + " commands, " + cleared + " timers and objects cleared, " + rest + " other timers cancelled";
+        }
+
         public string Describe()
         {
             StringBuilder sb = new StringBuilder();

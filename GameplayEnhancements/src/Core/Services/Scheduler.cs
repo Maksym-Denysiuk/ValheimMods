@@ -1,5 +1,5 @@
 // Main-thread timers. Every timer has an owner (a command); unloading the owner cancels its pending timers, so a delegate
-// from a replaced build never fires. Time base: Time.time (stops while the game is paused, like the old Later).
+// from a replaced build never fires; leaving the world cancels all of them (CancelAll). Time base: Time.time (stops while the game is paused, like the old Later).
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,6 +30,15 @@ namespace HomeCheat.Services
             foreach (Entry e in entries)
                 if (!e.Cancelled && ReferenceEquals(e.Owner, owner)) { e.Cancelled = true; n++; }
             entries.RemoveAll(delegate (Entry e) { return e.Cancelled; });
+            return n;
+        }
+
+        // every pending timer, whatever its owner; returns how many
+        public int CancelAll()
+        {
+            int n = 0;
+            foreach (Entry e in entries) if (!e.Cancelled) { e.Cancelled = true; n++; }
+            entries.Clear();
             return n;
         }
 

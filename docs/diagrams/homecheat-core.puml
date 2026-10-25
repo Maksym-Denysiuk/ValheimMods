@@ -1,5 +1,5 @@
 @startuml homecheat-core
-' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25.
+' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25 (wave 0 core pass: Host, Coords, Constructions, Caps, GridRoute, world exit).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -12,7 +12,7 @@ package "HomeCheat (Contracts)" {
     -registry : CommandRegistry
     -scheduler : Scheduler
     -inbox : FileInboxChannel
-    -Awake() : creates services and CommandDispatcher
+    -Awake() : creates services and CommandDispatcher, applies the two core patches
     -Update()
   }
   class HomeApi <<static>> {
@@ -43,8 +43,11 @@ package "HomeCheat (Contracts)" {
     #SubFlag(key, help, run : Func<Args,string>)
     #OnLoad()
     #OnUnload()
+    #OnWorldExit()
+    ~WorldExit() : int
     #Patches : PatchSet
     #Own(go : GameObject) : GameObject
+    #OwnInWorld(go : GameObject) : GameObject
     +Later(seconds : float, act : Action)
   }
   abstract class HarmEffect {
@@ -84,6 +87,34 @@ package "HomeCheat (Pure, no Unity; also in SelfTest)" {
   class GridMath <<static>> {
     +CentreColumn(cols) : float
     +Offset(row, col, centre, spacing, out along, out across)
+    +RectSize(ax, az, bx, bz, spacing, out cols, out rows)
+    +RectCells(ax, az, bx, bz, spacing, max) : List<GridPoint>
+  }
+  class GridRoute <<static>> {
+    +MaxCells = 40000
+    +Find(width, height, blocked, start, end, out path) : GridRouteStatus
+    +Corners(path) : List<GridCell>
+  }
+  enum GridRouteStatus {
+    Found
+    NoRoute
+    OverCap
+    Invalid
+  }
+  class GridPoint <<struct>> {
+    +X, Z : float
+  }
+  class GridCell <<struct>> {
+    +X, Z : int
+  }
+  class PointStore <<sealed>> {
+    +{static} Parse(text, out skipped) : PointStore
+    +Format() : string
+    +TryGet(world, name, out x, out y, out z) : bool
+    +Set(world, name, x, y, z)
+    +Clear(world, name) : bool
+    +ClearWorld(world) : int
+    +Names(world) : List<string>
   }
 }
 
@@ -98,6 +129,7 @@ package "HomeCheat.Services" {
     +All() : List<IHomeCommand>
     +Reload() : string
     +Describe() : string
+    +WorldExit(scheduler) : string
     -LoadFeature(...)
     -UnloadFeature(...)
   }
@@ -113,6 +145,7 @@ package "HomeCheat.Services" {
   class Scheduler <<public>> {
     +Later(owner, seconds, act)
     +CancelOwner(owner) : int
+    +CancelAll() : int
     +Pending : int
     ~Tick()
   }
@@ -135,10 +168,37 @@ package "HomeCheat.Kit (static helpers)" {
   class Trees <<static>>
   class Refl <<static>>
   class Fmt <<static>>
+  class Host <<static>> {
+    +IsServer : bool
+    +RequireWorld() : string
+    +RequireServer() : string
+  }
+  class Coords <<static>> {
+    +Start = "start", End = "end"
+    +WorldKey : string
+    +Get(name, out pos) : bool
+    +Require(name) : Vector3
+    +Set(name, pos)
+    +Clear(name) : bool
+    +ClearAll() : int
+    +Names() : List<string>
+  }
+  class Constructions <<static>> {
+    +All(pos, radius) : List<Piece>
+    +Near(pos, radius, out nearest) : int
+    +Describe(piece, from) : string
+  }
+  class Caps <<static>> {
+    +Check(name, value, max)
+    +Clamp(name, value, max, out note)
+  }
 }
 
 package "HomeCheat.Builtins" {
   class TreeScalePatch <<HarmonyPatch ZNetView.Awake>>
+  class WorldExitPatch <<HarmonyPatch ZNetScene.OnDestroy>> {
+    ~OnExit : Action
+  }
   note "6 built-in commands (internal sealed):\nping status reload commands help harmeffect\nsee homecheat-features" as NB
 }
 
@@ -147,6 +207,9 @@ HomeCheatPlugin *-- CommandRegistry
 HomeCheatPlugin *-- FileInboxChannel
 HomeCheatPlugin ..> HomeApi : sets sinks and services
 TreeScalePatch <.. HomeCheatPlugin : Harmony com.homeos.homecheat
+WorldExitPatch <.. HomeCheatPlugin : OnExit = registry.WorldExit
+WorldExitPatch ..> CommandRegistry : world exit
+CommandRegistry ..> CommandBase : WorldExit() per command
 FileInboxChannel ..> CommandDispatcher : handler = dispatcher.Exec
 CommandDispatcher --> CommandRegistry : op lookup
 CommandDispatcher ..> FormParser
@@ -163,4 +226,9 @@ CommandBase ..> Args : builds per Run
 CommandBase ..> Scheduler : timers owned by this
 
 TreeScalePatch ..> Trees
+GridRoute ..> GridCell
+GridRoute ..> GridRouteStatus
+GridMath ..> GridPoint
+Coords ..> PointStore : coords.state
+Coords ..> Host : WorldKey
 @enduml

@@ -1,5 +1,6 @@
 // HomeCheat - BepInEx client plugin for Maksym's own Valheim game and world. Architecture: docs/homecheat-architecture.md (repo root).
-// This class only wires the services: file inbox -> dispatcher -> registry of commands (built-ins + command DLLs), timers.
+// This class only wires the services: file inbox -> dispatcher -> registry of commands (built-ins + command DLLs), timers,
+// and the two core patches (tree scale on load, clean-up when the player leaves the world).
 // It never calls the console cheat path (Terminal/Console commands), on purpose. No network port.
 // C# 5 (csc 4.0): no ?., no $"", no expression bodies.
 using System;
@@ -37,8 +38,15 @@ namespace HomeCheat
             HomeApi.Dispatcher = dispatcher;
             inbox = new FileInboxChannel(Path.Combine(Paths.ConfigPath, "homecheat"), dispatcher.Exec);
 
-            try { new Harmony("com.homeos.homecheat").CreateClassProcessor(typeof(TreeScalePatch)).Patch(); }
+            Harmony harmony = new Harmony("com.homeos.homecheat");
+            try { harmony.CreateClassProcessor(typeof(TreeScalePatch)).Patch(); }
             catch (Exception e) { Logger.LogError("Harmony: " + e); }
+            WorldExitPatch.OnExit = delegate
+            {
+                try { Logger.LogInfo(registry.WorldExit(scheduler)); } catch (Exception e) { Logger.LogError("world exit: " + e); }
+            };
+            try { harmony.CreateClassProcessor(typeof(WorldExitPatch)).Patch(); }
+            catch (Exception e) { Logger.LogError("Harmony WorldExitPatch: " + e); }
 
             registry.RegisterBuiltin(new PingCommand());
             registry.RegisterBuiltin(new StatusCommand());
