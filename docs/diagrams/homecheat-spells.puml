@@ -1,5 +1,5 @@
 @startuml homecheat-spells
-' The spells feature DLL (HomeCheat.Features.Spells). Checked against src/Features/Spells on 2026-10-25.
+' The spells feature DLL (HomeCheat.Features.Spells). Checked against src/Features/Spells on 2026-10-25 (spell file v4, ValheimMods ffa0986).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -38,36 +38,72 @@ class SpellsSettings <<internal sealed>> {
 class SpellBar <<MonoBehaviour>> {
   -file : SpellFile
   ~Root() : SpellRootConfig
+  ~MakeNodeElement(node, owner, radial)
+  ~MakeLeaf(spell, owner, radial, icon, sub)
+  ~MakeNote(label, sub, owner, radial)
+  ~OpenLevel(radial, cfg, back)
+  ~CastChain(chain)
   +LoadFile(report) : string
   +OpenRadial() : string
   +Status() : string
-  +Baseline()
   -Update()
   -OnGUI()
-  -CastSpell(s, shift, pinKey)
+  -CastSpell(s, shift, pinKey, answers)
   -{static} Exec(form) : string
 }
 class SpellFile <<internal sealed>> {
   +Pins : Dictionary<string,Spell>
-  +GroupAt(slot) : SpellGroup
+  +Root : SpellNode
+  +NodeAt(id) : SpellNode
   +Load(report) : string
-  -Parse(text) : string
   +SaveOverrides()
   +ResetPins() : string
   +ResetFile() : string
   +List() : string
   +SetPin(key, spellId) : string
   +FindSpell(id) : Spell
+  +{static} DefaultText, TestText
 }
-class SpellGroup <<internal sealed>> {
-  +Title : string
-  +Direct : Spell
-  +Entries : Spell[9]
+class SpellParse <<internal sealed, no Unity>> {
+  +Root : SpellNode
+  +Spells, Pins : Dictionary<string,Spell>
+  +Bad : List<string>
+  +{static} Run(text) : SpellParse
+  +{static} ParseId(id) : int[]
+  +{static} ParseAsk(body, out err) : SpellAsk
+  +{static} Substitute(form, answers) : string
+  +{static} Split(options, max)
+  +Find(id) : SpellNode
+}
+class SpellNode <<internal sealed>> {
+  +Id, Title : string
+  +Number : int
+  +Sticky : bool
+  +Spell : Spell
+  +Children : List<SpellNode>
 }
 class Spell <<internal sealed>> {
-  +Slot, Entry : int
+  +Id : string
+  +Top : int
   +Label, Cmd, Shift, Pin : string
   +Sticky : bool
+  +Asks : List<SpellAsk>
+}
+class SpellAsk <<internal sealed>> {
+  +Key, Source : string
+  +Options : List<SpellAskOption>
+}
+class SpellAskOption <<internal sealed>> {
+  +Label, Value, Group : string
+}
+class SpellAskChain <<internal sealed>> {
+  +Spell : Spell
+  +Shift : bool
+  +PinKey : string
+  +Answers : Dictionary<string,string>
+}
+class SpellAskSources <<internal static, read only>> {
+  +Resolve(ask) : List<SpellAskOption>
 }
 class SpellPatches <<public static>> {
   +OpenPrefix(ref config) : bool
@@ -80,6 +116,7 @@ class SpellRootConfig <<internal sealed>>
 class SpellHotbarConfig <<internal sealed>>
 class SpellGroupConfig <<internal sealed>>
 class SpellLeafConfig <<internal sealed>>
+class SpellAskConfig <<internal sealed>>
 
 CommandBase <|-- SpellsCommand
 SpellsCommand *-- SpellsSettings : new in OnLoad
@@ -87,19 +124,32 @@ SpellsCommand *-- SpellBar : Own(GameObject HomeCheat_SpellBar)
 SpellsSettings --> SpellBar : Bar
 SpellsSettings --> PatchSet : the command's Patches
 SpellBar *-- SpellFile
-SpellFile *-- "8" SpellGroup
-SpellGroup o-- "0..9" Spell
+SpellFile ..> SpellParse : Load -> Run(text)
+SpellParse *-- SpellNode : Root
+SpellNode o-- "0..*" SpellNode : Children
+SpellNode o-- "0..1" Spell
+Spell *-- "0..*" SpellAsk : ask= flags
+SpellAsk *-- "0..*" SpellAskOption
+SpellAskConfig ..> SpellAskSources : dynamic answers
+SpellAskConfig --> SpellAskChain : answers so far
+SpellAskChain --> Spell
+SpellBar ..> SpellAskChain : CastChain -> CastSpell
+SpellBar ..> SpellParse : Substitute({key})
 SpellBar ..> SpellPatches : Update -> EnsureApplied
 SpellsCommand ..> SpellPatches : OnLoad -> EnsureApplied, enabled= -> Apply
 SpellPatches ..> SpellsSettings : Current
 SpellPatches ..> PatchSet : Patch(method, prefix, null)
-SpellBar ..> HomeApi : Exec(spell.Cmd) per ";;" part
+SpellBar ..> HomeApi : Exec(form) per ";;" part
 IRadialConfig <|.. SpellRootConfig
 IRadialConfig <|.. SpellHotbarConfig
 IRadialConfig <|.. SpellGroupConfig
 IRadialConfig <|.. SpellLeafConfig
+IRadialConfig <|.. SpellAskConfig
 SpellBar ..> SpellRootConfig : Root()
 SpellRootConfig ..> SpellHotbarConfig
 SpellRootConfig ..> SpellGroupConfig
 SpellBar ..> SpellLeafConfig
+SpellBar ..> SpellAskConfig : a spell with ask=
+SpellGroupConfig ..> SpellGroupConfig : sub-section
+SpellAskConfig ..> SpellAskConfig : next question
 @enduml
