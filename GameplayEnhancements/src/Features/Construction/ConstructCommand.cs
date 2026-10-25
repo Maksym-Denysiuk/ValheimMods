@@ -136,7 +136,9 @@ namespace HomeCheat.Features.Construction
             if (at == "self") anchor = p.transform.position;
             else if (at == "aim") anchor = Aim.Point(p, out aimed);
             else throw new CommandException("at must be aim or self");
-            float groundY = Ground.Height(anchor);
+            // a crosshair hit stands on the surface it hit (a rock, a floor); otherwise on the terrain (Maksym 2026-10-25)
+            bool onSurface = at == "aim" && aimed;
+            float groundY = onSurface ? anchor.y : Ground.Height(anchor);
 
             float yaw;
             if (a.Has("yaw")) yaw = a.Float("yaw", 0f);
@@ -204,7 +206,7 @@ namespace HomeCheat.Features.Construction
 
             return (batches == 1 ? "placed " + t.Placed : "placing " + total) + " of " + e.Name + " (" + count + " in the blueprint"
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
-                + " at " + Fmt.Vec(origin) + (at == "aim" ? (aimed ? " (crosshair)" : " (no crosshair hit, 8 m ahead)") : " (your position)")
+                + " at " + Fmt.Vec(origin) + (at == "aim" ? (aimed ? " (crosshair surface, terrain there " + Fmt.F(Ground.Height(anchor), 1) + ")" : " (no crosshair hit, 8 m ahead, on the terrain)") : " (your position, on the terrain)")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
                 + (batches > 1 ? ", " + batches + " batches over " + Fmt.F((batches - 1) * BatchGap, 1) + " s" : "")
                 + (t.Scaled > 0 ? ", " + t.Scaled + " scaled" : "") + (t.Signs > 0 ? ", " + t.Signs + " sign text(s)" : "")
