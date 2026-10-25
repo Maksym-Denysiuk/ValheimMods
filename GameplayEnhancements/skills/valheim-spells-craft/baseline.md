@@ -1,6 +1,6 @@
 # Baseline
 
-knowledge-sha: `5c62e84`
+knowledge-sha: `6ce453c`
 refreshed: 2026-10-25
 
 `knowledge-sha` is the ValheimMods commit whose docs this skill was last checked against. `scripts/commands-check.js --baseline baseline.md` reports how far it is behind and stops the run when `src/Core/` or `homecheat-architecture.md` changed since (refresh first: `instructions/refresh.md`). Only the refresh session changes this file.

@@ -41,14 +41,19 @@ const walk = d => fs.readdirSync(d, { withFileTypes: true })
 const read = f => fs.readFileSync(f, 'utf8');
 
 // ---- lists ---------------------------------------------------------------------------------------------------------
-// every class with `override string Name { get { return "<name>"; } }`
+// every command class (base CommandBase, AttackCommand, HarmEffect or IHomeCommand) with
+// `override string Name { get { return "<name>"; } }`; other classes with a Name (TransformForm's RavenForm) are not commands
+const COMMAND_BASES = /^(CommandBase|AttackCommand|HarmEffect|IHomeCommand)\b/;
 function codeCommands(src) {
   const out = [];
   for (const f of walk(src).filter(f => f.endsWith('.cs'))) {
     const t = read(f);
     const m = /override\s+string\s+Name\s*\{\s*get\s*\{\s*return\s+"([^"]+)"/.exec(t);
     if (!m) continue;
-    const cls = (/class\s+(\w+)\s*:/.exec(t) || [])[1] || '?';
+    let decl = null;   // the last class declaration before the Name
+    for (const d of t.slice(0, m.index).matchAll(/class\s+(\w+)\s*:\s*([\w.]+)/g)) decl = d;
+    if (decl && !COMMAND_BASES.test(decl[2])) continue;
+    const cls = decl ? decl[1] : '?';
     const rel = path.relative(src, f).split(path.sep);
     const feature = rel[0] === 'Core' ? 'core' : rel[0] === 'Features' ? rel[1].toLowerCase() : rel[0];
     out.push({ name: m[1], feature, cls, file: path.relative(path.dirname(src), f).split(path.sep).join('/') });
