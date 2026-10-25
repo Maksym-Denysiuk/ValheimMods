@@ -31,10 +31,8 @@
 3.3 | Strong push | op=earthquake&mode=strong&noStones=1&players=0
 3.4 | Slime moat | op=slime&gap=3&hurtself=0
 3.5 | Shield
-# real form (W1-world-build): 3.5.1 | Start point | op=coord&set=start
-3.5.1 | Start point (soon) | @dummy
-# real form (W1-world-build): 3.5.2 | End point | op=coord&set=end
-3.5.2 | End point (soon) | @dummy
+3.5.1 | Start point | op=coord&set=start
+3.5.2 | End point | op=coord&set=end
 # real form (W2-dome): 3.5.3 | Place shield | op=dome&from=coords
 3.5.3 | Place shield (soon) | @dummy
 # real form (W2-dome): 3.5.4 | List shields | op=dome&step=list
@@ -54,12 +52,9 @@
 4.8 | Tree x5 (soon) | @dummy
 # real form (W3-world-plant): 4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10
 4.9 | Tree x10 (soon) | @dummy
-# real form (W1-ship): 4.10 | Ship x5 | op=ship&speed=5
-4.10 | Ship x5 (soon) | @dummy
-# real form (W1-ship): 4.11 | Ship x10 | op=ship&speed=10
-4.11 | Ship x10 (soon) | @dummy
-# real form (W1-ship): 4.12 | Ship normal | op=ship&speed=1
-4.12 | Ship normal (soon) | @dummy
+4.10 | Ship x5 | op=ship&speed=5
+4.11 | Ship x10 | op=ship&speed=10
+4.12 | Ship normal | op=ship&speed=1
 5 | Heal, defence, bless
 5.1 | Heal | op=heal | pin=F3
 5.2 | Cleanse | op=cleanse
@@ -73,35 +68,23 @@
 5.10 | Remove all effects | op=cleanse&all=1
 6 | Build
 6.1 | Flatten | | sticky
-# real form (W1-world-build): 6.1.1 | Flatten here | op=groundlevel&delta=0&avoid=1
-6.1.1 | Flatten here (soon) | @dummy
-# real form (W1-world-build): 6.1.2 | Flatten +5 | op=groundlevel&delta=5&avoid=1
-6.1.2 | Flatten +5 (soon) | @dummy
-# real form (W1-world-build): 6.1.3 | Flatten +8 (max) | op=groundlevel&delta=8&avoid=1
-6.1.3 | Flatten +8 (soon) | @dummy
-# real form (W1-world-build): 6.1.4 | Flatten -3 | op=groundlevel&delta=-3&avoid=1
-6.1.4 | Flatten -3 (soon) | @dummy
-# real form (W1-world-build): 6.1.5 | Flatten -5 | op=groundlevel&delta=-5&avoid=1
-6.1.5 | Flatten -5 (soon) | @dummy
+6.1.1 | Flatten here | op=groundlevel&delta=0&avoid=1
+6.1.2 | Flatten +5 | op=groundlevel&delta=5&avoid=1
+6.1.3 | Flatten +8 (max) | op=groundlevel&delta=8&avoid=1
+6.1.4 | Flatten -3 | op=groundlevel&delta=-3&avoid=1
+6.1.5 | Flatten -5 | op=groundlevel&delta=-5&avoid=1
 6.2 | Coordinates
-# real form (W1-world-build): 6.2.1 | Start point | op=coord&set=start
-6.2.1 | Start point (soon) | @dummy
-# real form (W1-world-build): 6.2.2 | End point | op=coord&set=end
-6.2.2 | End point (soon) | @dummy
-# real form (W1-world-build): 6.2.3 | Show points | op=coord&show=1
-6.2.3 | Show points (soon) | @dummy
-# real form (W1-world-build): 6.2.4 | Clear points | op=coord&clear=1
-6.2.4 | Clear points (soon) | @dummy
+6.2.1 | Start point | op=coord&set=start
+6.2.2 | End point | op=coord&set=end
+6.2.3 | Show points | op=coord&show=1
+6.2.4 | Clear points | op=coord&clear=1
 6.3 | Paths
-# real form (W1-world-build): 6.3.1 | Dirt path start-end | op=path&type=dirt&from=coords&avoid=1
-6.3.1 | Dirt path start-end (soon) | @dummy
-# real form (W1-world-build): 6.3.2 | Stone path start-end | op=path&type=stone&from=coords&avoid=1
-6.3.2 | Stone path start-end (soon) | @dummy
+6.3.1 | Dirt path start-end | op=path&type=dirt&from=coords&avoid=1
+6.3.2 | Stone path start-end | op=path&type=stone&from=coords&avoid=1
 6.3.3 | Dirt path 5 m | op=path&type=dirt&length=5
 6.3.4 | Stone path 5 m | op=path&type=stone&length=5
 6.4 | Spawn
-# real form (W1-world-build): 6.4.1 | Spawn... | op=spawn&prefab={prefab}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
-6.4.1 | Spawn... (soon) | @dummy | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
+6.4.1 | Spawn... | op=spawn&prefab={prefab}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
 6.5 | Repair and refill | | sticky
 6.5.1 | Repair (aim) | op=repair
 6.5.2 | Refill (aim) | op=refill

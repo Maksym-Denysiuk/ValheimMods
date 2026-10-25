@@ -43,6 +43,7 @@ package "world  (HomeCheat.Features.WorldCommands)" as world {
   class PathCommand
   class InspectCommand
   class ScaleCommand
+  class CoordCommand
   class FieldAnchor <<internal static>> {
     +AheadOfPlayer(p, a, spacing) : Anchor
   }
@@ -125,6 +126,7 @@ CommandBase <|-- GroundLevelCommand
 CommandBase <|-- PathCommand
 CommandBase <|-- InspectCommand
 CommandBase <|-- ScaleCommand
+CommandBase <|-- CoordCommand
 CommandBase <|-- CheatStateCommand
 CommandBase <|-- CheatInfoCommand
 CommandBase <|-- HealCommand

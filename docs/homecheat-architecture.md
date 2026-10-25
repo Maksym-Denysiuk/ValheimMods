@@ -21,7 +21,7 @@ Rules:
 ```
 HomeCheat.dll (core)                                      HomeCheat.Cmd.<feature>.dll (hot reload)
  HomeCheatPlugin      Awake/Update only, wires services    Features/World        give spawn list place plant field cultivate
- Contracts            IHomeCommand, ICommandLifecycle,                           repair refill groundlevel path inspect scale
+ Contracts            IHomeCommand, ICommandLifecycle,                           repair refill groundlevel path inspect scale coord
                       CommandBase, HarmEffect, PatchSet,                         + FieldAnchor CropSpacing TerrainStamp
                       HomeApi                              Features/Diag         cheatstate cheatinfo
  Pure (no Unity)      Args, CommandException, FormParser,  Features/Earthquake   earthquake      (HarmEffect)

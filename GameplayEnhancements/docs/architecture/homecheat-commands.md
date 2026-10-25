@@ -5,7 +5,7 @@ description: HomeCheat command catalog (2026-10-25) - every command once, with i
 
 # HomeCheat command catalog
 
-One row per command (35: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
+One row per command (36: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
 
 `scripts/commands-check.js` of the `valheim-spells-craft` skill compares this table with the code, the index and the spell file; keep one row per command name.
 
@@ -29,7 +29,8 @@ One row per command (35: `override string Name` in `GameplayEnhancements/src/`).
 | help | core | `HelpCommand` | info | none | none | registry | none | - | - | - |
 | harmeffect | core | `HarmEffectCommand` | system | (as the effect) | (as the effect) | forwards to a `HarmEffect` | as the effect | - | - | - |
 | give | world | `GiveCommand` | give item | self | none | `ItemDrop` into the inventory | items in your inventory (world data) | stack size | - | - |
-| spawn | world | `SpawnCommand` | spawn creature | enemies | `dist=` ahead | creature prefab | creatures in the world | - | used as a test helper | 6.4.1 (soon: `ask=` prefab, count, yaw, pitch, player) |
+| spawn | world | `SpawnCommand` | spawn creature (or drop items) | enemies; ahead of another player with `player=<nick>` (host only, `Host.RequireServer`) | `dist=` ahead of you or that player; `yaw=`, `pitch=` | creature or item prefab, `Players.Find` | creatures or items in the world | count 100 (`Caps.Check`) | used as a test helper | 6.4.1 (`ask=` prefab, count, yaw, pitch, player) |
+| coord | world | `CoordCommand` | info (stored points) | self | on self, or crosshair with `aim=1` | core `Kit.Coords` (`coords.state` per world), local marker `Fx.Spawn` | `BepInEx/config/homecheat/coords.state` (outside the world save) | 64 points per world (`PointStore`) | `show=1`, `get=1` (read-only) | 6.2.1-6.2.4, 3.5.1, 3.5.2 |
 | list | world | `ListCommand` | info | none | none | `Prefabs.All` | none | 200 names | - | - |
 | inspect | world | `InspectCommand` | info | none | none | prefab components | none | - | - | - |
 | place | world | `PlaceCommand` | place object | ground | grid at crosshair or `dist=` | any prefab, `Anchor` | objects in the world | 400 | - | 7.4, 7.5 |
@@ -38,8 +39,8 @@ One row per command (35: `override string Name` in `GameplayEnhancements/src/`).
 | cultivate | world | `CultivateCommand` | terrain | ground | grid from your cell | hoe piece `cultivate` (`Prefabs.Get`, one `Instantiate` per cell; not `TerrainStamp`) | terrain change saved | 2 500 | - | 7.1; 7.6 (soon: `area=coords`) |
 | repair | world | `RepairCommand` | modify object | building pieces | crosshair or radius | `WearNTear` health | piece health | radius | `report=1` | 6.5.1, 6.5.3, 6.5.5, 6.5.7 |
 | refill | world | `RefillCommand` | modify object | fireplaces, smelters | crosshair or radius | `Fireplace`/`Smelter` fuel | fuel levels | radius | - | 6.5.2, 6.5.4, 6.5.6, 6.5.7 |
-| groundlevel | world | `GroundLevelCommand` | terrain | ground | radius around you | hoe piece `raise` via `TerrainStamp` | terrain change saved | radius 12 | - | 6.1.1-6.1.5 (soon: wait for `avoid=1`) |
-| path | world | `PathCommand` | terrain | ground | line ahead | hoe pieces (`path`, `paved_road`) via `TerrainStamp` | terrain change saved | 400 stamps, width 1-8 m | - | 6.3.3, 6.3.4; 6.3.1, 6.3.2 (soon: `from=coords&avoid=1`) |
+| groundlevel | world | `GroundLevelCommand` | terrain | ground | radius around you | hoe piece `raise` via `TerrainStamp`; `avoid=1` keeps away from player-built pieces (`Kit.Constructions`), `shrink=1` levels a smaller circle | terrain change saved | radius 12; the game's ±8 m clamp named in the answer | - | 6.1.1-6.1.5 (`avoid=1`) |
+| path | world | `PathCommand` | terrain | ground | line ahead; `from=coords` = stored start to end | hoe pieces (`path`, `paved_road`) via `TerrainStamp`; `avoid=1` routes on a 1 m grid (`GridRoute`, `Ground.IsBlocked`, `Kit.Constructions`) | terrain change saved | 400 stamps (straight: refused; `from=coords` or `avoid`: cut, named in the answer), width 1-8 m, grid 40 000 cells | - | 6.3.1, 6.3.2 (`from=coords&avoid=1`), 6.3.3, 6.3.4 |
 | scale | world | `ScaleCommand` | modify object | trees of a kind | radius | `TreeBase`, `Trees.ApplyScale`, core `TreeScalePatch` | scale, health and drops saved in ZDO; other players without HomeCheat see normal trees | radius | - | 4.5; 4.7-4.9 (soon: `aim=1`) |
 | cheatstate | diag | `CheatStateCommand` | info | self, nearby objects | radius 25 | reads `Terminal.m_cheat`, profile, ZDO marks | none (read-only) | - | the before/after check of every test | - |
 | cheatinfo | diag | `CheatInfoCommand` | info | none | none | reflection over game members | none | - | discovery leftover (known defect) | - |
