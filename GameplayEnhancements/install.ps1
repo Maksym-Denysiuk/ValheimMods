@@ -88,7 +88,7 @@ foreach ($f in Get-ChildItem (Join-Path $pay 'BepInEx\config\homecheat') -File) 
     else { Step "install spell file $($f.Name)" { Copy-Item $f.FullName $cfg } }
 }
 
-# 5. key settings (the game's own settings; F2 -> F6 and F9 free are done by the keybinds DLL at load)
+# 5. key settings (the game's own settings; F2 -> F11, F11 screenshot off and F9 free are done by the keybinds DLL at load)
 if (-not $NoKeySettings) {
     if (-not (Test-Path $script:PrefsKey)) { Warn 'no Valheim settings yet: start the game once, close it, run install.ps1 again for the keys' }
     else {

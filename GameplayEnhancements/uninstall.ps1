@@ -42,4 +42,4 @@ if ($RemoveBepInEx) {
     Move-ToBackup $bep $bk
     foreach ($f in 'winhttp.dll', 'doorstop_config.ini', '.doorstop_version', 'changelog.txt') { Move-ToBackup (Join-Path $game $f) (Join-Path $bk 'game-root') }
 }
-Say 'Done. Vanilla F2 (stats window) and F9 (gamepad layout) come back with the keybinds DLL gone.'
+Say 'Done. Vanilla F2 (stats window), F9 (gamepad layout) and F11 (screenshot) come back with the keybinds DLL gone.'

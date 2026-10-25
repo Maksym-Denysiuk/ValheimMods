@@ -1,4 +1,5 @@
-// op=keybinds: moves the network/debug stats window from F2 to F6 and frees F9 (vanilla F9 cycles the gamepad layout).
+// op=keybinds: moves the network/debug stats window from F2 to F11, frees F9 (vanilla F9 cycles the gamepad layout)
+// and turns off the vanilla F11 screenshot (GameCamera.ScreenShot) so F11 does one thing.
 // Console key (F5 -> `) and the F9 world-save bind are NOT done here: they are the game's own settings
 // (registry kbmBinding_Console, ConsoleBindings), see docs/Keybinds/keybinds.md.
 // The patches are applied on load (game start or op=reload) and removed on unload, so a newer build replaces them cleanly.
@@ -12,7 +13,7 @@ namespace HomeCheat.Features.Keybinds
 {
     public sealed class KeybindsCommand : CommandBase
     {
-        internal const int F2 = 283, F6 = 287, F9 = 290;
+        internal const int F2 = 283, F9 = 290, F11 = 292;
 
         // the loaded instance, for the patch classes; null while unloaded
         internal static KeybindsCommand Current;
@@ -24,7 +25,7 @@ namespace HomeCheat.Features.Keybinds
         }
 
         public override string Name { get { return "keybinds"; } }
-        protected override string Usage { get { return "keybinds [status=1] [on=0|1] - stats window (ConnectPanel) opens on F6 instead of F2, F9 no longer cycles the gamepad layout; on by default from load, on=0 removes the patches"; } }
+        protected override string Usage { get { return "keybinds [status=1] [on=0|1] - stats window (ConnectPanel) opens on F11 instead of F2 (vanilla F11 screenshot off), F9 no longer cycles the gamepad layout; on by default from load, on=0 removes the patches"; } }
 
         protected override void OnLoad()
         {
@@ -43,7 +44,9 @@ namespace HomeCheat.Features.Keybinds
             {
                 Patches.Apply(typeof(ConnectPanelKeyPatch));
                 Patches.Apply(typeof(KeyHintsF9Patch));
-                HomeApi.Log("keybinds: ON (stats window F2 -> F6, F9 gamepad-layout key off)");
+                Patches.Apply(typeof(GameCameraF11Patch));
+                Patches.Apply(typeof(FejdStartupF11Patch));
+                HomeApi.Log("keybinds: ON (stats window F2 -> F11, F11 screenshot off, F9 gamepad-layout key off)");
             }
             catch (Exception e) { HomeApi.LogError("keybinds: patch failed: " + e); }
         }
@@ -75,7 +78,7 @@ namespace HomeCheat.Features.Keybinds
         string Status()
         {
             bool on = Patches.IsActive;
-            return "keybinds: " + (on ? "ON" : "OFF") + ", patched " + (on ? Patches.Describe() + " " : "") + "; stats toggles on F6 seen: " + StatsToggles + ", F2 presses seen (ignored): " + StatsF2Presses;
+            return "keybinds: " + (on ? "ON" : "OFF") + ", patched " + (on ? Patches.Describe() + " " : "") + "; stats toggles on F11 seen: " + StatsToggles + ", F2 presses seen (ignored): " + StatsF2Presses;
         }
 
         internal static IEnumerable<CodeInstruction> Retarget(IEnumerable<CodeInstruction> ins, int from, int to, string what)

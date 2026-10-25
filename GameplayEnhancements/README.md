@@ -11,7 +11,7 @@ The HomeCheat plugin and every gameplay change built on it, as a standalone pack
 | Spells | `earthquake`, `slime`, `spellshot`, `heal` / `cleanse` / `bless`, `spells` (spell bar: G opens the radial, 10-cell bar) | `docs\Spells\` |
 | Transform | `transform` (raven, serpent, fish, human), `hidebody`, `killmobs` (test helper) | `docs\Transform\` |
 | Effects | `visualeffect` (fire any fx_/vfx_ prefab, weather), `fxdump` (prefab inventory) | `docs\FX\` |
-| Keys | `keybinds`: stats window F2 -> F6, F9 no longer cycles the gamepad layout; plus the game settings console key `~` and `bind F9 save` | `docs\Keybinds\` |
+| Keys | `keybinds`: stats window F2 -> F11 (vanilla F11 screenshot off), F9 no longer cycles the gamepad layout; plus the game settings console key `~` and `bind F9 save` | `docs\Keybinds\` |
 
 `MANIFEST.md` lists the exact feature DLL builds. Status per command (run in game or only built) is in `docs\HomeCheat-plugin\README.md`, column Status.
 
