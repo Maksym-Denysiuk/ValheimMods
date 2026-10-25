@@ -45,6 +45,7 @@ namespace HomeCheat.Features.Construction
         public const string KeyYaw = "hc_construct_yaw";
         public const string KeyName = "hc_construct_name";
         public const string KeyPillar = "hc_construct_pillar";  // ZDO mark of a preview pole: the plan id
+        const string PillarTorch = "piece_groundtorch", PillarTorchFallback = "piece_groundtorch_wood";
         const int PillarStack = 5;          // poles a preview column (5 x 4 m)
         const float PillarClear = 0.3f;     // seconds between taking the preview poles down and building
         const float FloorBin = 0.25f;       // metres: pivot levels for the ground floor
@@ -56,6 +57,10 @@ namespace HomeCheat.Features.Construction
         const float LegacyWait = 1f;        // seconds after removing old hoe stamps: the terrain rebuilds without them
         const float LegacyMargin = 4f;      // old hoe stamps this far around the levelled box are removed too (their smoothing reaches in)
         const float TerrainLimit = 8f;      // the game keeps terrain within this many metres of the world's own ground
+        const string PlinthFloor = "stone_floor_2x2", PlinthWall = "stone_wall_2x1";
+        const float PlinthTile = 2f;        // the stone foundation's tile: one 2 x 2 m floor
+        const int MaxPlinth = 1500, MaxPlinthWalls = 12;
+        const float ClearMargin = 1f, ClearBelow = 3f;   // clear the space: around the pieces' box, and under the base
         const float GroundMiss = 0.05f;     // a ground step with more vertices than this share off target stops the build
         const float ItemMargin = 2f;        // undo items=1: dropped items this far around the build's box
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
@@ -388,7 +393,8 @@ namespace HomeCheat.Features.Construction
                 if (ready != null)
                 {
                     float miss;
-                    string flat = Flatness(ready, out miss);
+                    List<Vector3> lows = new List<Vector3>();
+                    string flat = Flatness(ready, out miss, lows);
                     HomeApi.Log("construct: " + buildName + " " + flat);
                     if (miss > GroundMiss)
                     {
@@ -398,8 +404,12 @@ namespace HomeCheat.Features.Construction
                         Notify.Center(msg);
                         return;
                     }
+                    if (lows.Count > 0) jobs.AddRange(Plinth(lows, yaw, origin, notes));
                 }
                 if (poles) AddPoles(jobs, baseY, t, notes);
+                string cleared = ClearSpace(jobs, baseY);
+                HomeApi.Log("construct: " + buildName + " " + cleared);
+                notes.Add(cleared);
                 Run(jobs, id, yaw, buildName, me, t, notes);
             };
             if (delay <= 0f) build(); else Later(delay, build);
@@ -532,6 +542,11 @@ namespace HomeCheat.Features.Construction
             float lo, hi;
             if (!PieceGhost.Measure(pole, Quaternion.identity, out lo, out hi) || hi - lo < 0.5f) throw new CommandException(Pole + " could not be measured");
             float len = hi - lo;
+            // a ground torch on top of every column, seen from afar at night (Maksym 2026-10-25); marked like the poles
+            GameObject torch = Prefabs.Get(PillarTorch);
+            if (torch == null) torch = Prefabs.Get(PillarTorchFallback);
+            float tlo = 0f, thi = 0f;
+            if (torch != null && !PieceGhost.Measure(torch, Quaternion.identity, out tlo, out thi)) tlo = 0f;
             int n = 0;
             foreach (Vector3 pt in PillarPoints(pl, e))
             {
@@ -546,6 +561,14 @@ namespace HomeCheat.Features.Construction
                     if (nv == null || !nv.IsValid()) { UnityEngine.Object.Destroy(go); continue; }
                     nv.GetZDO().Set(KeyPillar, pl.PillarId);
                     n++;
+                }
+                if (torch != null)
+                {
+                    float columnTop = surface - lo + (PillarStack - 1) * len + hi;
+                    GameObject tg = (GameObject)UnityEngine.Object.Instantiate(torch, new Vector3(pt.x, columnTop - tlo, pt.z), Quaternion.identity);
+                    ZNetView tn = tg.GetComponent<ZNetView>();
+                    if (tn == null || !tn.IsValid()) UnityEngine.Object.Destroy(tg);
+                    else tn.GetZDO().Set(KeyPillar, pl.PillarId);
                 }
             }
             return n;
@@ -594,7 +617,7 @@ namespace HomeCheat.Features.Construction
             pl.PillarId = "plan-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             int n = PlacePillars(pl, e);
             SavePlan(pl);
-            return "preview " + Describe(pl, e) + "; " + n + " poles in 5 columns at the corners and the centre"
+            return "preview " + Describe(pl, e) + "; " + n + " poles in 5 columns at the corners and the centre, a ground torch on each"
                 + (removed > 0 ? " (the previous plan" + (old.Name != pl.Name ? " of " + old.Name : "") + " and its " + removed + " poles replaced)" : "")
                 + ". Next: step=start&confirm=1 builds it, step=rotate&by=90 turns it, step=preview again moves it, step=remove takes the poles down";
         }
@@ -730,6 +753,100 @@ namespace HomeCheat.Features.Construction
             return verts;
         }
 
+        // where the terrain cannot reach its target (more than TerrainLimit from the world's own ground), a stone foundation
+        // (Maksym 2026-10-25: "raise ground level, place stone walls and floor if not enough"): the shortfall in 2 x 2 m tiles
+        // turned with the build, per tile one stone floor with its top at the highest target in the tile and stone walls stacked
+        // under it down to the real ground, so stone stands on stone. The jobs carry the build's mark: undo takes them too
+        List<Job> Plinth(List<Vector3> lows, float yaw, Vector3 origin, List<string> notes)
+        {
+            List<Job> add = new List<Job>();
+            if (lows.Count == 0) return add;
+            GameObject floor = Prefabs.Get(PlinthFloor), wall = Prefabs.Get(PlinthWall);
+            Quaternion rot = Quaternion.Euler(0f, yaw, 0f), inv = Quaternion.Inverse(rot);
+            Vector3 flo, fhi, wlo, whi;
+            if (floor == null || wall == null || !PieceGhost.Box(floor, rot, out flo, out fhi) || !PieceGhost.Box(wall, rot, out wlo, out whi) || whi.y - wlo.y < 0.2f)
+            {
+                notes.Add("no stone foundation: " + PlinthFloor + " or " + PlinthWall + " missing or not measurable");
+                return add;
+            }
+            float wallH = whi.y - wlo.y, floorT = fhi.y - flo.y;
+            Dictionary<long, float> top = new Dictionary<long, float>(), ground = new Dictionary<long, float>();
+            foreach (Vector3 v in lows)
+            {
+                Vector3 l = inv * new Vector3(v.x, 0f, v.z);
+                long k = ((long)Mathf.FloorToInt(l.x / PlinthTile) << 32) | (uint)Mathf.FloorToInt(l.z / PlinthTile);
+                float cur, g = Ground.Height(v);
+                if (!top.TryGetValue(k, out cur) || v.y > cur) top[k] = v.y;
+                if (!ground.TryGetValue(k, out cur) || g < cur) ground[k] = g;
+            }
+            int floors = 0, walls = 0;
+            foreach (KeyValuePair<long, float> kv in top)
+            {
+                if (add.Count >= MaxPlinth) { notes.Add("stone foundation capped at " + MaxPlinth + " pieces"); break; }
+                int ix = (int)(kv.Key >> 32), iz = (int)(kv.Key & 0xffffffffL);
+                Vector3 c = rot * new Vector3((ix + 0.5f) * PlinthTile, 0f, (iz + 0.5f) * PlinthTile);
+                add.Add(PlinthJob(floor, new Vector3(c.x, kv.Value - fhi.y, c.z), rot, origin));
+                floors++;
+                float wallTop = kv.Value - floorT, bottom = ground[kv.Key];
+                for (int n = 0; n < MaxPlinthWalls && wallTop > bottom; n++)
+                {
+                    add.Add(PlinthJob(wall, new Vector3(c.x, wallTop - whi.y, c.z), rot, origin));
+                    walls++;
+                    wallTop -= wallH;
+                }
+            }
+            notes.Add("stone foundation where the ground cannot reach: " + floors + " floor(s), " + walls + " wall(s)");
+            return add;
+        }
+
+        static Job PlinthJob(GameObject prefab, Vector3 pos, Quaternion rot, Vector3 origin)
+        {
+            Job j = new Job();
+            j.Prefab = prefab;
+            j.Pos = pos;
+            j.Rot = rot;
+            j.Origin = origin;
+            return j;
+        }
+
+        // clear the space (Maksym 2026-10-25: "before placing the real construction, clear the space from existing objects"):
+        // inside the box of the pieces (+ ClearMargin around, from ClearBelow under the base to ClearMargin over the top) the
+        // world's own objects go: trees, logs, stumps and rocks, bushes, pickables, saplings, items on the ground. Never players,
+        // creatures, player-built pieces (those refuse the build before this) or this command's own marked objects
+        static string ClearSpace(List<Job> jobs, float baseY)
+        {
+            float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue, top = float.MinValue;
+            foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); top = Mathf.Max(top, j.Pos.y); }
+            Bounds box = new Bounds();
+            box.SetMinMax(new Vector3(ax - ClearMargin, baseY - ClearBelow, az - ClearMargin), new Vector3(bx + ClearMargin, top + ClearMargin, bz + ClearMargin));
+            Dictionary<string, int> kinds = new Dictionary<string, int>();
+            int n = 0;
+            foreach (ZNetView nv in UnityEngine.Object.FindObjectsOfType<ZNetView>())
+            {
+                if (nv == null || !nv.IsValid() || !box.Contains(nv.transform.position)) continue;
+                GameObject go = nv.gameObject;
+                if (go.GetComponent<Character>() != null) continue;
+                ZDO z = nv.GetZDO();
+                if (z.GetString(KeyBuild, "").Length > 0 || z.GetString(KeyPillar, "").Length > 0) continue;
+                Piece pc = go.GetComponent<Piece>();
+                if (pc != null && pc.IsPlacedByPlayer()) continue;
+                string kind = go.GetComponent<TreeBase>() != null ? "trees" : go.GetComponent<TreeLog>() != null ? "logs"
+                    : go.GetComponent<MineRock5>() != null || go.GetComponent<MineRock>() != null ? "rocks" : go.GetComponent<Destructible>() != null ? "stumps, rocks and bushes"
+                    : go.GetComponent<Pickable>() != null ? "pickables" : go.GetComponent<Plant>() != null ? "saplings" : go.GetComponent<ItemDrop>() != null ? "items" : "";
+                if (kind.Length == 0) continue;
+                nv.ClaimOwnership();
+                ZNetScene.instance.Destroy(go);
+                int c;
+                kinds.TryGetValue(kind, out c);
+                kinds[kind] = c + 1;
+                n++;
+            }
+            if (n == 0) return "space clear: nothing to remove";
+            List<string> parts = new List<string>();
+            foreach (KeyValuePair<string, int> kv in kinds) parts.Add(kv.Value + " " + kv.Key);
+            return "space cleared: " + n + " object(s) removed (" + string.Join(", ", parts.ToArray()) + ")";
+        }
+
         // a piece that must rest on the ground: no WearNTear (bushes, pickable stones), or a material other than wood (stone,
         // marble, iron ...): on flat ground only these broke, wood stood on its posts (gumdrop endgame, 2026-10-25)
         static bool NeedsGround(GameObject prefab)
@@ -776,15 +893,17 @@ namespace HomeCheat.Features.Construction
         static string Flatness(GroundJob g)
         {
             float miss;
-            return Flatness(g, out miss);
+            return Flatness(g, out miss, null);
         }
 
         // miss = the share of vertices more than 5 cm off their target (0..1)
-        static string Flatness(GroundJob g, out float miss)
+        // beyondLows (when given): the vertices left too low by the game's terrain limit, collected for the stone foundation and
+        // left out of miss
+        static string Flatness(GroundJob g, out float miss, List<Vector3> beyondLows)
         {
             miss = 0f;
             if (g == null || g.Targets == null || g.Targets.Count == 0) return "no levelled ground in this session";
-            int ok = 0, high = 0, low = 0, beyond = 0;
+            int ok = 0, high = 0, low = 0, beyond = 0, covered = 0;
             float worst = 0f;
             Vector3 at = Vector3.zero;
             foreach (Vector3 v in g.Targets)
@@ -792,10 +911,14 @@ namespace HomeCheat.Features.Construction
                 float d = Ground.Height(v) - v.y;
                 if (Mathf.Abs(d) <= 0.05f) ok++; else if (d > 0f) high++; else low++;
                 // the game keeps terrain within 8 m of the world's own ground (TerrainComp.LevelTerrain clamps the change at +-8)
-                if (Mathf.Abs(d) > 0.05f && WorldGenerator.instance != null && Mathf.Abs(v.y - WorldGenerator.instance.GetHeight(v.x, v.z)) > TerrainLimit - 0.1f) beyond++;
+                if (Mathf.Abs(d) > 0.05f && WorldGenerator.instance != null && Mathf.Abs(v.y - WorldGenerator.instance.GetHeight(v.x, v.z)) > TerrainLimit - 0.1f)
+                {
+                    beyond++;
+                    if (d < 0f && beyondLows != null) { beyondLows.Add(v); covered++; }
+                }
                 if (Mathf.Abs(d) > Mathf.Abs(worst)) { worst = d; at = v; }
             }
-            miss = 1f - (float)ok / g.Targets.Count;
+            miss = 1f - (float)(ok + covered) / g.Targets.Count;
             return "ground: " + ok + " of " + g.Targets.Count + " vertices within 5 cm of their target (" + g.Raised + " raised above the base " + Fmt.F(g.BaseY, 2) + "), "
                 + high + " too high, " + low + " too low" + (beyond > 0 ? " (" + beyond + " of them more than " + Fmt.F(TerrainLimit, 0) + " m from the world's own ground, the game's limit)" : "") + (Mathf.Abs(worst) > 0.05f ? ", worst " + Fmt.F(worst, 2) + " m at " + Fmt.F(at.x, 0) + "," + Fmt.F(at.z, 0) : "");
         }
