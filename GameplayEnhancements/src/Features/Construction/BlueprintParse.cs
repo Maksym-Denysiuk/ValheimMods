@@ -96,6 +96,7 @@ namespace HomeCheat.Features.Construction
 
                     string extra = "";
                     float sx = 1f, sy = 1f, sz = 1f;
+                    bool saved = false;
 
                     if (parts.Length == 10)
                     {
@@ -103,7 +104,13 @@ namespace HomeCheat.Features.Construction
                     }
                     else if (parts.Length > 10)
                     {
-                        int extraEnd = parts.Length - 4;
+                        // PlanBuild ends with the scale (sx;sy;sz); InfinityHammer adds one more field, the object's saved data in
+                        // base64 (2026-10-25, portalhub): when the last field is not a number, the scale is the three before it
+                        float probe;
+                        int n = parts.Length;
+                        bool hasData = n >= 14 && !float.TryParse(parts[n - 1], NumberStyles.Float, CultureInfo.InvariantCulture, out probe);
+                        if (hasData) { n--; saved = true; }
+                        int extraEnd = n - 4;
                         if (extraEnd < 9) extraEnd = 9;
                         StringBuilder sb = new StringBuilder();
                         for (int i = 9; i <= extraEnd; i++)
@@ -116,7 +123,7 @@ namespace HomeCheat.Features.Construction
                         int scaleXIdx = extraEnd + 1;
                         int scaleYIdx = scaleXIdx + 1;
                         int scaleZIdx = scaleYIdx + 1;
-                        if (scaleZIdx < parts.Length)
+                        if (scaleZIdx < n)
                         {
                             if (!float.TryParse(parts[scaleXIdx], NumberStyles.Float, CultureInfo.InvariantCulture, out sx) ||
                                 !float.TryParse(parts[scaleYIdx], NumberStyles.Float, CultureInfo.InvariantCulture, out sy) ||
@@ -144,6 +151,7 @@ namespace HomeCheat.Features.Construction
                     piece.Qz = qz;
                     piece.Qw = qw;
                     piece.Extra = extra;
+                    piece.HasSavedData = saved;
                     piece.Sx = sx;
                     piece.Sy = sy;
                     piece.Sz = sz;

@@ -935,8 +935,9 @@ namespace HomeCheat.Features.Construction
             if (wnt != null) wnt.OnPlaced();
             if (pc != null && !string.IsNullOrEmpty(pc.Extra))
             {
-                Sign sign = go.GetComponent<Sign>();
-                if (sign != null) { sign.SetText(pc.Extra); t.Signs++; }
+                // the text of a sign or the tag of a portal (both TextReceiver)
+                TextReceiver text = go.GetComponent<TextReceiver>();
+                if (text != null) { text.SetText(pc.Extra); t.Signs++; }
                 else t.ExtraIgnored++;
             }
             t.Placed++;

@@ -24,7 +24,8 @@ namespace HomeCheat.Features.Construction
                 BlueprintEntry e = new BlueprintEntry();
                 Blueprint b = BlueprintParse.Parse(File.ReadAllText(f), f);
                 e.Parts.Add(b);
-                e.Name = b.Name;
+                // InfinityHammer names a selection of many objects "Multiple (<count>)": the file name says more
+                e.Name = b.Name.StartsWith("Multiple (") ? Path.GetFileNameWithoutExtension(f) : b.Name;
                 e.Source = Path.GetFileName(f);
                 found.Add(e);
             }
