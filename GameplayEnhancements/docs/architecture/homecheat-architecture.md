@@ -64,6 +64,8 @@ Each command in the single-command boxes is its own DLL (`earthquake`, `slime`, 
 
 A cast goes `SpellBar.CastSpell` -> the spell's `Cmd` from the spell file (the Shift form appended when Shift is held), split on `;;` -> `HomeApi.Exec("op=heal")` for each part -> the dispatcher -> `HealCommand` in another DLL: features never reference each other's types.
 
+Spell file v4 (2026-10-25): `SpellParse` (no Unity reference) reads the file into a tree of `SpellNode`s (dotted ids of any depth, titles, sticky inherited from a title) holding `Spell`s; `SpellGroupConfig` shows one title's level (the game lays out a long level as a spiral). A spell with `ask=` flags opens one `SpellAskConfig` level per question (`SpellAsk`, answers `SpellAskOption`, dynamic answers from `SpellAskSources`); the answers collect in a `SpellAskChain`, and the last one calls `SpellBar.CastChain` -> `CastSpell`, which puts each answer into `{key}` (`SpellParse.Substitute`, URL-escaped) before the `;;` split. So a command that needs a choice from the player (a prefab, a count, an area) takes plain parameters, and the choice is made in the spell file; it holds no menu code of its own. Format and limits: [spellbar.md](../Spells/spellbar.md#spell-file-v4).
+
 ## Main classes
 
 | Class | Role |
@@ -85,7 +87,7 @@ A cast goes `SpellBar.CastSpell` -> the spell's `Cmd` from the spell file (the S
 
 ## Inherit or compose
 
-OOP is used, but shallow. Unity and Valheim are built from components, and their types are not ours to subclass. The exceptions are `BaseUnityPlugin` (the plugin), `MonoBehaviour` (`SpellBar`, `TransformState`, `TransformRemote`, `TransformLanding`) and the game's `IRadialConfig` (the four `Spell*Config` classes).
+OOP is used, but shallow. Unity and Valheim are built from components, and their types are not ours to subclass. The exceptions are `BaseUnityPlugin` (the plugin), `MonoBehaviour` (`SpellBar`, `TransformState`, `TransformRemote`, `TransformLanding`) and the game's `IRadialConfig` (the five `Spell*Config` classes: `SpellRootConfig`, `SpellHotbarConfig`, `SpellGroupConfig`, `SpellAskConfig`, `SpellLeafConfig`).
 
 - **Inherit** when something is a kind of command with a shared lifecycle: every command derives from `CommandBase`; player-targeted effects derive from `HarmEffect : CommandBase`. Concrete commands are `sealed`. Nothing goes deeper than two levels.
 - **Compose** when a command *has* something: Harmony patches (`Patches`), a GameObject (`Own(...)` until unload, `OwnInWorld(...)` until the player leaves the world), timers (`Later(...)`), effects (`Kit.Fx`), a grid (`Kit.Anchor`), a spell file (`SpellFile` inside the spell bar).
@@ -255,7 +257,10 @@ Where new behaviour goes, from the smallest change to the largest. Prefer the fi
 
 | Want | Extend | Where | Notes |
 |---|---|---|---|
-| a new spell-bar entry for an existing command (a preset) | one line in the spell file | `BepInEx/config/homecheat/spells.txt` (format in its header: `slot.entry \| label \| command \| flags`, `;;` chains commands, flags `sticky`, `pin=`, `shift=`) | no build; `op=spells&reload=1`. The game folder copy is the source; `build.js` copies it into `payload/`; `install.ps1` installs it only when missing |
+| a new spell-bar entry for an existing command (a preset) | one line in the spell file | `BepInEx/config/homecheat/spells.txt` (spell file v4, format in its header: `id \| label \| command \| flags`, dotted ids of any depth under a title line `id \| label`, `;;` chains commands, flags `sticky`, `pin=`, `shift=`, `ask=`) | no build; `op=spells&reload=1` (0 bad lines). Never reuse an id with a new meaning. A long level needs no splitting: the game continues it as a spiral. The game folder copy is the source; `build.js` copies it into `payload/`; `install.ps1` installs it only when missing |
+| a spell that asks the player first (which prefab, how many, which area) | `ask=<key>:<answers>` flags on the spell line, `{key}` in its command | `spells.txt` | no build; the command only takes plain parameters. Answers fixed (`Label=value,...`) or dynamic (`@players`, `@crops`, `@trees`, `@prefabs`) |
+| a planned command's spell line | swap its `@dummy` "(soon)" line for the `# real form (<session>): ...` comment above it, same id | `spells.txt` (fresh read just before the edit) | by the session that builds the command; `spells-ui-test.txt` stays `@dummy`; `SpellFile.DefaultText` is refreshed once after the last wave |
+| a new dynamic answer source for `ask=` | a `case` in `SpellAskSources.Resolve` and the name in `SpellParse.Sources` | `Features/Spells/` | spell-bar owner only (one owner of the Spells folder at a time); read-only |
 | a new option of an existing command | a parameter read in `Execute`, default = old behaviour | the command's class in `src/Features/<F>/` | `op=reload`; document it in `Usage`, the page and the catalog |
 | a read-only helper of a command (discovery, report) | `SubAction(key, help, run)` or `SubFlag(...)` in the constructor | the command's class | runs instead of `Execute` when the key is present |
 | a new projectile or strike type | a branch in `Candidates(type)` and the type check | `Features/Spellshot/SpellShotCommand.cs:30,55` | `type=probe&filter=` lists projectile prefabs |
@@ -279,7 +284,7 @@ What protects the game today. The wave 0 core pass (2026-10-25) put the host gua
 | no network port: commands only from the local inbox | in place | `FileInboxChannel` | - |
 | main thread only | in place | `CommandDispatcher` | - |
 | other players only when this game hosts the world | in place: `Kit.Host.RequireServer()`; older features keep their own check | `Kit/Host.cs`; `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111` | `Host.RequireServer()` before touching another player or shared world data |
-| spell bar only in single player or a world this PC hosts | in place | `SpellBar.cs:405` (`Exec`: every cast stops with an error when `ZNet.instance` is missing or not the server) | a command cast from the spell bar inherits it; a command sent through the inbox does not, so it still needs the check above |
+| spell bar only in single player or a world this PC hosts | in place | `SpellBar.cs:486` (`Exec`: every cast stops with an error when `ZNet.instance` is missing or not the server) | a command cast from the spell bar inherits it; a command sent through the inbox does not, so it still needs the check above |
 | world loaded | in place | `Kit.Host.RequireWorld()` checks `ZNet`, `ZNetScene`, `ZoneSystem` and `ObjectDB`; `Players.Local`, `Prefabs.Require` throw a clear error too | `Host.RequireWorld()` (or `RequireServer()`) first, then `Players.Local` |
 | caps on counts and sizes | in place: `Kit.Caps.Check` / `Clamp`; the values stay per command | `cultivate` 2 500, `field` 40 000 examined / 2 500 planted, `place` 400, `plant` 400, `path` 400 stamps, `spellshot` 81 shots and 300 strike points per volley, `groundlevel` radius 12, `list` 200 | a `const` cap, stated in `Usage`, applied with `Caps.Check` (refuse) or `Caps.Clamp` (lower, note in the answer) |
 | timers and objects of a replaced build | in place | `CommandBase` (`ICommandLifecycle.Unload`): timers cancelled, patches removed, owned objects destroyed | use `Later`, `Own`, `Patches` only |

@@ -22,7 +22,7 @@ Nearest: <command(s)> (catalog row, page, source read: yes/no)
 Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 
 ## What it does
-- Trigger: op=<name>[&...]; spell bar <id> "<label>" [pin=] [sticky] [shift=] [ask=] (id: group.entry today; a dotted path of any depth such as 6.1.2 once spell file v4 is pushed, old ids keep their meaning)
+- Trigger: op=<name>[&...]; spell bar <id> "<label>" [pin=] [sticky] [shift=] [ask=<key>:<answers>] (spell file v4: a dotted id of any depth such as 6.1.2 under its title; an existing id keeps its meaning; a planned "(soon)" line keeps its id when the real form is swapped in)
 - Targets: self <on/off>, enemies <on/off>, tamed <on/off>, other players <on/off, opt-in parameter>, bosses <on/off>
 - Placement: self | crosshair | radius <m> | ring | grid | line | world
 - Magnitude: damage / push / heal / count / size / duration, with defaults
@@ -37,10 +37,10 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 ## How it is built
 - Feature folder: src/Features/<F>/ (existing | new); class <Name>Command : CommandBase | <Name>Effect : HarmEffect
 - Sub-actions: <key=...> (read-only helpers)
-- OnLoad needs: patches <...>, owned GameObjects <...>, timers <...>; refs.txt <dll>
+- OnLoad needs: patches <...>, owned GameObjects <...> (Own: across worlds | OwnInWorld: until the player leaves the world), timers <...>, OnWorldExit <state reset or none>; refs.txt <dll>
 - Kit reused: <helpers>; game objects reused: <Aoe, Projectile, ...>
 - Core change: none | <what> (-> core owner, restart)
-- Guards carried until the core pass: IsServer before other players, Players.Local, caps, ZDO mark for persistent objects, confirm=1 for destructive parts
+- Guards (core since wave 0): Host.RequireWorld / RequireServer (other players, shared world data), Players.Local, Caps.Check or Clamp with a const cap, ZDO mark for persistent objects; per command: confirm=1 for destructive parts
 - Docs: page <topic>/<file>.md, index row, catalog row, architecture doc <section> if a pattern changes
 
 ## Open questions
