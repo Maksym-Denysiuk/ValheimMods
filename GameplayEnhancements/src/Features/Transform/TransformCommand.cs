@@ -20,7 +20,7 @@ namespace HomeCheat.Features.TransformCommands
             get
             {
                 return "op=transform&type=human|raven|serpent|fish[&duration=<s, 0=until human>][&speed=<x, default 1>][&hover=0 (raven keeps gliding forward)][&lookdive=0 (altitude only with Space/Ctrl)][&share=1 (default, host only: a networked copy of the creature follows you so other players see it; 0 = only you see the form)][&hide=1 (default, with share: your human body is hidden from other players, op=hidebody, until you are human again)][&scale=<x>][&yoff=<m>][&model=<prefab>]"
-                    + " - raven flies (look up/down to climb/dive, shift = fast), serpent/fish swim fast and crawl on land; other players see the form through share (default on, host only); type=human always restores; type=models lists candidate prefabs";
+                    + " - raven flies (look up/down to climb/dive, shift = fast) and takes no fall damage, serpent/fish swim fast and crawl on land; other players see the form through share (default on, host only); type=human always restores; type=models lists candidate prefabs";
             }
         }
 

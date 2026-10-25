@@ -1,6 +1,6 @@
 // raven form: no fall damage for the local player. Character.UpdateGroundContact turns the drop below m_maxAirAltitude into
 // damage (Clamp01((drop - 4) / 16) * 100) and passes it through SEMan.ModifyFallDamage(baseDamage, ref damage) before
-// Damage() is called only when damage > 0 (the Feather cape uses the same hook); the landing itself (effects, ground reset) stays.
+// Damage() is called only when damage > 0 (status effects use the same hook: SE_Stats.m_fallDamageModifier); the landing itself (effects, ground reset) stays.
 using HarmonyLib;
 using UnityEngine;
 
