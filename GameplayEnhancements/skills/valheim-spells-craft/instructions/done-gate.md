@@ -23,11 +23,11 @@ Two triggers:
 
 ## 2. Package
 
-`node scripts/valheim/packages/build.js` (HomeOS): refreshes `payload/` (newest build of every feature, `spells.txt`), the skill copies, `docs/architecture/` and `MANIFEST.md`. A feature folder without a build stops it: build first. Outside HomeOS: skip with a note. `build.js` also refreshes other features' builds in `payload/`: commit only your own feature's DLL and leave the rest unstaged.
+`node scripts/valheim/packages/build.js` (HomeOS): refreshes `payload/` (newest build of every feature, `spells.txt`), the skill copies, `docs/architecture/` and `MANIFEST.md`. A feature folder without a build stops it: build your own first; when the folder is another session's, wait for its build (never build or commit another session's feature) and say so. Outside HomeOS: skip with a note. `build.js` also refreshes other features' builds in `payload/`: commit only your own feature's DLL and leave the rest unstaged. While another session works in the submodule, `MANIFEST.md` lists its uncommitted DLLs too: leave both `MANIFEST.md` files unstaged and name them in the handoff; the last committer (the refresh after the wave) commits them with a fresh `build.js`.
 
 ## 3. Commit and push
 
-1. Submodule (`references/ValheimCustomMods`): on `main` (a fresh checkout is detached: `git checkout main`), `git status`; add this task's paths by name (or `git add -A` only when status shows nothing from other work), commit (one-line subject, short body), `git pull --rebase`, `git push origin main`.
+1. Submodule (`references/ValheimCustomMods`): on `main` (a fresh checkout is detached: `git checkout main`), `git status`; add this task's paths by name (or `git add -A` only when status shows nothing from other work), commit with `git commit --only <your paths>` (the index is shared: another session's plain `git commit` takes whatever you staged: W1-ship's `0ac250e` swept in a staged change of W3-mines; a private `GIT_INDEX_FILE` works too) (one-line subject, short body), `git pull --rebase`, `git push origin main`.
 2. HomeOS: `git add references/ValheimCustomMods` (+ any HomeOS files of this task by name), commit, push.
 3. Report both shas, the push state and the list of files that went to the public repository.
 A rebase conflict or a failed push: stop, do not commit the pointer, report. Never force-push.
