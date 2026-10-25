@@ -442,12 +442,14 @@ namespace HomeCheat.Features.Dome
         }
 
         // test aid: see DomeShow
-        string Show(Args a)
+        string Show(Args a) { return ShowDomes(a.Flag("on", true), Mathf.Clamp01(a.Float("alpha", 0.1f))); }
+
+        // the menu's "Show domes (only you)" row and step=show
+        internal string ShowDomes(bool show, float alpha)
         {
             Host.RequireServer();
-            if (!a.Flag("on", true)) { DomeShow.Off(); return "dome show: off"; }
+            if (!show) { DomeShow.Off(); return "dome show: off"; }
             Rescan();
-            float alpha = Mathf.Clamp01(a.Float("alpha", 0.1f));
             int n = DomeShow.Show(groups, groupNos, WardArea(true).m_radius, alpha);
             StringBuilder wl = new StringBuilder();
             foreach (KeyValuePair<string, List<ZDO>> kv in groups)

@@ -3,7 +3,8 @@
 // world, ticked for the picked group), Status (Active, Deactivated, Deleted). Apply runs DomeCommand.Apply: New covers the
 // coord start and end points plus 10 % with wards; a group gets the list and the status on every ward, or loses all its wards.
 // While it is open the game sees a text input (TextInput.IsVisible, DomePatches): the cursor is free, the player stands still.
-// Drawn on this PC only (an interface, not world graphics). Enter applies, Esc closes.
+// Drawn on this PC only (an interface, not world graphics). Enter applies, Esc closes. Show domes (Hidden / Visible) switches
+// the test-aid domes of DomeShow at once, for this PC only.
 using System;
 using System.Collections.Generic;
 using HomeCheat.Kit;
@@ -89,6 +90,12 @@ namespace HomeCheat.Features.Dome
             HomeApi.Log("dome menu: " + answer);
             Notify.Center(answer);
             Close();
+        }
+
+        void Toggle(bool show)
+        {
+            try { HomeApi.Log("dome menu: " + Cmd.ShowDomes(show, 0.1f).Split('\n')[0]); error = ""; }
+            catch (Exception e) { error = e.Message; }
         }
 
         void OnGUI()
@@ -185,6 +192,13 @@ namespace HomeCheat.Features.Dome
                 if (GUI.Button(new Rect(x + 140f + 200f + Gap, y, 200f, 28f), (gaps ? "> " : "") + "Leave gaps", gaps ? sBtnOn : sBtn)) gaps = true;
                 y += 40f;
             }
+            // a view of this PC only, applied at once (no Apply): the test-aid domes of DomeShow
+            GUI.Label(new Rect(x, y, 140f, 26f), "Show domes", sLabel);
+            bool showing = DomeShow.On;
+            if (GUI.Button(new Rect(x + 140f, y, 120f, 28f), (showing ? "" : "> ") + "Hidden", showing ? sBtn : sBtnOn) && showing) Toggle(false);
+            if (GUI.Button(new Rect(x + 140f + 120f + Gap, y, 120f, 28f), (showing ? "> " : "") + "Visible", showing ? sBtnOn : sBtn) && !showing) Toggle(true);
+            GUI.Label(new Rect(x + 140f + 2f * (120f + Gap) + 8f, y + 4f, 360f, 22f), "only you see them, 10 % visible, active wards only", sHint);
+            y += 40f;
             if (sel != 0 && status == 2) GUI.Label(new Rect(x + 140f, y, inner - 140f, 22f), "Apply removes all " + (cur == null ? 0 : cur.Wards) + " ward(s) of this group (no materials back)", sErr);
 
             float bottom = win.yMax - 56f;
