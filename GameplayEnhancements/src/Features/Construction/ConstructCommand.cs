@@ -47,6 +47,13 @@ namespace HomeCheat.Features.Construction
         public const string KeyOrigin = "hc_construct_o";       // the copy's origin (Vector3), for continue=1
         public const string KeyYaw = "hc_construct_yaw";
         public const string KeyName = "hc_construct_name";
+        public const string KeyPillar = "hc_construct_pillar";  // ZDO mark of a preview pole: the plan id
+        const int PillarStack = 5;          // poles a preview column (5 x 4 m)
+        const float PillarClear = 0.3f;     // seconds between taking the preview poles down and building
+        const float FloorBin = 0.25f;       // metres: pivot levels for the ground floor
+        const float FloorShare = 0.05f;     // the ground floor holds at least this share of the pieces
+        const int FloorMin = 10;            // and at least this many
+        const float SettleCheck = 30f;      // seconds after the last step: the support report once the game has computed it
 
         string lastId = "", lastName = "";
         int lastPlaced;
@@ -70,9 +77,12 @@ namespace HomeCheat.Features.Construction
         {
             get
             {
-                return "construct step=list | step=place&name=<construction> [at=aim|self] [yaw=<world degrees, default your facing snapped to 22.5>]"
+                return "construct step=list | step=preview&name=<construction> [at=aim|self] [yaw=<world degrees, default your facing snapped to 22.5>]"
                     + " [ground=auto|flatten|pillars|none (auto: on terrain = flatten the footprint + " + (int)FlattenMargin + " m to the base and pole the gaps; on a piece or rock = none)]"
-                    + " [overlap=0 (1 = build even with player-built pieces inside the footprint)]"
+                    + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)]"
+                    + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
+                    + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
+                    + " | step=place&name=<construction> (direct, no preview; same keys)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
                     + " | step=support [id=<default the last>] (read-only) | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
@@ -91,11 +101,15 @@ namespace HomeCheat.Features.Construction
         {
             string step = a.Str("step", "").ToLowerInvariant();
             if (step == "list") return List();
+            if (step == "preview") return Preview(a);
+            if (step == "rotate") return Rotate(a);
+            if (step == "start") return Start(a);
+            if (step == "remove") return RemovePlan();
             if (step == "place") return a.Flag("continue", false) ? Continue(a) : Place(a);
             if (step == "support") return Support(a);
             if (step == "status") return Status();
             if (step == "undo") return Undo(a);
-            throw new CommandException("step= list, place, support, status or undo (op=help&cmd=construct)");
+            throw new CommandException("step= list, preview, rotate, start, remove, place, support, status or undo (op=help&cmd=construct)");
         }
 
         string List()
@@ -198,30 +212,35 @@ namespace HomeCheat.Features.Construction
             return c != null && (c.GetComponent<Heightmap>() != null || LayerMask.LayerToName(c.gameObject.layer) == "terrain");
         }
 
-        string Place(Args a)
+        // where and how a construction goes: from the crosshair at preview (or a direct place), kept until start or remove
+        sealed class Plan
         {
-            Host.RequireServer();
-            Player p = Players.Local;
-            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
-            int count = Caps.Check("pieces", e.PieceCount, MaxPieces);
-            if (count == 0) throw new CommandException(e.Name + " has no pieces");
-            float x0, x1, y0, y1, z0, z1;
-            e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
-            Caps.Check("footprint", Mathf.Max(x1 - x0, z1 - z0), MaxSide);
+            public string World, Name, Ground, BaseRule, BaseText, PillarId;
+            public Vector3 Anchor;
+            public float BaseY, Yaw;
+        }
 
+        static Plan MakePlan(Args a, Player p, BlueprintEntry e)
+        {
             string at = a.Str("at", "aim").ToLowerInvariant();
             if (at != "aim" && at != "self") throw new CommandException("at must be aim or self");
             string ground = a.Str("ground", "auto").ToLowerInvariant();
             if (ground != "auto" && ground != "flatten" && ground != "pillars" && ground != "none") throw new CommandException("ground must be auto, flatten, pillars or none");
+            string baseRule = a.Str("base", "floor").ToLowerInvariant();
+            if (baseRule != "floor" && baseRule != "lowest") throw new CommandException("base must be floor or lowest");
             RaycastHit hit = new RaycastHit();
             bool aimed = at == "aim" && AimHit(out hit);
             Vector3 anchor = at == "self" ? p.transform.position : (aimed ? hit.point : p.transform.position + p.transform.forward * 8f);
             bool onTerrain = !aimed || IsTerrain(hit.collider);
-            float baseY = aimed ? anchor.y : Ground.Height(anchor);
-            string baseText = aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
+            Plan pl = new Plan();
+            pl.World = Host.RequireWorld();
+            pl.Name = e.Name;
+            pl.Anchor = anchor;
+            pl.BaseY = aimed ? anchor.y : Ground.Height(anchor);
+            pl.BaseText = aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
                 : (at == "self" ? "terrain at your feet" : "terrain 8 m ahead (no crosshair hit)");
-            if (ground == "auto") ground = onTerrain ? "flatten" : "none";
-
+            pl.Ground = ground == "auto" ? (onTerrain ? "flatten" : "none") : ground;
+            pl.BaseRule = baseRule;
             float yaw;
             if (a.Has("yaw")) yaw = a.Float("yaw", 0f);
             else
@@ -229,24 +248,85 @@ namespace HomeCheat.Features.Construction
                 Vector3 f = p.transform.forward;
                 yaw = Mathf.Round(Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg / 22.5f) * 22.5f;
             }
-            yaw = Mathf.Repeat(yaw, 360f);
-            Quaternion turn = Quaternion.Euler(0f, yaw, 0f);
+            pl.Yaw = Mathf.Repeat(yaw, 360f);
+            pl.PillarId = "";
+            return pl;
+        }
 
+        // the pieces of a plan in the world, the ground floor's collider bottom on the base (Maksym 2026-10-25: gumdrop stood
+        // 2.7 m in the air on its own foundation posts). Ground floor = the lowest FloorBin level of pivots holding at least
+        // FloorShare of the pieces (and FloorMin); the pieces below it are foundations and sink into the ground. Without such a
+        // level (the stairs: about 4 pieces a level), or with base=lowest, the lowest piece goes on the base.
+        static List<Job> Layout(Plan pl, BlueprintEntry e, List<string> missing, out int skipped, out Vector3 origin, out string floorText)
+        {
+            Quaternion turn = Quaternion.Euler(0f, pl.Yaw, 0f);
             List<Job> jobs = new List<Job>();
-            List<string> missing = new List<string>();
-            int skipped = AddJobs(jobs, e, new Vector3(anchor.x, baseY, anchor.z), turn, null, missing);
-            if (jobs.Count == 0) throw new CommandException("none of the " + count + " pieces is a prefab this game knows (" + string.Join(" ", missing.ToArray()) + ")");
-
-            // the lowest collider bottom (not pivot) goes on the base
+            skipped = AddJobs(jobs, e, new Vector3(pl.Anchor.x, pl.BaseY, pl.Anchor.z), turn, null, missing);
+            origin = new Vector3(pl.Anchor.x, pl.BaseY, pl.Anchor.z);
+            floorText = "";
+            if (jobs.Count == 0) return jobs;
             float lowPivot = float.MaxValue;
             foreach (Job j in jobs) if (j.Pos.y < lowPivot) lowPivot = j.Pos.y;
+            float floorFrom = lowPivot, floorTo = lowPivot + LowestBand;
+            int floorCount = 0;
+            if (pl.BaseRule == "floor")
+            {
+                Dictionary<int, int> bins = new Dictionary<int, int>();
+                foreach (Job j in jobs)
+                {
+                    int bin = Mathf.FloorToInt((j.Pos.y - lowPivot) / FloorBin);
+                    int c;
+                    bins.TryGetValue(bin, out c);
+                    bins[bin] = c + 1;
+                }
+                int need = Mathf.Max(FloorMin, Mathf.CeilToInt(jobs.Count * FloorShare)), found = -1;
+                foreach (KeyValuePair<int, int> kv in bins)
+                    if (kv.Value >= need && (found < 0 || kv.Key < found)) found = kv.Key;
+                if (found > 0) { floorFrom = lowPivot + found * FloorBin; floorTo = floorFrom + FloorBin; floorCount = bins[found]; }
+            }
             float lowest = float.MaxValue;
-            foreach (Job j in jobs) if (j.Pos.y <= lowPivot + LowestBand) lowest = Mathf.Min(lowest, Bottom(j));
-            float lift = baseY - lowest;
-            Vector3 origin = new Vector3(anchor.x, baseY + lift, anchor.z);
+            int sunk = 0;
+            foreach (Job j in jobs)
+            {
+                if (j.Pos.y < floorFrom) { sunk++; continue; }
+                if (j.Pos.y < floorTo) lowest = Mathf.Min(lowest, Bottom(j));
+            }
+            float lift = pl.BaseY - lowest;
+            origin = new Vector3(pl.Anchor.x, pl.BaseY + lift, pl.Anchor.z);
             foreach (Job j in jobs) { j.Pos.y += lift; j.Origin = origin; }
+            floorText = floorCount > 0
+                ? "ground floor " + Fmt.F(floorFrom - lowPivot, 2) + " m above the lowest piece (" + floorCount + " pieces) on the base, " + sunk + " foundation piece(s) below it sunk into the ground"
+                : "lowest piece on the base";
+            return jobs;
+        }
 
-            if (!a.Flag("overlap", false))
+        string Place(Args a)
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
+            return Build(MakePlan(a, p, e), e, p, a.Flag("overlap", false));
+        }
+
+        string Build(Plan pl, BlueprintEntry e, Player p, bool overlap)
+        {
+            int count = Caps.Check("pieces", e.PieceCount, MaxPieces);
+            if (count == 0) throw new CommandException(e.Name + " has no pieces");
+            float x0, x1, y0, y1, z0, z1;
+            e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
+            Caps.Check("footprint", Mathf.Max(x1 - x0, z1 - z0), MaxSide);
+            Vector3 anchor = pl.Anchor;
+            float baseY = pl.BaseY, yaw = pl.Yaw;
+            string ground = pl.Ground, baseText = pl.BaseText;
+
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
+            if (jobs.Count == 0) throw new CommandException("none of the " + count + " pieces is a prefab this game knows (" + string.Join(" ", missing.ToArray()) + ")");
+
+            if (!overlap)
             {
                 Vector3 mid = new Vector3(anchor.x, baseY + (y1 - y0) * 0.5f, anchor.z);
                 float reach = 0.5f * Mathf.Sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0) + (y1 - y0) * (y1 - y0)) + BuildingMargin;
@@ -302,10 +382,207 @@ namespace HomeCheat.Features.Construction
             return (delay <= 0f && jobs.Count <= BatchSize ? "placed " + t.Placed : "placing " + jobs.Count) + " of " + e.Name + " (" + count + " in the blueprint"
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
                 + " at " + Fmt.Vec(origin) + " on the " + baseText + " (base " + Fmt.F(baseY, 2) + ", terrain " + Fmt.F(Ground.Height(anchor), 2) + ")"
+                + ", " + floorText
                 + ", ground " + ground + (stamps > 0 ? " (" + stamps + " stamps, pieces after " + Fmt.F(delay, 1) + " s)" : "")
                 + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
-                + "; standing and support in " + Fmt.F(delay + CheckAfter, 0) + " s (op=construct&step=support)";
+                + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
+        }
+
+        // ---- preview -> start | remove (the agreed flow, Maksym 2026-10-25): the area is shown first, built only on confirm ----
+
+        static string StateFile { get { return Path.Combine(Path.Combine(Paths.ConfigPath, "homecheat"), "construct.state"); } }
+
+        // one plan per world, one line per world: world, name, anchor x y z, base, yaw, ground, base rule, pillar id, base text
+        static Dictionary<string, string[]> ReadState()
+        {
+            Dictionary<string, string[]> all = new Dictionary<string, string[]>();
+            if (!File.Exists(StateFile)) return all;
+            foreach (string line in File.ReadAllLines(StateFile))
+            {
+                string[] f = line.Split('\t');
+                if (f.Length >= 11) all[f[0]] = f;
+            }
+            return all;
+        }
+
+        static void WriteState(Dictionary<string, string[]> all)
+        {
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, string[]> kv in all) lines.Add(string.Join("\t", kv.Value));
+            string tmp = StateFile + ".tmp";
+            File.WriteAllLines(tmp, lines.ToArray());
+            if (File.Exists(StateFile)) File.Delete(StateFile);
+            File.Move(tmp, StateFile);
+        }
+
+        static void SavePlan(Plan pl)
+        {
+            Dictionary<string, string[]> all = ReadState();
+            all[pl.World] = new string[] { pl.World, pl.Name, Fmt.F(pl.Anchor.x, 3), Fmt.F(pl.Anchor.y, 3), Fmt.F(pl.Anchor.z, 3), Fmt.F(pl.BaseY, 3),
+                Fmt.F(pl.Yaw, 1), pl.Ground, pl.BaseRule, pl.PillarId, pl.BaseText.Replace("\t", " ") };
+            WriteState(all);
+        }
+
+        static void ClearPlan(string world)
+        {
+            Dictionary<string, string[]> all = ReadState();
+            if (all.Remove(world)) WriteState(all);
+        }
+
+        static Plan LoadPlan(string world)
+        {
+            string[] f;
+            if (!ReadState().TryGetValue(world, out f)) return null;
+            System.Globalization.CultureInfo inv = System.Globalization.CultureInfo.InvariantCulture;
+            Plan pl = new Plan();
+            pl.World = f[0]; pl.Name = f[1];
+            pl.Anchor = new Vector3(float.Parse(f[2], inv), float.Parse(f[3], inv), float.Parse(f[4], inv));
+            pl.BaseY = float.Parse(f[5], inv); pl.Yaw = float.Parse(f[6], inv);
+            pl.Ground = f[7]; pl.BaseRule = f[8]; pl.PillarId = f[9]; pl.BaseText = f[10];
+            return pl;
+        }
+
+        static Plan RequirePlan()
+        {
+            Plan pl = LoadPlan(Host.RequireWorld());
+            if (pl == null) throw new CommandException("no construction planned in this world: op=construct&step=preview&name=<construction> first");
+            return pl;
+        }
+
+        // the 4 corners of the turned footprint and its centre, at the plan's anchor
+        static List<Vector3> PillarPoints(Plan pl, BlueprintEntry e)
+        {
+            float x0, x1, y0, y1, z0, z1;
+            e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
+            Vector3 c = Centre(e);
+            Quaternion turn = Quaternion.Euler(0f, pl.Yaw, 0f);
+            List<Vector3> pts = new List<Vector3>();
+            float[,] xz = new float[,] { { x0, z0 }, { x1, z0 }, { x1, z1 }, { x0, z1 } };
+            for (int i = 0; i < 4; i++)
+                pts.Add(pl.Anchor + turn * new Vector3(xz[i, 0] - c.x, 0f, xz[i, 1] - c.z));
+            pts.Add(pl.Anchor);
+            return pts;
+        }
+
+        // PillarStack poles on the surface under each point; no creator, so they never count as player-built (keep-away)
+        static int PlacePillars(Plan pl, BlueprintEntry e)
+        {
+            GameObject pole = Prefabs.Require(Pole, "(the core-wood pole)");
+            float lo, hi;
+            if (!PieceGhost.Measure(pole, Quaternion.identity, out lo, out hi) || hi - lo < 0.5f) throw new CommandException(Pole + " could not be measured");
+            float len = hi - lo;
+            int n = 0;
+            foreach (Vector3 pt in PillarPoints(pl, e))
+            {
+                float surface = Ground.Height(pt);
+                RaycastHit h;
+                if (Physics.Raycast(new Vector3(pt.x, Mathf.Max(surface, pl.BaseY) + 50f, pt.z), Vector3.down, out h, 200f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore))
+                    surface = h.point.y;
+                for (int k = 0; k < PillarStack; k++)
+                {
+                    GameObject go = (GameObject)UnityEngine.Object.Instantiate(pole, new Vector3(pt.x, surface - lo + k * len, pt.z), Quaternion.identity);
+                    ZNetView nv = go.GetComponent<ZNetView>();
+                    if (nv == null || !nv.IsValid()) { UnityEngine.Object.Destroy(go); continue; }
+                    nv.GetZDO().Set(KeyPillar, pl.PillarId);
+                    n++;
+                }
+            }
+            return n;
+        }
+
+        static int RemovePillars(string pillarId)
+        {
+            int n = 0;
+            foreach (ZNetView nv in UnityEngine.Object.FindObjectsOfType<ZNetView>())
+            {
+                if (nv == null || !nv.IsValid()) continue;
+                string v = nv.GetZDO().GetString(KeyPillar, "");
+                if (v.Length == 0 || (pillarId.Length > 0 && v != pillarId)) continue;
+                nv.ClaimOwnership();
+                ZNetScene.instance.Destroy(nv.gameObject);
+                n++;
+            }
+            return n;
+        }
+
+        // what start will do, for the preview answer and for start without confirm=1
+        static string Describe(Plan pl, BlueprintEntry e)
+        {
+            float x0, x1, y0, y1, z0, z1;
+            e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            Layout(pl, e, missing, out skipped, out origin, out floorText);
+            return pl.Name + ": " + e.PieceCount + " pieces" + (skipped > 0 ? " (" + skipped + " unknown, skipped)" : "") + ", " + Fmt.F(x1 - x0, 1) + " x " + Fmt.F(z1 - z0, 1)
+                + " x " + Fmt.F(y1 - y0, 1) + " m, yaw " + Fmt.F(pl.Yaw, 1) + ", base " + Fmt.F(pl.BaseY, 2) + " on the " + pl.BaseText + ", " + floorText
+                + ", ground " + pl.Ground + (pl.Ground == "flatten" ? " (the footprint + " + (int)FlattenMargin + " m levelled to the base, poles under gaps left)" : pl.Ground == "pillars" ? " (poles under gaps, terrain unchanged)" : " (unchanged)");
+        }
+
+        string Preview(Args a)
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
+            Caps.Check("pieces", e.PieceCount, MaxPieces);
+            Plan old = LoadPlan(Host.RequireWorld());
+            int removed = old != null ? RemovePillars(old.PillarId) : 0;
+            Plan pl = MakePlan(a, p, e);
+            pl.PillarId = "plan-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+            int n = PlacePillars(pl, e);
+            SavePlan(pl);
+            return "preview " + Describe(pl, e) + "; " + n + " poles in 5 columns at the corners and the centre"
+                + (removed > 0 ? " (the previous plan" + (old.Name != pl.Name ? " of " + old.Name : "") + " and its " + removed + " poles replaced)" : "")
+                + ". Next: step=start&confirm=1 builds it, step=rotate&by=90 turns it, step=preview again moves it, step=remove takes the poles down";
+        }
+
+        string Rotate(Args a)
+        {
+            Host.RequireServer();
+            Plan pl = RequirePlan();
+            BlueprintEntry e = Require(pl.Name);
+            float by = a.Float("by", 90f);
+            RemovePillars(pl.PillarId);
+            pl.Yaw = Mathf.Repeat(pl.Yaw + by, 360f);
+            int n = PlacePillars(pl, e);
+            SavePlan(pl);
+            return "rotated by " + Fmt.F(by, 1) + ": " + Describe(pl, e) + "; " + n + " poles moved";
+        }
+
+        string Start(Args a)
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            Plan pl = RequirePlan();
+            BlueprintEntry e = Require(pl.Name);
+            bool overlap = a.Flag("overlap", false);
+            if (!a.Flag("confirm", false)) return "would build " + Describe(pl, e) + ": add confirm=1";
+            int removed = RemovePillars(pl.PillarId);
+            ClearPlan(pl.World);
+            // the poles go at the end of this frame: build a moment later so the pole check and the keep-away do not see them
+            Later(PillarClear, delegate
+            {
+                try { HomeApi.Log("construct: start " + Build(pl, e, p, overlap)); }
+                catch (CommandException ex)
+                {
+                    SavePlan(pl);
+                    PlacePillars(pl, e);
+                    Notify.Center("construct: not built: " + ex.Message);
+                    HomeApi.Log("construct: start refused: " + ex.Message + " (plan and poles restored)");
+                }
+            });
+            return "building " + pl.Name + ": " + removed + " preview poles removed, construction starts in " + Fmt.F(PillarClear, 1) + " s (the result shows on screen; op=construct&step=support)";
+        }
+
+        string RemovePlan()
+        {
+            Host.RequireServer();
+            Plan pl = RequirePlan();
+            int n = RemovePillars(pl.PillarId);
+            ClearPlan(pl.World);
+            return "removed the plan of " + pl.Name + " and its " + n + " preview poles; nothing was built";
         }
 
         // continue=1: the next copy (or count= copies) on the build under the crosshair, shifted by the blueprint's repeat
@@ -391,7 +668,7 @@ namespace HomeCheat.Features.Construction
             {
                 if (j.Piece == null) continue;
                 float bottom = Bottom(j);
-                if (bottom > baseY + BaseBand) continue;
+                if (bottom > baseY + BaseBand || bottom < baseY - BaseBand) continue;   // above the base, or a sunk foundation
                 RaycastHit h;
                 if (!Physics.Raycast(new Vector3(j.Pos.x, bottom + 0.3f, j.Pos.z), Vector3.down, out h, 64f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore)) { noSurface++; continue; }
                 if (bottom - h.point.y <= GapTolerance) continue;
@@ -429,10 +706,19 @@ namespace HomeCheat.Features.Construction
                 Action stepAct = delegate { for (int i = from; i < to; i++) PlaceOne(jobs[i], id, yaw, name, me, t); };
                 if (bi == 0) stepAct(); else Later(bi * BatchGap, stepAct);
             }
-            Later((batches - 1) * BatchGap + CheckAfter, delegate
+            // the game computes support over several seconds (a fresh piece reads as fully supported until then), so the
+            // report at CheckAfter is marked as settling and the one at SettleCheck is the real one
+            float last = (batches - 1) * BatchGap;
+            Later(last + CheckAfter, delegate
             {
                 string msg = "construct: " + name + " " + SupportLine(id, t.Placed) + (t.Poles > 0 ? ", " + t.Poles + " poles" : "")
-                    + (notes.Count > 0 ? "; " + string.Join("; ", notes.ToArray()) : "");
+                    + (notes.Count > 0 ? "; " + string.Join("; ", notes.ToArray()) : "") + "; support still settling, final in " + Fmt.F(SettleCheck - CheckAfter, 0) + " s";
+                HomeApi.Log(msg + " (id " + id + ")");
+                Notify.Center(msg);
+            });
+            Later(last + SettleCheck, delegate
+            {
+                string msg = "construct: " + name + " settled: " + SupportLine(id, t.Placed);
                 HomeApi.Log(msg + " (id " + id + ")");
                 Notify.Center(msg);
             });
@@ -545,6 +831,12 @@ namespace HomeCheat.Features.Construction
                 sb.Append("last build ").Append(lastName).Append(" (id ").Append(lastId).Append("): ").Append(standing).Append(" of ").Append(lastPlaced).Append(" standing");
             }
             else sb.Append("no build in this session");
+            Plan pl = LoadPlan(Host.RequireWorld());
+            BlueprintEntry pe = pl != null ? BlueprintLibrary.Find(BlueprintLibrary.Scan(Dir), pl.Name) : null;
+            if (pl != null)
+                sb.Append("; planned (preview poles standing): ").Append(pe != null ? Describe(pl, pe) : pl.Name + " (its blueprint file is gone: step=remove)")
+                  .Append(" - step=start&confirm=1 to build, step=remove to drop it");
+            else sb.Append("; nothing planned");
             sb.Append("; ").Append(g.Count).Append(" build(s) loaded around you");
             foreach (KeyValuePair<string, List<ZNetView>> kv in g)
                 sb.Append("\n").Append(kv.Key).Append(": ").Append(kv.Value.Count).Append(" pieces near ").Append(Fmt.Vec(kv.Value[0].transform.position));
