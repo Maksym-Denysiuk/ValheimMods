@@ -247,6 +247,7 @@ Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead 
 | a message on the player's screen (failures only) | `Notify.Error(text)` (done for you for every `ERROR` answer), `Notify.Center(text)` |
 | the PvP rule of an attack | derive from `AttackCommand`: `HitsPlayers(a)`, `PvpNote(a)`, `PvpUsage`; then `PvpHits.ArmAoe(aoe, hitPlayers)` per `Aoe`, `PvpHits.ArmHit(hit, hitPlayers)` per `HitData`, `PvpHits.MarkProjectile(pr)` per shot |
 | the solid object under the crosshair | `Aim.SolidHit(range, out hit)` (no terrain, triggers ignored) |
+| any object under the crosshair, creatures and loose items included | `DespawnCommand`'s ray (feature Despawn, not Kit yet): camera `Physics.RaycastAll` on solid, character, hitbox and item layers, your own player skipped, stops at `Heightmap`; `Aim.SolidHit` does not see creatures or items. A second user makes it a Kit candidate |
 | a grid of cells from the crosshair or `dist=` metres ahead | `Anchor.AtAim(p)`, `Anchor.FromArgs(p, a)`, `anchor.Cell(row, col, centre, spacing)`; maths in `GridMath` (Pure) |
 | a grid from the player's own cell | `FieldAnchor.AheadOfPlayer` (feature World, not Kit yet) |
 | the cultivated patch under a point, or the connected part of a soil grid | `FieldPatch.Sample(pos)` (`StartSoil`, `Contains(pos)`, `Bounds`, `Area`, `OverCap`; 0.5 m cells, cap 40 000), `FieldPatch.Connected(soil, row, colFrom, colTo, out startSoil)` (feature World, not Kit yet) |
@@ -347,7 +348,7 @@ What protects the game today. The wave 0 core pass (2026-10-25) put the host gua
 | other players hit only through the PvP rule | in place for `spellshot`, `slime`, `earthquake`, `trap` (`pvp=1`) | `AttackCommand`, `Kit.PvpHits`, `PvpProjectilePatch` | derive from `AttackCommand` |
 | timers and objects of a replaced build | in place | `CommandBase` (`ICommandLifecycle.Unload`): timers cancelled, patches removed, owned objects destroyed | use `Later`, `Own`, `Patches` only |
 | timers and objects when the player leaves the world | in place | `WorldExitPatch` (`ZNetScene.OnDestroy`) -> `CommandRegistry.WorldExit`: every timer cancelled, `OwnInWorld` objects destroyed, `OnWorldExit` called | `Later`, `OwnInWorld`; mark persistent objects in their ZDO (earthquake `hc_earthquake`) so a `clear=1` finds them later |
-| destructive or world-wide actions need `confirm=1` | per command: `dome step=remove` has it (without it the answer says what it would remove); missing in earthquake | earthquake `kill=` and `clearitems=1` act at once | require `confirm=1` and a radius with a default; a spell line for the step carries `&confirm=1` |
+| destructive or world-wide actions need `confirm=1` | per command: `dome step=remove` has it (without it the answer says what it would remove); missing in earthquake. `despawn` (one object, the one you aim at) uses a refusal list instead: players, tombstones and location objects are never removed, `look=1` says what would go; Maksym removed its `confirm=1` after the test (2026-10-25, logged on its page) | earthquake `kill=` and `clearitems=1` act at once | require `confirm=1` and a radius with a default; a spell line for the step carries `&confirm=1` |
 
 ## Test aids
 
