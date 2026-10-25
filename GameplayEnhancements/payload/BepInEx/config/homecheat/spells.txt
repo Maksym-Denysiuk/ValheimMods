@@ -20,8 +20,7 @@
 2.7 | Stone circle | op=earthquake&damage=1&players=0
 2.8 | Stone circle (trolls) | op=earthquake&damage=1&mode=strong&players=0
 2.9 | Thunderbolt wall 5x2 | op=spellshot&type=thunderbolt&perrow=5&rows=2
-# real form (W1-harpoon): 2.10 | Harpoon | op=spellshot&type=harpoon
-2.10 | Harpoon (soon) | @dummy
+2.10 | Harpoon | op=spellshot&type=harpoon
 # real form (W3-mines): 2.11 | Place mine | op=mine
 2.11 | Place mine (soon) | @dummy
 # real form (W3-mines): 2.12 | Remove mines | op=mine&remove=1&radius=10

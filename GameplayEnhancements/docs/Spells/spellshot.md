@@ -1,5 +1,5 @@
 ---
-description: spellshot command of the HomeCheat Valheim plugin (2026-10-24) - a grid of arrows, ballista bolts or lightning beams fired along the crosshair; prefabs found, how a Projectile is launched, the thunderbolt beam (lightning strikes with hidden damage carriers), parameters, tests including the push-back measurements, files, limits and undo
+description: spellshot command of the HomeCheat Valheim plugin (2026-10-24, harpoon 2026-10-25) - a grid of arrows, ballista bolts, lightning beams or pulling harpoons fired along the crosshair; prefabs found, how a Projectile is launched, the thunderbolt beam (lightning strikes with hidden damage carriers), the harpoon type (vanilla SE_Harpooned through the hit's status effect, built but not yet run in game, with its test list), parameters, tests including the push-back measurements, files, limits and undo
 ---
 # spellshot (HomeCheat command)
 
@@ -14,6 +14,7 @@ Built and tested 2026-10-24 on Valheim 1.0.20, BepInEx 5.4.2351, host `MDENYSIUK
 | `arrow` | Needle arrow, speed 60 m/s, falls with gravity 5 | item `ArrowNeedle` -> projectile `bow_projectile_needle` |
 | `balistashot` | Flametal ballista bolt, speed 90 m/s, straight, lives 12 s | item `TurretBoltFlametal` -> projectile `Turret_projectile` (shared with the other turret bolts) |
 | `thunderbolt` | a lightning beam (below) | visual `fx_Lightning`, damage carrier `lightningAOE` |
+| `harpoon` | the Abyssal Harpoon's throw; a hit enemy is pulled to you (below) | item `SpearChitin` (assumed, probe pending) -> its projectile, status effect from the item (`Harpooned` expected) |
 
 Start of the grid: the player's head (eye point) plus `dist` metres along the camera direction, not the camera itself (in third person the camera sits behind the player and the volley would start inside the character). The grid plane is perpendicular to the shot direction, items `spacing` apart.
 
@@ -28,17 +29,28 @@ Eikthyr (the first boss) has no lightning projectile: his attacks (`Eikthyr_antl
 - A volley is capped at 300 strikes, so a 9x9 gets only about 3 strikes per beam.
 - `beam=0` (or `projectile=<prefab>`) gives the older single-spot strike at the crosshair instead.
 
+## harpoon = the Abyssal Harpoon's pull
+
+Built 2026-10-25 without the game (phase 4, wave 1): **status B, not run in game; test list below**.
+
+- Fires the harpoon item's own projectile through the same ammo-item path as `arrow` (item `SpearChitin`; `projectile=<name>` overrides), with you as the owner, at the item's throw speed (`speed=` overrides).
+- The pull is vanilla. Read from the game's IL (`assembly_valheim.dll`, 2026-10-25): the game's `Attack.FireProjectileBurst` puts the weapon's `m_attackStatusEffect` into `HitData.m_statusEffectHash` (by its chance); `Projectile.Setup` copies that hash when the prefab has none; on a hit `Character.RPC_Damage` adds the status effect to the target and calls `SetAttacker(<owner>)`. spellshot builds its own `HitData`, so it sets `m_statusEffectHash` itself, always (no chance roll). The effect: the item's own `m_attackStatusEffect`, else `se=<name>`, else the `ObjectDB` status effect named `Harpooned`.
+- What `SE_Harpooned` then does (vanilla): pulls the target towards you (`Utils.Pull`), drains your stamina in proportion to the target's mass, breaks when it gets too far (`m_breakDistance`), when you run out of stamina, or when you block or attack; it refuses targets beyond `m_maxDistance` ("target too far") and bosses always break free. Bodies on ships or attached are not pulled.
+- Targets as every spellshot type: enemies; you are the owner, so you are never hit. A grid (`perrow`, `rows`) gives several harpoons; each one hit drains stamina on its own.
+- Nothing stays in the world: the projectile has its own lifetime; the status effect ends as above.
+
 ## Use
 
 Drop `sp-1.cmd` into `BepInEx/config/homecheat/inbox/` with the text `op=spellshot&type=arrow&perrow=3&rows=3` (unique name per call; load a rebuilt DLL first with `op=reload`).
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `type` | required | `arrow`, `balistashot`, `thunderbolt`; also `probe`, `clear`, `pos` |
+| `type` | required | `arrow`, `balistashot`, `thunderbolt`, `harpoon`; also `probe`, `clear`, `pos` |
 | `perrow`, `rows` | 1, 1 | items per row and rows, 1 to 9 |
 | `dist` | 1 (beam: 6) | start distance from the head, minimum 0.5 |
 | `spacing` | 0.6 (beam and strikes: 1.5) | metres between items |
-| `speed` | per type | projectile speed |
+| `speed` | per type (harpoon: the item's throw speed) | projectile speed |
+| `se` | harpoon only: the item's own status effect | status effect carried by a harpoon hit, by name (`op=bless&list=1` lists names) |
 | `projectile` | per type | prefab override (projectile or ammo item) |
 | `damage` | 1 | multiplier of the ammo's damage (beam: of `strikedamage`) |
 | `range`, `step` | 40, 2 | beam length and strike spacing along it |
@@ -48,7 +60,7 @@ Drop `sp-1.cmd` into `BepInEx/config/homecheat/inbox/` with the text `op=spellsh
 | `push` | 1 | multiplier of the strike push force on enemies, 0 = no push |
 | `at` | `aim` | single strikes only: `self` puts them in front of the player |
 
-Helpers: `type=probe&filter=<text>` lists projectile prefabs, the ammo items that fire them and the default items of creatures; `type=pos` prints the player position and speed; `type=clear` removes leftover `fx_Lightning` objects.
+Helpers: `type=probe&filter=<text>` lists projectile prefabs, the ammo items that fire them (with the status effect their attack carries, `se=<name> (<chance>)`) and the default items of creatures; `type=pos` prints the player position and speed; `type=clear` removes leftover `fx_Lightning` objects.
 
 ## How a Projectile is launched
 
@@ -62,6 +74,29 @@ Helpers: `type=probe&filter=<text>` lists projectile prefabs, the ammo items tha
 - Push-back on the player: with creatures around, the troll's own hits were mistaken for it. With the area cleared and the player standing still, a beam starting 0.5 m ahead moved the player about 4.5 m every time (4 of 4); 1 m and 2 m never did; 1.5 m and 2.5 m sometimes. After setting `m_hitFriendly` off, 3 of 3 at 0.5 m and 3 of 3 at 1.5 m left the player untouched (0.01 m drift).
 - `op=cheatstate` after the run: `Achievements.IsCheatedAtAll` True, `IsWorldCheated` False, `Terminal.m_cheat` True, `PlayerProfile.m_usedCheats` True, `Inventory.AnyCheatedItem` False, nearest pickable not marked cheated. The True flags were already set in this session by the ghost command and other effect commands, not by spellshot.
 
+## harpoon: card, assumptions and test list (2026-10-25)
+
+Card 3.6 of the phase 3 backlog plan (verdict: extend `spellshot` with `type=harpoon`). Unattended run, no game; Maksym reviews the assumptions.
+
+| # | Assumption | Why |
+|---|---|---|
+| A5 | Harpoon = the `SpearChitin` item's projectile with the vanilla `SE_Harpooned`, no own pull physics | game mechanics first |
+| A5a | The status effect goes on the hit through `HitData.m_statusEffectHash` (from the item's `m_attackStatusEffect`), not through `Projectile.m_statusEffect` as the card first said | the IL shows that is how the game's own attack does it; the projectile prefab has no effect of its own (to confirm with the probe) |
+| A5b | Always applied (no `m_attackStatusEffectChance` roll) | a harpoon spell that sometimes does not pull reads as broken |
+| A5c | The card stays on this page (no `docs/Backlog/harpoon.md`) | the change is one type of an existing command; this page is where the next session looks |
+
+Test list for Maksym (ClaudeTest, one at a time; `op=reload` first, the answer names `HomeCheat.Cmd.spellshot.v20261025110055.dll` or newer):
+
+1. `op=cheatstate` -> note the flags.
+2. Probe: `op=spellshot&type=probe&filter=harpoon` -> a `PROJECTILE` line for the harpoon projectile (name it here).
+3. Probe: `op=spellshot&type=probe&filter=chitin` -> `ITEM SpearChitin -> <projectile> vel=<n> ... se=Harpooned (<chance>)`. If the item has another name or no `se=`, the default in `Candidates` or `se=` needs fixing.
+4. `op=spawn&prefab=Boar&dist=15`, aim at it, `op=spellshot&type=harpoon` -> first line `spellshot harpoon 1x1 = 1 projectiles (prefab <projectile> via SpearChitin, status effect Harpooned) ...`. Look: the boar is hit, a line appears and the boar is pulled towards you; your stamina drops while it pulls; block releases it.
+5. `op=spellshot&type=harpoon&perrow=3` at three boars -> three lines; stamina drains faster.
+6. Out of range: a boar farther than the harpoon's max distance -> the message "target too far", no pull.
+7. Clean-up: `op=killmobs`; `op=cheatstate` -> same flags as in step 1 (spellshot sets none).
+
+Test log: none yet (not run in game).
+
 ## Limits and open points
 
 - The thunderbolt visual `fx_Lightning` is a guess at the look; `fx_eikthyr_forwardshockwave`, `fx_eikthyr_stomp` and `lightningAOE` are the other candidates found.
@@ -69,6 +104,7 @@ Helpers: `type=probe&filter=<text>` lists projectile prefabs, the ammo items tha
 - Arrows and bolts hitting and damaging a creature was not measured.
 - A creature inside several overlapping strikes is hit several times (about 2 to 3 for a normal beam).
 - The core `op=list` throws `TargetException` in the log (see `earthquake.md`); not from this command.
+- harpoon: built and compiled only; the item name `SpearChitin`, the projectile it fires and the status effect name are unverified until the probes run (test list above). The pull strength, stamina drain and break distance are the vanilla values of the status effect; nothing is tuned.
 
 ## Files
 

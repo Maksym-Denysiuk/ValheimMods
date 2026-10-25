@@ -28,12 +28,12 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/HomeCheat-plugin/tree-scale.md | 3850 | 452b28c55b54adc1 |
 | docs/Keybinds/README.md | 819 | fc525dcfcd76a569 |
 | docs/Keybinds/keybinds.md | 6211 | a5627525cdc5e597 |
-| docs/Spells/README.md | 2417 | fd7e4c8eae432df2 |
+| docs/Spells/README.md | 2579 | 3f6fe102d3c9d3bf |
 | docs/Spells/earthquake.md | 11046 | 8d4205b0dcbc7948 |
 | docs/Spells/slime.md | 9286 | fa0277c5ef4e3d77 |
 | docs/Spells/spellbar-design.md | 39023 | cf26f03666530969 |
 | docs/Spells/spellbar.md | 11000 | 6b91485605005c07 |
-| docs/Spells/spellshot.md | 7694 | 8709affe6e752cc4 |
+| docs/Spells/spellshot.md | 12365 | 1452f2e89a1a5dff |
 | docs/Transform/README.md | 1443 | e16785ab64ec53ee |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
 | docs/Transform/hidebody.md | 3129 | 611470fc69a21ccf |
@@ -76,7 +76,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.killmobs.v20261024235500.dll | 6144 | 9d3ee71eeaa5c95b |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.slime.v20261025003356.dll | 23040 | e3e2f83ce6458370 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v20261025104610.dll | 101888 | a2e707aae2e67b5f |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261024235646.dll | 20992 | af2940d4ca686e7d |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261025110055.dll | 23552 | c215d0567f1e171c |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.transform.v20261024235900.dll | 38400 | 7ae22ad809b436e7 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.visualeffect.v20261024235600.dll | 19456 | e166bd7870012878 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.world.v20261025011404.dll | 29696 | b8b4bec6f06bcf54 |
@@ -178,7 +178,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/Spells/SpellsCommand.cs | 6465 | 09e004470cd49622 |
 | src/Features/Spells/SpellsSettings.cs | 3329 | 8c669fbe520ced6a |
 | src/Features/Spells/refs.txt | 237 | 4e6875fba330461a |
-| src/Features/Spellshot/SpellShotCommand.cs | 24714 | c0e9972dfa85605b |
+| src/Features/Spellshot/SpellShotCommand.cs | 27961 | 003845fb1d09f477 |
 | src/Features/Transform/TransformCommand.cs | 18062 | 6dd305ca280cfaf5 |
 | src/Features/Transform/TransformLanding.cs | 961 | 3aa052d2de0e2684 |
 | src/Features/Transform/TransformRemote.cs | 4236 | 04a131abb2e9e305 |

@@ -1,5 +1,5 @@
 // spellshot: a matrix of projectiles along the crosshair (own game / own world only).
-// op=spellshot&type=arrow|balistashot|thunderbolt&perrow=1&rows=1&dist=1&spacing=0.6&speed=&projectile=&damage=1
+// op=spellshot&type=arrow|balistashot|thunderbolt|harpoon&perrow=1&rows=1&dist=1&spacing=0.6&speed=&projectile=&damage=1
 // op=spellshot&type=probe&filter=needle   -> discovery: prefabs with a Projectile, items whose attack fires one
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,8 @@ namespace HomeCheat.Features.Spellshot
         {
             get
             {
-                return "spellshot type=arrow|balistashot|thunderbolt [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [push=1 (x strike push force; enemies are pushed, you are not hit at all)]; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
+                return "spellshot type=arrow|balistashot|thunderbolt|harpoon [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [push=1 (x strike push force; enemies are pushed, you are not hit at all)]; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
+                    + "harpoon = the Abyssal Harpoon's projectile (SpearChitin) carrying its vanilla pull status effect (Harpooned): a hit enemy is reeled in like with the harpoon, costs your stamina by the target's weight, block or attack releases it, bosses break free; [se=<status effect name> (default: the harpoon item's own)] [speed= (default: the harpoon's throw speed)]; "
                     + "perrow/rows are 1..9 (even counts centre the grid between items); formation is centred on the crosshair, all shots fly along it; "
                     + "local player only (owner = you). type=probe&filter=<text> lists projectile prefabs.";
             }
@@ -36,6 +37,8 @@ namespace HomeCheat.Features.Spellshot
             if (type == "balistashot") return new string[] { "TurretBoltFlametal" };
             // thunderbolt = lightningAOE: the Lightning-damage strike (bolt from the sky, rod + ground ring) at the aim point. The staff shot (projectile=StaffLightning) stays available.
             if (type == "thunderbolt") return new string[] { "fx_eikthyr_forwardshockwave" };
+            // harpoon = the Abyssal Harpoon item; its attack fires the projectile, its m_attackStatusEffect (SE_Harpooned) does the pull
+            if (type == "harpoon") return new string[] { "SpearChitin" };
             return new string[0];
         }
 
@@ -52,8 +55,9 @@ namespace HomeCheat.Features.Spellshot
             if (type == "probe") return Probe(a.Str("filter", ""));
             if (type == "clear") return Clear(a.Str("fx", "fx_Lightning"));
             if (type == "pos") { Player pp = Players.Local; return pp == null ? "ERROR: no player" : "pos " + pp.transform.position.x.ToString("F2") + " " + pp.transform.position.y.ToString("F2") + " " + pp.transform.position.z.ToString("F2") + " vel " + pp.GetVelocity().magnitude.ToString("F2"); }
-            if (type != "arrow" && type != "balistashot" && type != "thunderbolt")
-                return "ERROR: type must be arrow, balistashot or thunderbolt (or probe or clear)";
+            if (type != "arrow" && type != "balistashot" && type != "thunderbolt" && type != "harpoon")
+                return "ERROR: type must be arrow, balistashot, thunderbolt or harpoon (or probe or clear)";
+            if (type == "harpoon") Host.RequireWorld();
 
             int perrow = a.Int("perrow", 1);
             int rows = a.Int("rows", 1);
@@ -113,6 +117,24 @@ namespace HomeCheat.Features.Spellshot
             MethodInfo setup = FindSetup();
             if (isProj && setup == null) return "ERROR: Projectile.Setup not found in this game version";
 
+            // harpoon: the pull is the item's attack status effect, which the game's Attack puts into HitData.m_statusEffectHash;
+            // Projectile.Setup copies it and Character.RPC_Damage adds it and calls SetAttacker(owner) (IL read 2026-10-25)
+            int seHash = 0;
+            string seName = null;
+            if (type == "harpoon")
+            {
+                if (!isProj) return "ERROR: '" + projPrefab.name + "' fires no projectile; harpoon needs the harpoon item or its projectile (type=probe&filter=chitin)";
+                StatusEffect se = HarpoonEffect(a.Str("se", ""), ammoPrefab);
+                if (se == null) return "ERROR: no pull status effect found" + (a.Has("se") ? " named '" + a.Str("se", "") + "'" : " on " + (ammoPrefab != null ? ammoPrefab.name : projPrefab.name)) + "; list status effects with op=bless&list=1 and pass se=<name>";
+                seHash = se.NameHash();
+                seName = se.name;
+                if (!a.Has("speed") && ammoPrefab != null)
+                {
+                    Attack at = ammoPrefab.GetComponent<ItemDrop>().m_itemData.m_shared.m_attack;
+                    if (at.m_projectileVel > 0f) speed = at.m_projectileVel;
+                }
+            }
+
             lastShot = Time.time;
             if (type == "thunderbolt" && given.Length == 0 && a.Flag("beam", true))
                 return Beam(a, p, cam, perrow, rows, a.Has("dist") ? dist : 6f, spacingGiven ? spacing : 1.5f, scale);
@@ -128,7 +150,7 @@ namespace HomeCheat.Features.Spellshot
                         if (isProj)
                         {
                             Vector3 pos = C + Rt * dx + Up * dy;
-                            Fire(p, setup, projPrefab, ammoPrefab, pos, D, speed, dmgMul);
+                            Fire(p, setup, projPrefab, ammoPrefab, pos, D, speed, dmgMul, seHash);
                         }
                         else
                         {
@@ -167,7 +189,7 @@ namespace HomeCheat.Features.Spellshot
                     }
                 }
             return "spellshot " + type + " " + perrow + "x" + rows + " = " + ok + " projectiles (" + (isProj ? "prefab " + projPrefab.name : "strike prefab " + projPrefab.name)
-                + (used != null && used != projPrefab.name ? " via " + used : "") + ") from " + Fmt.Vec(C) + " along " + Fmt.Vec(D)
+                + (used != null && used != projPrefab.name ? " via " + used : "") + (seName != null ? ", status effect " + seName : "") + ") from " + Fmt.Vec(C) + " along " + Fmt.Vec(D)
                 + (firstErr != null ? " ; first error: " + firstErr : "");
         }
 
@@ -319,8 +341,24 @@ namespace HomeCheat.Features.Spellshot
             return null;
         }
 
+        // the harpoon's pull: se=<name> from ObjectDB, else the item's own attack status effect, else ObjectDB "Harpooned"
+        static StatusEffect HarpoonEffect(string name, GameObject item)
+        {
+            if (name.Length == 0 && item != null)
+            {
+                ItemDrop id = item.GetComponent<ItemDrop>();
+                if (id != null && id.m_itemData != null && id.m_itemData.m_shared != null && id.m_itemData.m_shared.m_attackStatusEffect != null)
+                    return id.m_itemData.m_shared.m_attackStatusEffect;
+            }
+            if (ObjectDB.instance == null) return null;
+            string want = name.Length > 0 ? name : "Harpooned";
+            foreach (StatusEffect se in ObjectDB.instance.m_StatusEffects)
+                if (se != null && string.Equals(se.name, want, StringComparison.OrdinalIgnoreCase)) return se;
+            return null;
+        }
+
         // builds the Setup argument list from the parameter types, so a changed signature still works
-        static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul)
+        static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul, int seHash)
         {
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(projPrefab, pos, Quaternion.LookRotation(dir));
             Projectile pr = go.GetComponent<Projectile>();
@@ -343,6 +381,7 @@ namespace HomeCheat.Features.Spellshot
             }
             if (dmgMul != 1f) hit.m_damage.Modify(dmgMul);
             hit.m_skill = pr.m_skill;
+            if (seHash != 0) hit.m_statusEffectHash = seHash; // harpoon: applied on hit, the owner becomes the attacker
 
             ParameterInfo[] ps = setup.GetParameters();
             object[] args = new object[ps.Length];
@@ -404,8 +443,10 @@ namespace HomeCheat.Features.Spellshot
                     && id.m_itemData.m_shared.m_attack.m_attackProjectile != null)
                 {
                     Attack at = id.m_itemData.m_shared.m_attack;
+                    StatusEffect ase = id.m_itemData.m_shared.m_attackStatusEffect;
                     lines.Add("ITEM " + g.name + " -> " + at.m_attackProjectile.name + " vel=" + at.m_projectileVel
-                        + " dmg=" + id.m_itemData.m_shared.m_damages.GetTotalDamage());
+                        + " dmg=" + id.m_itemData.m_shared.m_damages.GetTotalDamage()
+                        + " se=" + (ase != null ? ase.name + " (" + id.m_itemData.m_shared.m_attackStatusEffectChance + ")" : "-"));
                 }
             }
             lines.Sort();

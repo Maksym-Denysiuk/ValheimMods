@@ -41,7 +41,7 @@ Syntax in short; defaults and details on the linked pages. Status: V = run in ga
 | scale (tree resize) | `op=scale&filter=<tree name>[&factor=2][&radius=50]` | V (oak, beech, birch) | [tree-scale.md](tree-scale.md) |
 | heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | V (2026-10-25) | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [src/Features/Heal](../../src/Features/Heal/) |
 | earthquake, slime | `op=earthquake`, `op=slime` (also `op=harmeffect&kind=<name>`) | V | [../Spells/earthquake.md](../Spells/earthquake.md), [../Spells/slime.md](../Spells/slime.md) |
-| spellshot | `op=spellshot&type=...` | V | [../Spells/spellshot.md](../Spells/spellshot.md) |
+| spellshot | `op=spellshot&type=arrow\|balistashot\|thunderbolt\|harpoon` | V; harpoon B: built 2026-10-25, not run in game: test list in spellshot.md | [../Spells/spellshot.md](../Spells/spellshot.md) |
 | transform, hidebody | `op=transform&type=...`, `op=hidebody&on=1` | V | [../Transform/transform.md](../Transform/transform.md), [../Transform/hidebody.md](../Transform/hidebody.md) |
 | visualeffect | `op=visualeffect&name=<prefab>` (`list=1`, `name=reset`, `duration`, `scale`; see the FX README) | V | [../FX/README.md](../FX/README.md), [src/Features/VisualEffect](../../src/Features/VisualEffect/) |
 | give | `op=give&prefab=<item>[&amount=1][&quality=1]` | V (50 wood) | this page only |
