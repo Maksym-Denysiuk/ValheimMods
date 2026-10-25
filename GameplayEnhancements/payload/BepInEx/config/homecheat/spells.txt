@@ -1,21 +1,47 @@
-# HomeCheat spell bar. One spell per line:  slot.entry | label | command | flags
-#   slot alone + 2 fields = group title;  slot alone + 3 fields = the slot is itself a spell;  slot.entry = a spell inside the group (entry 1-8)
-#   command = the form of an inbox file (op=...&k=v); chain calls with ;;   special: @radial opens the vanilla radial
-#   flags (space separated): sticky (bar stays open)  pin=F1|F2|F3|F4|F5|F6|S1..S5 (S = Shift+digit)  shift=<form added when Shift is held while casting>
-# F5 is the game console key: pins on F5 also open the console.
-1 | Radial | @radial
+# HomeCheat spell bar, spell file v4. One line per entry:  id | label | command | flags
+#   id: dotted numbers of any depth (2, 2.1, 6.1.3). 1 is the Hotbar (the 10 bar cells), not configurable. A level holds any number
+#     of entries: past the game's per-layer limit the radial continues as a spiral (like the emote wheel).
+#   title (a group or a sub-section): "id | label", or "id | label | | sticky" (sticky on a title = every spell below it is sticky)
+#   command: the form of an inbox file (op=...&k=v); chain commands with ;;   @dummy only shows a toast (a spell not built yet)
+#   flags (space separated): sticky (the radial stays on its level after the cast)  pin=F1..F5|S1..S5 (S = Shift+digit)
+#     shift=<form added when Shift is held while casting>
+#     ask=<key>:<Label=value,...> one radial level per ask flag, in order; the answer replaces {key} in the command; "_" in a
+#     label shows as a space; dynamic answers: @players @crops @trees @prefabs (more than 40 answers are split A-Z into sub-levels).
+#     Back (right click) goes to the previous question, closing the radial cancels.
+# F5 is also the game console key: a pin on F5 opens the console as well.
+# "(soon)" lines: the command arrives later; the line above each one is its real form, swapped in by the session that builds it.
 2 | Attack
 2.1 | Arrow | op=spellshot&type=arrow | pin=F1 shift=perrow=3&rows=3
 2.2 | Arrow 3x3 | op=spellshot&type=arrow&perrow=3&rows=3
 2.3 | Balista | op=spellshot&type=balistashot
 2.4 | Thunderbolt | op=spellshot&type=thunderbolt
-2.5 | Quake (damage) | op=earthquake&damage=1&noStones=1
-2.6 | Slime ring | op=slime
+2.5 | Quake (damage) | op=earthquake&damage=1&noStones=1&players=0
+2.6 | Slime ring | op=slime&hurtself=0
+2.7 | Stone circle | op=earthquake&damage=1&players=0
+2.8 | Stone circle (trolls) | op=earthquake&damage=1&mode=strong&players=0
+2.9 | Thunderbolt wall 5x2 | op=spellshot&type=thunderbolt&perrow=5&rows=2
+# real form (W1-harpoon): 2.10 | Harpoon | op=spellshot&type=harpoon
+2.10 | Harpoon (soon) | @dummy
+# real form (W3-mines): 2.11 | Place mine | op=mine
+2.11 | Place mine (soon) | @dummy
+# real form (W3-mines): 2.12 | Remove mines | op=mine&remove=1&radius=10
+2.12 | Remove mines (soon) | @dummy
 3 | Protect
-3.1 | Push away | op=earthquake&noStones=1 | pin=F2 shift=mode=strong
-3.2 | Stone circle | op=earthquake&damage=1 | pin=S2 shift=mode=strong
-3.3 | Strong push | op=earthquake&mode=strong&noStones=1
-3.4 | Slime moat | op=slime&gap=3
+3.1 | Push away | op=earthquake&noStones=1&players=0 | pin=F2 shift=mode=strong
+3.2 | Stone circle | op=earthquake&damage=1&players=0 | pin=S2 shift=mode=strong
+3.3 | Strong push | op=earthquake&mode=strong&noStones=1&players=0
+3.4 | Slime moat | op=slime&gap=3&hurtself=0
+3.5 | Shield
+# real form (W1-world-build): 3.5.1 | Start point | op=coord&set=start
+3.5.1 | Start point (soon) | @dummy
+# real form (W1-world-build): 3.5.2 | End point | op=coord&set=end
+3.5.2 | End point (soon) | @dummy
+# real form (W2-dome): 3.5.3 | Place shield | op=dome&from=coords
+3.5.3 | Place shield (soon) | @dummy
+# real form (W2-dome): 3.5.4 | List shields | op=dome&step=list
+3.5.4 | List shields (soon) | @dummy
+# real form (W2-dome): 3.5.5 | Remove shield | op=dome&step=remove
+3.5.5 | Remove shield (soon) | @dummy
 4 | Fun
 4.1 | Raven 60 s | op=transform&type=raven&duration=60 | pin=S4
 4.2 | Serpent 60 s | op=transform&type=serpent&duration=60
@@ -23,7 +49,19 @@
 4.4 | Human | op=transform&type=human | pin=S5
 4.5 | Oaks x2 | op=scale&filter=Oak&factor=2&radius=30
 4.6 | Reset sky | op=visualeffect&name=reset
-5 | Heal and bless
+# real form (W3-world-plant): 4.7 | Tree x3 (only you see) | op=scale&aim=1&factor=3
+4.7 | Tree x3 (soon) | @dummy
+# real form (W3-world-plant): 4.8 | Tree x5 (only you see) | op=scale&aim=1&factor=5
+4.8 | Tree x5 (soon) | @dummy
+# real form (W3-world-plant): 4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10
+4.9 | Tree x10 (soon) | @dummy
+# real form (W1-ship): 4.10 | Ship x5 | op=ship&speed=5
+4.10 | Ship x5 (soon) | @dummy
+# real form (W1-ship): 4.11 | Ship x10 | op=ship&speed=10
+4.11 | Ship x10 (soon) | @dummy
+# real form (W1-ship): 4.12 | Ship normal | op=ship&speed=1
+4.12 | Ship normal (soon) | @dummy
+5 | Heal, defence, bless
 5.1 | Heal | op=heal | pin=F3
 5.2 | Cleanse | op=cleanse
 5.3 | Bonemass | op=bless&name=bonemass | pin=S3
@@ -32,21 +70,70 @@
 5.6 | Moder | op=bless&name=moder
 5.7 | Yagluth | op=bless&name=yagluth
 5.8 | The Queen | op=bless&name=queen
+5.9 | Fader | op=bless&name=fader
+5.10 | Remove all effects | op=cleanse&all=1
 6 | Build
-6.1 | Flatten | op=groundlevel&delta=0
-6.2 | Raise 1 m | op=groundlevel&delta=1
-6.3 | Lower 1 m | op=groundlevel&delta=-1
-6.4 | Dirt path 5 m | op=path&type=dirt&length=5
-6.5 | Stone path 5 m | op=path&type=stone&length=5
+6.1 | Flatten | | sticky
+# real form (W1-world-build): 6.1.1 | Flatten here | op=groundlevel&delta=0&avoid=1
+6.1.1 | Flatten here (soon) | @dummy
+# real form (W1-world-build): 6.1.2 | Flatten +5 | op=groundlevel&delta=5&avoid=1
+6.1.2 | Flatten +5 (soon) | @dummy
+# real form (W1-world-build): 6.1.3 | Flatten +8 (max) | op=groundlevel&delta=8&avoid=1
+6.1.3 | Flatten +8 (soon) | @dummy
+# real form (W1-world-build): 6.1.4 | Flatten -3 | op=groundlevel&delta=-3&avoid=1
+6.1.4 | Flatten -3 (soon) | @dummy
+# real form (W1-world-build): 6.1.5 | Flatten -5 | op=groundlevel&delta=-5&avoid=1
+6.1.5 | Flatten -5 (soon) | @dummy
+6.2 | Coordinates
+# real form (W1-world-build): 6.2.1 | Start point | op=coord&set=start
+6.2.1 | Start point (soon) | @dummy
+# real form (W1-world-build): 6.2.2 | End point | op=coord&set=end
+6.2.2 | End point (soon) | @dummy
+# real form (W1-world-build): 6.2.3 | Show points | op=coord&show=1
+6.2.3 | Show points (soon) | @dummy
+# real form (W1-world-build): 6.2.4 | Clear points | op=coord&clear=1
+6.2.4 | Clear points (soon) | @dummy
+6.3 | Paths
+# real form (W1-world-build): 6.3.1 | Dirt path start-end | op=path&type=dirt&from=coords&avoid=1
+6.3.1 | Dirt path start-end (soon) | @dummy
+# real form (W1-world-build): 6.3.2 | Stone path start-end | op=path&type=stone&from=coords&avoid=1
+6.3.2 | Stone path start-end (soon) | @dummy
+6.3.3 | Dirt path 5 m | op=path&type=dirt&length=5
+6.3.4 | Stone path 5 m | op=path&type=stone&length=5
+6.4 | Spawn
+# real form (W1-world-build): 6.4.1 | Spawn... | op=spawn&prefab={prefab}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
+6.4.1 | Spawn... (soon) | @dummy | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
+6.5 | Repair and refill | | sticky
+6.5.1 | Repair (aim) | op=repair
+6.5.2 | Refill (aim) | op=refill
+6.5.3 | Repair r10 | op=repair&aim=0&radius=10 | pin=F4
+6.5.4 | Refill r10 | op=refill&aim=0&radius=10
+6.5.5 | Repair r50 | op=repair&aim=0&radius=50
+6.5.6 | Refill r50 | op=refill&aim=0&radius=50
+6.5.7 | Repair+refill r10 | op=repair&aim=0&radius=10 ;; op=refill&aim=0&radius=10
+6.6 | Shield
+# real form (W1-world-build): 6.6.1 | Start point | op=coord&set=start
+6.6.1 | Start point (soon) | @dummy
+# real form (W1-world-build): 6.6.2 | End point | op=coord&set=end
+6.6.2 | End point (soon) | @dummy
+# real form (W2-dome): 6.6.3 | Place shield | op=dome&from=coords
+6.6.3 | Place shield (soon) | @dummy
+# real form (W2-dome): 6.6.4 | List shields | op=dome&step=list
+6.6.4 | List shields (soon) | @dummy
+# real form (W2-dome): 6.6.5 | Remove shield | op=dome&step=remove
+6.6.5 | Remove shield (soon) | @dummy
 7 | Field
 7.1 | Cultivate 3x5 | op=cultivate&rows=3&perrow=5 | pin=S1
 7.2 | Carrots 3x5 | op=field&prefab=Pickable_Carrot&rows=3&perrow=5
 7.3 | Oak grove | op=plant&prefab=Oak_Sapling&rows=3&perrow=5&scale=3
 7.4 | Place wall | op=place&prefab=woodwall&perrow=3
 7.5 | Place campfire | op=place&prefab=fire_pit
-8 | Repair
-8.1 | Repair (aim) | op=repair | sticky
-8.2 | Repair r10 | op=repair&aim=0&radius=10 | sticky pin=F4
-8.3 | Refill (aim) | op=refill | sticky
-8.4 | Refill r10 | op=refill&aim=0&radius=10 | sticky
-8.5 | Repair + refill r10 | op=repair&aim=0&radius=10 ;; op=refill&aim=0&radius=10 | sticky
+# real form (W2-world-field): 7.6 | Cultivate start-end | op=cultivate&area=coords
+7.6 | Cultivate start-end (soon) | @dummy
+# real form (W2-world-field): 7.7 | Plant food... | op=field&area={area}&prefab={crop} | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
+7.7 | Plant food... (soon) | @dummy | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
+# real form (W2-world-field): 7.8 | Harvest patch | op=harvest
+7.8 | Harvest patch (soon) | @dummy
+# real form (W3-world-plant): 7.9 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1 | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
+7.9 | Plant trees... (soon) | @dummy | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
+8 | Construct

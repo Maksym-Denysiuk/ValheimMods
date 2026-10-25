@@ -1,28 +1,44 @@
-# HomeCheat spell bar UI test. Placeholder spells only: a cast shows 'placeholder: <label> (<slot.entry>)' and logs it, nothing is executed.
-# Format as in spells.txt:  slot.entry | label | command | flags   (command @dummy; flags: sticky  pin=F1..F5|S1..S5  shift=<text>)
+# HomeCheat spell bar UI test, spell file v4. Placeholder spells only: a cast shows "placeholder: <label> (<id>)" and logs it, nothing is executed.
+# The same tree as spells.txt with every command @dummy; answer chains (ask=) run their questions, the toast shows the answers.
+# Format as in spells.txt:  id | label | command | flags   (titles: id | label  or  id | label | | sticky;  flags: sticky  pin=  shift=  ask=<key>:<answers>|@source)
 2 | Attack
 2.1 | Arrow | @dummy | pin=F1 shift=perrow=3&rows=3
 2.2 | Arrow 3x3 | @dummy
-2.3 | Balista | @dummy | shift=perrow=3
+2.3 | Balista | @dummy
 2.4 | Thunderbolt | @dummy
-2.5 | Quake (damage) | @dummy | shift=mode=strong
+2.5 | Quake (damage) | @dummy
 2.6 | Slime ring | @dummy
+2.7 | Stone circle | @dummy
+2.8 | Stone circle (trolls) | @dummy
+2.9 | Thunderbolt wall 5x2 | @dummy
+2.10 | Harpoon | @dummy
+2.11 | Place mine | @dummy
+2.12 | Remove mines | @dummy
 3 | Protect
 3.1 | Push away | @dummy | pin=F2 shift=mode=strong
-3.2 | Stone circle | @dummy | pin=S2
+3.2 | Stone circle | @dummy | pin=S2 shift=mode=strong
 3.3 | Strong push | @dummy
 3.4 | Slime moat | @dummy
-3.5 | Ward | @dummy | sticky
+3.5 | Shield
+3.5.1 | Start point | @dummy
+3.5.2 | End point | @dummy
+3.5.3 | Place shield | @dummy
+3.5.4 | List shields | @dummy
+3.5.5 | Remove shield | @dummy
 4 | Fun
 4.1 | Raven 60 s | @dummy | pin=S4
 4.2 | Serpent 60 s | @dummy
 4.3 | Fish 60 s | @dummy
 4.4 | Human | @dummy | pin=S5
-4.5 | Oaks x2 | @dummy | shift=factor=4
+4.5 | Oaks x2 | @dummy
 4.6 | Reset sky | @dummy
-4.7 | Rain | @dummy | sticky
-4.8 | Night | @dummy | sticky
-5 | Heal and bless
+4.7 | Tree x3 | @dummy
+4.8 | Tree x5 | @dummy
+4.9 | Tree x10 | @dummy
+4.10 | Ship x5 | @dummy
+4.11 | Ship x10 | @dummy
+4.12 | Ship normal | @dummy
+5 | Heal, defence, bless
 5.1 | Heal | @dummy | pin=F3
 5.2 | Cleanse | @dummy
 5.3 | Bonemass | @dummy | pin=S3
@@ -31,22 +47,49 @@
 5.6 | Moder | @dummy
 5.7 | Yagluth | @dummy
 5.8 | The Queen | @dummy
+5.9 | Fader | @dummy
+5.10 | Remove all effects | @dummy
 6 | Build
-6.1 | Flatten | @dummy | sticky
-6.2 | Raise 1 m | @dummy | sticky shift=delta=3
-6.3 | Lower 1 m | @dummy | sticky shift=delta=-3
-6.4 | Dirt path 5 m | @dummy
-6.5 | Stone path 5 m | @dummy
+6.1 | Flatten | | sticky
+6.1.1 | Flatten here | @dummy
+6.1.2 | Flatten +5 | @dummy
+6.1.3 | Flatten +8 | @dummy
+6.1.4 | Flatten -3 | @dummy
+6.1.5 | Flatten -5 | @dummy
+6.2 | Coordinates
+6.2.1 | Start point | @dummy
+6.2.2 | End point | @dummy
+6.2.3 | Show points | @dummy
+6.2.4 | Clear points | @dummy
+6.3 | Paths
+6.3.1 | Dirt path start-end | @dummy
+6.3.2 | Stone path start-end | @dummy
+6.3.3 | Dirt path 5 m | @dummy
+6.3.4 | Stone path 5 m | @dummy
+6.4 | Spawn
+6.4.1 | Spawn... | @dummy | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
+6.5 | Repair and refill | | sticky
+6.5.1 | Repair (aim) | @dummy
+6.5.2 | Refill (aim) | @dummy
+6.5.3 | Repair r10 | @dummy | pin=F4
+6.5.4 | Refill r10 | @dummy
+6.5.5 | Repair r50 | @dummy
+6.5.6 | Refill r50 | @dummy
+6.5.7 | Repair+refill r10 | @dummy
+6.6 | Shield
+6.6.1 | Start point | @dummy
+6.6.2 | End point | @dummy
+6.6.3 | Place shield | @dummy
+6.6.4 | List shields | @dummy
+6.6.5 | Remove shield | @dummy
 7 | Field
 7.1 | Cultivate 3x5 | @dummy | pin=S1
 7.2 | Carrots 3x5 | @dummy
 7.3 | Oak grove | @dummy
-7.4 | Place wall | @dummy | shift=perrow=5
+7.4 | Place wall | @dummy
 7.5 | Place campfire | @dummy
-7.6 | Place torch | @dummy
-8 | Repair
-8.1 | Repair (aim) | @dummy | sticky
-8.2 | Repair r10 | @dummy | sticky pin=F4 shift=radius=30
-8.3 | Refill (aim) | @dummy | sticky
-8.4 | Refill r10 | @dummy | sticky pin=F5
-8.5 | Repair + refill r10 | @dummy | sticky
+7.6 | Cultivate start-end | @dummy
+7.7 | Plant food... | @dummy | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops
+7.8 | Harvest patch | @dummy
+7.9 | Plant trees... | @dummy | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20
+8 | Construct

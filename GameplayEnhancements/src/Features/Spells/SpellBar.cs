@@ -36,7 +36,15 @@ namespace HomeCheat.Features.Spells
         public static SpellBar Find() { return SpellsSettings.ActiveBar; }
 
         internal SpellRootConfig Root() { if (root == null) root = new SpellRootConfig(this); return root; }
-        internal SpellGroup GroupAt(int slot) { return file.GroupAt(slot); }
+        internal SpellNode RootNode() { return file.Root; }
+        internal SpellNode NodeAt(string id) { return file.NodeAt(id); }
+
+        // first number of a dotted id: the root section, which picks the icon
+        internal static int TopOf(string id)
+        {
+            int dot = id.IndexOf('.'), n;
+            return int.TryParse(dot < 0 ? id : id.Substring(0, dot), out n) ? n : 0;
+        }
 
         void Awake() { file.Load(false); }
 
@@ -86,22 +94,57 @@ namespace HomeCheat.Features.Spells
 
         // ---- radial leaf: a game element that calls our code ------------------------------------------------------------------
 
+        // one entry of a level: a spell is a leaf, a title is a GroupElement that opens its sub-section (owner = the level it sits on,
+        // so the game's Back returns there)
+        internal RadialMenuElement MakeNodeElement(SpellNode n, IRadialConfig owner, RadialBase radial)
+        {
+            if (n.Spell != null) return MakeLeaf(n.Spell, owner, radial, IconFor(SlotIcon(n.Spell.Top)), SubtitleFor(n.Spell, n.Id));
+            GroupElement ge = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
+            ge.Init(new SpellGroupConfig(this, n.Id), owner, radial);
+            SetSubTitle(ge, n.Id + (n.Sticky ? "   sticky" : ""));
+            return ge;
+        }
+
         // A leaf is the game's GroupElement prefab with a name and an icon; its Interact and CloseOnInteract are replaced, so selecting it
-        // casts the spell (CloseOnInteract false = sticky: the radial stays open).
+        // casts the spell (CloseOnInteract false = sticky: the radial stays open), or opens its first question (answer chain).
         // Shift+click does not cast: it picks the spell up and opens the Hotbar section to choose a cell (see BeginPlace).
-        internal RadialMenuElement MakeLeaf(Spell s, IRadialConfig back, RadialBase radial, Sprite icon, string subtitle)
+        internal RadialMenuElement MakeLeaf(Spell s, IRadialConfig owner, RadialBase radial, Sprite icon, string subtitle)
         {
             GroupElement ge = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
-            ge.Init(new SpellLeafConfig(s.Label, icon), back, radial);
+            ge.Init(new SpellLeafConfig(s.Label, icon), owner, radial);
             SetSubTitle(ge, subtitle);
             ge.Interact = delegate()
             {
-                if (SpellsSettings.ShiftHeld()) BeginPlace(s, radial); else CastSpell(s, false, null);
+                if (SpellsSettings.ShiftHeld()) BeginPlace(s, radial);
+                else if (s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, null), 0, null, null), owner);
+                else CastSpell(s, false, null, null);
                 return true;
             };
-            ge.CloseOnInteract = delegate() { return SpellsSettings.ShiftHeld() ? false : !s.Sticky; };
+            ge.CloseOnInteract = delegate() { return SpellsSettings.ShiftHeld() || s.Asks.Count > 0 ? false : !s.Sticky; };
             return ge;
         }
+
+        // a leaf that only shows a text (an empty section, a question with no answers); a click does nothing
+        internal RadialMenuElement MakeNote(string label, string subtitle, IRadialConfig owner, RadialBase radial)
+        {
+            GroupElement ge = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
+            ge.Init(new SpellLeafConfig(label, null), owner, radial);
+            SetSubTitle(ge, subtitle);
+            ge.Interact = delegate() { Toast(subtitle, false); return true; };
+            ge.CloseOnInteract = delegate() { return false; };
+            return ge;
+        }
+
+        // opens a level from inside an Interact, the way the game opens a group: queued, with 'back' on the Back stack
+        internal void OpenLevel(RadialBase radial, IRadialConfig cfg, IRadialConfig back)
+        {
+            if (mQueuedOpen == null) mQueuedOpen = typeof(RadialBase).GetMethod("QueuedOpen", AllF);
+            if (mQueuedOpen != null) mQueuedOpen.Invoke(radial, new object[] { cfg, back });
+            else radial.Open(cfg, back);
+        }
+
+        // the last answer of a chain was picked: substitute {key} and cast
+        internal void CastChain(SpellAskChain c) { CastSpell(c.Spell, c.Shift, c.PinKey, c.Answers); }
 
         // a Hotbar section: the spell of one bar cell (or an empty slot). Click casts it; while a spell waits to be placed a click puts it here.
         internal RadialMenuElement MakeCellElement(string cell, IRadialConfig back, RadialBase radial)
@@ -116,10 +159,11 @@ namespace HomeCheat.Features.Spells
             ge.Interact = delegate()
             {
                 if (assigning != null) AssignTo(cell);
-                else if (has) CastSpell(s, false, cell);
+                else if (has && s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, cell), 0, null, null), new SpellHotbarConfig(this));
+                else if (has) CastSpell(s, false, cell, null);
                 return true;
             };
-            ge.CloseOnInteract = delegate() { return placing || !has || !s.Sticky; };
+            ge.CloseOnInteract = delegate() { return placing || !has || (!s.Sticky && s.Asks.Count == 0); };
             cellOf[ge] = cell;
             return ge;
         }
@@ -130,19 +174,15 @@ namespace HomeCheat.Features.Spells
         internal string SubtitleFor(Spell s, string id)
         {
             string k = file.PinOf(s);
-            return id + (k.Length > 0 ? "  " + SpellFile.PinLabel(k) : "") + "   Shift+click: to the bar";
+            string q = "";
+            foreach (SpellAsk a in s.Asks) q += (q.Length == 0 ? "   asks: " : ", ") + a.Key;
+            return id + (k.Length > 0 ? "  " + SpellFile.PinLabel(k) : "") + q + "   Shift+click: to the bar";
         }
 
         // ---- placing a spell on the bar ---------------------------------------------------------------------------------------
 
         // (re)opens the Hotbar section so it shows the current cells
-        void OpenHotbar(RadialBase radial)
-        {
-            IRadialConfig hb = new SpellHotbarConfig(this);
-            if (mQueuedOpen == null) mQueuedOpen = typeof(RadialBase).GetMethod("QueuedOpen", AllF);
-            if (mQueuedOpen != null) mQueuedOpen.Invoke(radial, new object[] { hb, Root() });
-            else radial.Open(hb, Root());
-        }
+        void OpenHotbar(RadialBase radial) { OpenLevel(radial, new SpellHotbarConfig(this), Root()); }
 
         // RMB is the radial's Back; with Shift held it must not go back, because Shift+RMB empties a Hotbar cell
         RadialBase backWrappedFor;   // the radial whose Back is already wrapped by this bar
@@ -218,7 +258,7 @@ namespace HomeCheat.Features.Spells
         }
 
         // SubTitle has a non-public setter in the game: set it by reflection (text under the name in the radial centre)
-        static void SetSubTitle(RadialMenuElement e, string text)
+        internal static void SetSubTitle(RadialMenuElement e, string text)
         {
             try
             {
@@ -249,7 +289,23 @@ namespace HomeCheat.Features.Spells
         public string Status()
         {
             return "spells " + (SpellsSettings.On ? "ON" : "OFF") + (SpellsSettings.IsPlaceholder ? " (PLACEHOLDER mode)" : " (real spells)")
-                + ", patches " + PatchInfo() + ", last cast: " + lastCast + ", flags: " + Snap() + "\n" + file.CountSlots() + " groups, " + file.Pins.Count + " pins. file " + SpellsSettings.ActiveFile;
+                + ", patches " + PatchInfo() + ", last cast: " + lastCast + ", flags: " + Snap() + "\n" + file.CountSections() + " sections, " + file.Pins.Count + " pins. file " + SpellsSettings.ActiveFile
+                + "\nradial: MaxElementsRange=" + LayerRange() + " (elements per layer before the spiral starts a new layer)";
+        }
+
+        // RadialDataSO.MaxElementsRange: the asset's per-layer thresholds (int[]), read by RadialBase.SetElementsPerLayer
+        static string LayerRange()
+        {
+            try
+            {
+                object v = HomeCheat.Kit.Refl.Get(RadialData.SO, "MaxElementsRange");
+                int[] arr = v as int[];
+                if (arr == null) return v == null ? "?" : v.ToString();
+                string[] s = new string[arr.Length];
+                for (int i = 0; i < arr.Length; i++) s[i] = arr[i].ToString();
+                return "[" + string.Join(",", s) + "]";
+            }
+            catch (Exception e) { return "? (" + e.Message + ")"; }
         }
 
         static string PatchInfo()
@@ -322,7 +378,8 @@ namespace HomeCheat.Features.Spells
                 {
                     // Shift is part of the key for cells 1-5, so it does not select the spell's shift= variant there
                     if (k[0] == 'S') SpellsSettings.MarkConsumed();
-                    CastSpell(ps, k[0] == 'F' && shift, k);
+                    if (ps.Asks.Count > 0) OpenChainRadial(new SpellAskChain(ps, k[0] == 'F' && shift, k));
+                    else CastSpell(ps, k[0] == 'F' && shift, k, null);
                     return;
                 }
             }
@@ -342,17 +399,37 @@ namespace HomeCheat.Features.Spells
 
         // ---- casting -----------------------------------------------------------------------------------------------------------
 
-        // pinKey: the bar slot that fired (for the flash), null when the spell was picked in the radial
-        void CastSpell(Spell s, bool shift, string pinKey)
+        // a pinned spell with questions: open the radial on its first question (the same Open the G key makes; ours is not swapped)
+        void OpenChainRadial(SpellAskChain c)
+        {
+            try
+            {
+                RadialBase radial = (RadialBase)typeof(Hud).GetField("m_radialMenu", AllF).GetValue(Hud.instance);
+                if (radial == null) { Toast(c.Spell.Label + ": radial menu not available, pick it with G", true); return; }
+                PropertyInfo can = radial.GetType().GetProperty("CanOpen", AllF);
+                if (can != null && can.CanWrite) can.SetValue(radial, true, null);
+                flash[c.PinKey] = Time.unscaledTime + 0.25f;
+                radial.Open(new SpellAskConfig(this, c, 0, null, null), null);
+            }
+            catch (Exception e)
+            {
+                HomeApi.Log("spells: cannot open the questions of " + c.Spell.Label + ": " + (e.InnerException != null ? e.InnerException.Message : e.Message));
+                Toast(c.Spell.Label + " asks questions: pick it with G", true);
+            }
+        }
+
+        // pinKey: the bar slot that fired (for the flash), null when the spell was picked in the radial; answers: of its questions, or null
+        void CastSpell(Spell s, bool shift, string pinKey, Dictionary<string, string> answers)
         {
             if (Time.unscaledTime < s.Next) return;
             s.Next = Time.unscaledTime + 0.3f;
             if (pinKey != null) flash[pinKey] = Time.unscaledTime + 0.25f;
+            string given = "";
+            if (answers != null) foreach (KeyValuePair<string, string> kv in answers) given += " " + kv.Key + "=" + kv.Value;
             // placeholder mode (or a @dummy line): show a toast and log it, never call a command, never touch the game
             if (SpellsSettings.IsPlaceholder || s.Cmd.Trim() == "@dummy")
             {
-                string id = s.Entry > 0 ? s.Slot + "." + s.Entry : "" + s.Slot;
-                string pm = "placeholder: " + s.Label + " (" + id + ")" + (shift && s.Shift.Length > 0 ? " +shift=" + s.Shift : "");
+                string pm = "placeholder: " + s.Label + " (" + s.Id + ")" + (shift && s.Shift.Length > 0 ? " +shift=" + s.Shift : "") + (given.Length > 0 ? " answers:" + given : "");
                 lastCast = pm;
                 HomeApi.Log("spells: " + pm);
                 Toast(pm, false);
@@ -360,6 +437,12 @@ namespace HomeCheat.Features.Spells
             }
             string form = s.Cmd;
             if (shift && s.Shift.Length > 0) form = form + "&" + s.Shift;
+            form = SpellParse.Substitute(form, answers);
+            if (form.IndexOf('{') >= 0 && form.IndexOf('}') > form.IndexOf('{'))
+            {
+                Toast(s.Label + ": a question is unanswered (" + form + ")", true);
+                return;
+            }
             string before = Snap();
             StringBuilder res = new StringBuilder();
             foreach (string part in form.Split(new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries))
@@ -369,7 +452,7 @@ namespace HomeCheat.Features.Spells
                 res.Append(FirstLine(r));
             }
             string after = Snap();
-            lastCast = s.Label + " (" + form + ")";
+            lastCast = s.Label + " (" + form + ")";   // answers are already in the form
             bool err = res.ToString().StartsWith("ERROR");
             HomeApi.Log("spells: " + s.Label + " -> " + res);
             if (before != after)
@@ -479,9 +562,9 @@ namespace HomeCheat.Features.Spells
         Sprite IconOf(Spell s)
         {
             Sprite sp;
-            if (iconCache.TryGetValue(s.Slot, out sp) && sp != null) return sp;
-            sp = IconFor(SlotIcon(s.Slot));
-            iconCache[s.Slot] = sp;
+            if (iconCache.TryGetValue(s.Top, out sp) && sp != null) return sp;
+            sp = IconFor(SlotIcon(s.Top));
+            iconCache[s.Top] = sp;
             return sp;
         }
 

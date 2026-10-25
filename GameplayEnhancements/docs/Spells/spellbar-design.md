@@ -1,6 +1,6 @@
-# Spells: replacing the `G` key action (design only, 2026-10-24)
+# Spells: replacing the `G` key action (design 2026-10-24, built since)
 
-Status: design for approval. No code written, no source edited, game not touched. Scope: Maksym's own game and worlds, HomeCheat plugin.
+Status: built (view v3 2026-10-24; spell file v4 2026-10-25, section 15: built, not run in game). Sections 0-13 are the original design and its answers; 14-15 are what was built. Scope: Maksym's own game and worlds, HomeCheat plugin.
 
 ## 0. Recommendation in five lines
 1. Vanilla `G` opens the game's **main radial menu** (button `OpenRadial`). `T` (button `OpenEmote`) opens the emote radial. Both go through one method, `Player.CheckKeyboardRadialPressed()`.
@@ -344,3 +344,28 @@ Build line: `M=/d/steam/steamapps/common/Valheim/valheim_Data/Managed; bash buil
 View v3 unverified in game: the click-to-place flow (cursor really freed, no camera drift, the order of the leaf Interact and CloseOnInteract calls, mouse position under the 1080-scaled GUI matrix) and the sprite drawing in IMGUI (atlas sprites). Fallback if the cursor stays locked: place by pressing the cell key.
 
 Known limits: not yet seen on screen (the radial elements are the game's prefabs, so how a leaf looks inside a group is unverified); leaves use their group's icon; gamepad radial not covered; `spells.txt` pins are read at load (live `pin=` last one session); the core fixes of `code-review.md` are not applied.
+
+## 15. Spell file v4 and the menu tree (2026-10-25, phase 4 wave 0, built, not run in game)
+
+Built by session S0-spells of the Valheim work plan (HomeOS `LocalOutputs/2026-10-25--01-59/backlog-plan.md` section 2), unattended and without the game. Format and use: [spellbar.md](spellbar.md).
+
+| Change | How | Evidence |
+|---|---|---|
+| ids of any depth, any number of entries per level | `SpellParse` (no Unity) builds a tree of `SpellNode`s; `SpellGroupConfig` takes a node id and opens sub-sections as `GroupElement`s, so Back is vanilla at every depth | offline parser check: both spell files 0 bad lines |
+| no 8-entry limit | a level passes all its elements to `RadialBase.ConstructRadial`, which calls `SetElementsPerLayer(count)` (thresholds `RadialDataSO.MaxElementsRange`) and lays the rest out in layers, the spiral of the emote wheel (`EmoteGroupConfig` passes 25) | IL of `ConstructRadial`, `SetElementsPerLayer`, `EmoteGroupConfig.InitRadialConfig` |
+| title lines at any depth, sticky titles | `id \| label` or `id \| label \| \| sticky`; sticky passes to every spell below | parser check |
+| answer chains | `ask=` flags; `SpellAskConfig` is one level per question; a click stores the answer and `QueuedOpen`s the next level with the current one on the Back stack; the last answer casts with `{key}` replaced (values escaped) | not run in game |
+| dynamic answers | `SpellAskSources`: `@players` (others only when hosting), `@crops`, `@trees`, `@prefabs` (categories: Creatures, Items by type); more than 40 answers split into alphabetical blocks | not run in game |
+| `status=1` | also prints `RadialData.SO.MaxElementsRange` | not run in game |
+| menu tree | plan section 2.2 in `spells.txt`, `spells-ui-test.txt` (all `@dummy`) and `SpellFile.DefaultText`; commands not built yet are `@dummy` "(soon)" lines with their real form in a comment above | `commands-check.js` exit 0 |
+
+Assumptions taken in the unattended run (Maksym reviews):
+- **A18**: existing ids keep their meaning; Repair moves from 8 to 6.5 with its pin; 6.1 (Flatten) becomes a sub-section title; the old 6.2 Raise 1 m / 6.3 Lower 1 m are dropped (plan 2.2).
+- **A21**: overflow is the game's same-level spiral. Fallback if `GroupElement`s look wrong in layers: a "More..." group.
+- **ASSUMPTION (S0-spells)**: a title is a line whose command field is empty, so a sticky title is written `id | label | | sticky` (the plan did not fix a syntax).
+- **ASSUMPTION (S0-spells)**: a section or sub-section with nothing below it (8 Construct) opens one note "(nothing here yet)" instead of an empty level.
+- **ASSUMPTION (S0-spells)**: a pinned spell with questions (F-key or Shift+digit) opens the radial on its first question; from the Hotbar section it opens the questions with the Hotbar as Back.
+- **ASSUMPTION (S0-spells)**: fixed answers keep the order of the flag; dynamic answers are sorted by label (by category first for `@prefabs`); an alphabetical block is named "first - last" label.
+- **ASSUMPTION (S0-spells)**: Flatten 6.1.x waits for `avoid=1` (W1-world-build): without it the presets would flatten into buildings, so they are `@dummy` until then, and the working Flatten / Raise / Lower of v3 is not in the menu meanwhile (`op=groundlevel` still works from the inbox).
+
+Probes for Maksym's test: `op=spells&status=1` (the `MaxElementsRange` values), `op=bless&list=1` (`GP_Fader` for 5.9).

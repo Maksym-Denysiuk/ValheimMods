@@ -5,13 +5,14 @@ using Valheim.UI;
 
 namespace HomeCheat.Features.Spells
 {
-    // one group: its spells as leaves
+    // one group or sub-section (a title of the spell file) at any depth: its entries as leaves (spells) or GroupElements (sub-sections).
+    // Any number of entries: RadialBase.ConstructRadial lays them out in layers (the spiral) past MaxElementsPerLayer.
     sealed class SpellGroupConfig : IRadialConfig
     {
-        readonly SpellBar bar; readonly int slot;
-        public SpellGroupConfig(SpellBar b, int s) { bar = b; slot = s; }
-        public string LocalizedName { get { SpellGroup g = bar.GroupAt(slot); return g == null ? "?" : g.Title; } }
-        public Sprite Sprite { get { return SpellBar.IconFor(SpellBar.SlotIcon(slot)); } }
+        readonly SpellBar bar; readonly string id;
+        public SpellGroupConfig(SpellBar b, string nodeId) { bar = b; id = nodeId; }
+        public string LocalizedName { get { SpellNode n = bar.NodeAt(id); return n == null ? "?" : n.Title; } }
+        public Sprite Sprite { get { return SpellBar.IconFor(SpellBar.SlotIcon(SpellBar.TopOf(id))); } }
 
         public void InitRadialConfig(RadialBase radial)
         {
@@ -27,15 +28,12 @@ namespace HomeCheat.Features.Spells
 
         void Build(RadialBase radial)
         {
-            SpellGroup g = bar.GroupAt(slot);
+            SpellNode n = bar.NodeAt(id);
             List<RadialMenuElement> els = new List<RadialMenuElement>();
-            if (g != null)
-                for (int e = 1; e <= 8; e++)
-                {
-                    Spell s = g.Entries[e];
-                    if (s == null) continue;
-                    els.Add(bar.MakeLeaf(s, SpellsSettings.ActiveBar.Root(), radial, Sprite, bar.SubtitleFor(s, slot + "." + e)));
-                }
+            if (n != null && n.Spell == null)
+                foreach (SpellNode c in n.Children) els.Add(bar.MakeNodeElement(c, this, radial));
+            // a title with nothing below it (Construct), or a group that vanished on a file reload: one note, never an empty radial
+            if (els.Count == 0) els.Add(bar.MakeNote("(nothing here yet)", id + ": add lines " + id + ".1, " + id + ".2 ... to the spell file", this, radial));
             radial.ConstructRadial(els);
         }
     }

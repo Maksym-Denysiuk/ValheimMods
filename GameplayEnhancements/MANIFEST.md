@@ -1,8 +1,8 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 10:42 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 10:47 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
-Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025005643.dll, HomeCheat.Cmd.spellshot.v20261024235646.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025011404.dll.
+Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261024235646.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025011404.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
@@ -21,34 +21,34 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 9940 | c774728eafc45be2 |
+| docs/HomeCheat-plugin/README.md | 10125 | a533afd3b13c5c62 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3505 | 2468f7a3fe9d73c3 |
 | docs/HomeCheat-plugin/plant-field-place.md | 7069 | ee49c3e03bbd8157 |
 | docs/HomeCheat-plugin/repair-refill.md | 3652 | 6c89fc5acd5c0024 |
 | docs/HomeCheat-plugin/tree-scale.md | 3850 | 452b28c55b54adc1 |
 | docs/Keybinds/README.md | 819 | fc525dcfcd76a569 |
 | docs/Keybinds/keybinds.md | 6211 | a5627525cdc5e597 |
-| docs/Spells/README.md | 2094 | f9d518a35f2a73ba |
+| docs/Spells/README.md | 2417 | fd7e4c8eae432df2 |
 | docs/Spells/earthquake.md | 11046 | 8d4205b0dcbc7948 |
 | docs/Spells/slime.md | 9286 | fa0277c5ef4e3d77 |
-| docs/Spells/spellbar-design.md | 35477 | 80a7b7064203ba8e |
-| docs/Spells/spellbar.md | 5501 | 4c40b6356c9ee9d7 |
+| docs/Spells/spellbar-design.md | 38971 | 63a58e3327e43750 |
+| docs/Spells/spellbar.md | 11000 | 6b91485605005c07 |
 | docs/Spells/spellshot.md | 7694 | 8709affe6e752cc4 |
 | docs/Transform/README.md | 1443 | e16785ab64ec53ee |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
 | docs/Transform/hidebody.md | 3129 | 611470fc69a21ccf |
 | docs/Transform/transform.md | 7841 | 7f10dfffedaf1591 |
-| docs/architecture/diagrams/homecheat-core.svg | 85338 | 5edf38941c7f1b6f |
+| docs/architecture/diagrams/homecheat-core.svg | 120777 | 9186f4649f606f1d |
 | docs/architecture/diagrams/homecheat-features.svg | 128897 | f15ceca4153f9b90 |
 | docs/architecture/diagrams/homecheat-spells.svg | 52780 | e538ccc51c37272a |
-| docs/architecture/homecheat-architecture.md | 31264 | 214d85183657b842 |
+| docs/architecture/homecheat-architecture.md | 35955 | ad0c7a380acdc8fe |
 | docs/architecture/homecheat-commands.md | 11432 | 550852802331eab5 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5375 | 6d37772ecf22af6b |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
-| payload/BepInEx/config/homecheat/spells-ui-test.txt | 1785 | e6316d0e2f2da073 |
-| payload/BepInEx/config/homecheat/spells.txt | 2627 | 94fbb579eb2871bf |
+| payload/BepInEx/config/homecheat/spells-ui-test.txt | 3193 | e8d424c76af30e2f |
+| payload/BepInEx/config/homecheat/spells.txt | 8160 | 002a70aba25c05d1 |
 | payload/BepInEx/core/0Harmony.dll | 204800 | 1a21cc03424fc82c |
 | payload/BepInEx/core/0Harmony.xml | 267107 | d1f02fc3ada3a13d |
 | payload/BepInEx/core/0Harmony20.dll | 112640 | 5708451a91eaecee |
@@ -75,12 +75,12 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.keybinds.v20261025002247.dll | 9216 | 0d3ee4da781650f3 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.killmobs.v20261024235500.dll | 6144 | 9d3ee71eeaa5c95b |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.slime.v20261025003356.dll | 23040 | e3e2f83ce6458370 |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v20261025005643.dll | 57856 | a34b8d068c05753b |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v20261025104610.dll | 101888 | a2e707aae2e67b5f |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261024235646.dll | 20992 | af2940d4ca686e7d |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.transform.v20261024235900.dll | 38400 | 7ae22ad809b436e7 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.visualeffect.v20261024235600.dll | 19456 | e166bd7870012878 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.world.v20261025011404.dll | 29696 | b8b4bec6f06bcf54 |
-| payload/BepInEx/plugins/HomeCheat.dll | 39424 | 5538fb7e012c8e3f |
+| payload/BepInEx/plugins/HomeCheat.dll | 52224 | 3bef27078d0bdd43 |
 | payload/doorstop_config.ini | 1460 | 4d5c6dfa0f771c6a |
 | payload/winhttp.dll | 26112 | 93406d0a02e7c164 |
 | send-command.ps1 | 1587 | 58fc65dbc9e0a1a5 |
@@ -162,18 +162,20 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/Slime/SlimeEffect.cs | 21762 | 6adb953fdddd6e86 |
 | src/Features/Spells/Spell.cs | 704 | 76c3299b9be776af |
 | src/Features/Spells/SpellAsk.cs | 505 | 4622a4595ee37d55 |
+| src/Features/Spells/SpellAskChain.cs | 852 | 9b6c5d8c11b6645d |
+| src/Features/Spells/SpellAskConfig.cs | 4974 | f25cfe5262cc6951 |
 | src/Features/Spells/SpellAskOption.cs | 431 | 6f3ef42388c881be |
-| src/Features/Spells/SpellBar.cs | 27434 | 5b5a23c198f9f32d |
-| src/Features/Spells/SpellFile.cs | 15434 | 6f9ff9d0a15d6b03 |
-| src/Features/Spells/SpellGroup.cs | 485 | 6d869c72f98e1c90 |
-| src/Features/Spells/SpellGroupConfig.cs | 1731 | 9a9c3092d6b69c89 |
+| src/Features/Spells/SpellAskSources.cs | 4111 | e7296a1476ece495 |
+| src/Features/Spells/SpellBar.cs | 32572 | ff9956c61c853975 |
+| src/Features/Spells/SpellFile.cs | 21143 | a107d03bc9700b56 |
+| src/Features/Spells/SpellGroupConfig.cs | 2078 | 6701b07edb17da9f |
 | src/Features/Spells/SpellHotbarConfig.cs | 1636 | 37d0aeb60e0a31f0 |
 | src/Features/Spells/SpellLeafConfig.cs | 565 | a41c3ad1a83fd196 |
 | src/Features/Spells/SpellNode.cs | 855 | c08353042d7efd16 |
-| src/Features/Spells/SpellParse.cs | 12042 | d7883ac593faa37a |
+| src/Features/Spells/SpellParse.cs | 12034 | 6da1d5b3126336c3 |
 | src/Features/Spells/SpellPatches.cs | 3917 | e33ce0bbea6a9829 |
-| src/Features/Spells/SpellRootConfig.cs | 2694 | 3317cead50bab522 |
-| src/Features/Spells/SpellsCommand.cs | 5841 | 94e7214abb7add06 |
+| src/Features/Spells/SpellRootConfig.cs | 2640 | 2b6e742cbf9fa889 |
+| src/Features/Spells/SpellsCommand.cs | 6465 | 09e004470cd49622 |
 | src/Features/Spells/SpellsSettings.cs | 3329 | 8c669fbe520ced6a |
 | src/Features/Spells/refs.txt | 237 | 4e6875fba330461a |
 | src/Features/Spellshot/SpellShotCommand.cs | 24714 | c0e9972dfa85605b |
@@ -199,6 +201,6 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/World/ScaleCommand.cs | 1486 | 2f243ba6864597f0 |
 | src/Features/World/SpawnCommand.cs | 1422 | bd0dfa66364e0d80 |
 | src/Features/World/TerrainStamp.cs | 1457 | a9e51401d1f46af7 |
-| src/SelfTest/SelfTestMain.cs | 4801 | d97edefe00a4d0b9 |
+| src/SelfTest/SelfTestMain.cs | 11915 | fa325b164c4012d2 |
 | src/build.sh | 4141 | 200d6db8a1074040 |
 | uninstall.ps1 | 2115 | fe0abbe9c26c6fce |

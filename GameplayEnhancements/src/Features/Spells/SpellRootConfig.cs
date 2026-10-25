@@ -6,7 +6,7 @@ using Valheim.UI;
 namespace HomeCheat.Features.Spells
 {
     // ---- the radial configs: our subclasses of the game's extension point ----
-    // root level: 8 sections. Section 1 is our Hotbar (the 10 bar cells), 2-8 are our groups (or empty).
+    // root level: section 1 is our Hotbar (the 10 bar cells), 2-8 are our sections (or empty), more sections continue the spiral.
     sealed class SpellRootConfig : IRadialConfig
     {
         readonly SpellBar bar;
@@ -35,15 +35,16 @@ namespace HomeCheat.Features.Spells
             GroupElement hb = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
             hb.Init(new SpellHotbarConfig(bar), this, radial);
             els.Add(hb);
-            for (int n = 2; n <= 8; n++)
+            // 2..8 keep their places (a missing section is an empty slot); sections above 8 follow in order (the spiral takes them)
+            int next = 2;
+            foreach (SpellNode n in bar.RootNode().Children)
             {
-                SpellGroup g = bar.GroupAt(n);
-                if (g == null || (g.Direct == null && !g.HasEntries)) { els.Add(MakeEmpty()); continue; }
-                if (g.Direct != null) { els.Add(bar.MakeLeaf(g.Direct, this, radial, SpellBar.IconFor(SpellBar.SlotIcon(n)), bar.SubtitleFor(g.Direct, "" + g.Direct.Slot))); continue; }
-                GroupElement ge = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
-                ge.Init(new SpellGroupConfig(bar, n), this, radial);
-                els.Add(ge);
+                if (n.Number < 2) continue;
+                for (; next < n.Number && next <= 8; next++) els.Add(MakeEmpty());
+                next = n.Number + 1;
+                els.Add(bar.MakeNodeElement(n, this, radial));
             }
+            for (; next <= 8; next++) els.Add(MakeEmpty());
             radial.ConstructRadial(els);
         }
 
