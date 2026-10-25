@@ -24,6 +24,8 @@ namespace HomeCheat.Features.Dome
         const float SyncSeconds = 2f;      // how often the host copies a changed ward's state to its group
         const float RescanSeconds = 30f;   // how often the host looks for dome wards again (built or removed elsewhere)
         const int MaxListed = 8;           // spots named in an answer
+        const float SlideMax = 0.5f;       // partial=1: a blocked ward slides toward the zone centre by up to this x the ward radius
+        const float SlideStep = 1f;        // ... in steps of this many metres (Maksym 2026-10-25)
 
         internal static DomeCommand Current;
 
@@ -114,6 +116,7 @@ namespace HomeCheat.Features.Dome
             public Vector3 Pos;
             public bool Ok;
             public string Why;
+            public bool Slid;      // partial=1: moved toward the zone centre off a blocked spot (the outer edge loses some cover)
         }
 
         string Build(Args a)
@@ -177,6 +180,7 @@ namespace HomeCheat.Features.Dome
             foreach (DomePoint lp in lattice)
             {
                 Spot sp = FindSpot(lp, slack, me, wr, allWards);
+                if (!sp.Ok && partial) Slide(sp, cx, cz, wr * SlideMax, me, wr, allWards);
                 if (!sp.Ok) bad++;
                 spots.Add(sp);
             }
@@ -525,6 +529,28 @@ namespace HomeCheat.Features.Dome
             return sp;
         }
 
+        // partial=1 (Leave gaps): a spot still blocked after the nudge slides toward the zone centre, 1 m at a time, up to max metres;
+        // the first spot that takes a ward wins, so the zone keeps as much cover as it can and only the far edge loses some.
+        // A spot that is still blocked becomes a gap (Maksym 2026-10-25).
+        void Slide(Spot sp, float cx, float cz, float max, long me, float wr, List<ZDO> allWards)
+        {
+            float dx = cx - sp.Lattice.X, dz = cz - sp.Lattice.Z, len = Mathf.Sqrt(dx * dx + dz * dz);
+            if (len < 0.01f) return;
+            dx /= len; dz /= len;
+            string last = null;
+            float tried = 0f;
+            for (float t = SlideStep; t <= Mathf.Min(max, len) + 0.001f; t += SlideStep)
+            {
+                Vector3 pos;
+                string why;
+                tried = t;
+                if (!CheckSpot(sp.Lattice.X + dx * t, sp.Lattice.Z + dz * t, me, wr, allWards, out pos, out why)) { last = why; continue; }
+                sp.Ok = true; sp.Pos = pos; sp.Why = null; sp.Slid = true;
+                return;
+            }
+            if (last != null) sp.Why += "; slid " + Fmt.F(tried, 0) + " m toward the centre, still: " + last;
+        }
+
         bool CheckSpot(float x, float z, long me, float wr, List<ZDO> allWards, out Vector3 pos, out string why)
         {
             pos = new Vector3(x, 0f, z);
@@ -611,7 +637,8 @@ namespace HomeCheat.Features.Dome
                 if (++n > MaxListed) { sb.Append("\n  ... and ").Append(CountOk(spots) - MaxListed).Append(" more"); break; }
                 float moved = DomeWards.DistanceXZ(sp.Pos, new Vector3(sp.Lattice.X, 0f, sp.Lattice.Z));
                 sb.Append("\n  ").Append(preview ? "would place at " : "ward at ").Append(Fmt.Vec(sp.Pos));
-                if (moved > 0.01f) sb.Append(" (moved ").Append(Fmt.F(moved, 1)).Append(" m from a blocked spot)");
+                if (sp.Slid) sb.Append(" (slid ").Append(Fmt.F(moved, 1)).Append(" m toward the centre off a blocked spot: less cover at the outer edge)");
+                else if (moved > 0.01f) sb.Append(" (moved ").Append(Fmt.F(moved, 1)).Append(" m from a blocked spot)");
             }
             return sb.ToString();
         }
