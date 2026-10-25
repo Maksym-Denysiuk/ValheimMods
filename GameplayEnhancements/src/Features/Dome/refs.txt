@@ -1,2 +1,6 @@
 # PlatformUserID (Piece.SetCreator takes the creator's platform user id, as Player.PlacePiece passes it)
 Splatform.dll
+# GUI, GUIStyle (IMGUI): the dome menu
+UnityEngine.IMGUIModule.dll
+# TextAnchor, FontStyle
+UnityEngine.TextRenderingModule.dll

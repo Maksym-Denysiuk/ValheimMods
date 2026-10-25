@@ -36,7 +36,8 @@ namespace HomeCheat.Features.Dome
         public const string KeyCx = "hc_dome_cx";
         public const string KeyCz = "hc_dome_cz";
         public const string KeyRadius = "hc_dome_r";
-        public const string KeyCount = "hc_dome_n";     // wards placed in the group
+        public const string KeyCount = "hc_dome_n";     // wards in the group (after the last build or merge)
+        public const string KeyNo = "hc_dome_no";      // N of the group's name Group-N, the same on every ward of the group
         public const string KeySig = "hc_dome_sig";     // the group state last copied to every ward (WardState.Signature)
 
         static MethodInfo setEnabled;

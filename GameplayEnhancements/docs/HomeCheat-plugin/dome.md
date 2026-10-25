@@ -1,22 +1,43 @@
 ---
-description: dome command of the HomeCheat Valheim plugin (2026-10-25) - a protected zone of vanilla wards (guard_stone) between two points, one ward or a group of up to 50 without gaps, placed as if built with the hammer so every player sees the standard ward; the host copies on/off and the permitted list across a group; refusals for water, buildings, slopes and other players' wards; card, assumptions, how it works, open checks and test list, limits, undo; built without the game, not yet run
+description: dome command of the HomeCheat Valheim plugin (2026-10-25) - a protected zone of vanilla wards (guard_stone) from two points plus 10 %, one ward or a group of up to 50 with minimal overlap, placed as if built with the hammer so every player sees the standard ward; one spell-bar entry opens the ward menu (New or Group-N, allowed players from the world's join history, Active / Deactivated / Deleted); new wards that meet your group join it; the host copies on/off and the permitted list across a group; monsters: vanilla ward rules only (trader-style guard researched and parked); card, assumptions, how it works, tests, limits, undo
 ---
 # dome (ward zone, feature Dome)
 
-Built 2026-10-25 in phase 4, wave 2 (session W2-dome) on Valheim 1.0.20, BepInEx 5.4.2351, unattended and without the game: compiled and staged, **not run in game yet**. Own game and own world only. Source: [src/Features/Dome/](../../src/Features/Dome/), DLL `HomeCheat.Cmd.dome.v<stamp>.dll`. The requirements and the plan card (backlog plan 3.8) are kept privately in HomeOS; this page holds only what the code does.
+Built 2026-10-25 in phase 4, wave 2 (session W2-dome) on Valheim 1.0.20, BepInEx 5.4.2351, unattended and without the game; first run in game 2026-10-25 (one ward from the Shield entries); the ward menu, Group-N names and the join history added the same day in an attended session (section Ward menu). Own game and own world only. Source: [src/Features/Dome/](../../src/Features/Dome/), DLL `HomeCheat.Cmd.dome.v<stamp>.dll`. The requirements and the plan card (backlog plan 3.8) are kept privately in HomeOS; this page holds only what the code does.
 
 ## Goal
 
 A protected zone like a trader camp, built from what every vanilla player already has: normal wards. Before: a ward is placed by hand and covers its own radius. After `op=dome&from=coords`: the zone between two marked points is covered by one ward at its centre, or by a group of wards without gaps when it is wider than one ward; the group acts as one ward. Other players need no mod: they see normal wards and their game applies the normal ward rules.
 
-This is build order steps 2 and 3 (single ward, then groups with synced on/off and permitted list). Not built yet: the server monster guard (step 4), the owner panel and hover text (step 5), extra effects and scale (step 6).
+This is build order steps 2 and 3 (single ward, then groups with synced on/off and permitted list) plus the ward menu, which replaces the owner panel of step 5 for the permitted list. Parked: the monster guard (step 4, Maksym 2026-10-25: wards are vanilla). Not built: hover text (step 5), extra effects and scale (step 6).
+
+## Ward menu (2026-10-25, attended, session "dome step 4")
+
+Maksym's redesign after the first in-game test: the Shield entries (start, end, place, list, remove) became **one** spell-bar entry, **Protect and Lights > Shield** (3.5) and **Build > Shield** (6.6), both `op=dome&step=menu`. It opens a one-screen window in the look of the mines form:
+
+| Row | Answers | Default |
+|---|---|---|
+| Wards placed | `New`, then your groups `Group-1` ... `Group-X` (only groups whose wards you created) | New |
+| Allowed | you (always: the creator has access, so you are shown ticked and greyed) and every player who has joined this world; for a group, its current list is ticked | you only |
+| Status | `Active`, `Deactivated`, `Deleted` (greyed for New) | Active; a group shows its state |
+
+Under Wards placed one line says what the pick means: for New the zone from the coord points (centre, radius + 10 %, how many wards at most, distance) or what is missing; for a group its ward count, centre, state, allowed count and distance. The button reads Place (New), Apply, or Delete (Status Deleted, with a red line naming how many wards go). Enter applies, Esc or Cancel closes; the answer shows as the game's centre text and in `LogOutput.log` (`dome menu: ...`).
+
+- **New**: covers the circle between the coord start and end points plus 10 % (`DomeLayout.Margin` 1.1) with wards, the hexagonal lattice at `Fill` 0.95 (overlaps as small as possible, 5 % of the ward radius left to move a ward off a blocked spot). Lattice spots whose cell your own dome wards already cover are left out. New wards whose circle meets a ward of one of your groups **join** that group (it keeps its on/off; its list gains the players ticked); meeting several groups merges them into the lowest number. Otherwise a new `Group-<max+1>` with the ticked players and the status.
+- **A group**: Apply writes the ticked list and Active / Deactivated to every ward of the group; Deleted removes all its wards (no materials back; the Apply click is the confirmation).
+- **Players who joined**: the host records every player it sees, per world, in `BepInEx/config/homecheat/dome-players.state` (this PC only, never in the repository): the players online (the host's player list, id from the character's ZDO `ZDOVars.s_playerID`) and every player on a ward's permitted list, at each rescan (every 30 s and every dome command). A player who has never been online while the host ran HomeCheat is not offered yet.
+- **Group numbers**: `Group-N`, N saved on every ward of the group (ZDO key `hc_dome_no`); a group built before the numbers got the next free number on the first rescan, in build order.
+- `op=dome&step=apply&group=new|<n>[&allow=<name>,<name>][&status=active|deactivated|deleted]` is the window's Apply as a command (tests, scripts): without `allow=` a group keeps its list (New: only you), without `status=` it keeps its state (New: active); an unknown name is refused with the known names.
+- **Monsters**: parked by Maksym's decision (2026-10-25, "wards are vanilla"). The research that led there: the trader camp keeps monsters out with an `EffectArea` of type `NoMonsters` that every game registers locally (`EffectArea.Awake`: its collider's bounds, a static list); `MonsterAI.UpdateAI` (untamed only) flees from a target inside the area and flees from the area's centre when itself within the bounds plus 8 m. Only the game that owns a creature runs its AI, and no networked vanilla prefab carries a working `NoMonsters` area (only `piece_shieldgenerator` / `charred_shieldgenerator`, switched off and never switched on by game code), so it cannot reach creatures run by another player's vanilla game. What the wards already do on every game: `guard_stone` carries a `PlayerBase` area of 20 m, and `SpawnSystem.IsSpawnPointGood` skips natural spawns inside one.
+
+The window is drawn on this PC only (an interface, not world graphics, R0 holds). While it is open `TextInput.IsVisible` returns true (postfix in `DomePatches`), so the cursor is free and the player stands still, as with the spell form.
 
 ## Card
 
 - Verdict: **new** command `dome` in a new feature `Dome` (catalog worked example "protection dome like the trader").
 - Fingerprint: effect place object (protect) / target ground, a zone / placement two points (centre and radius) / mechanism vanilla `PrivateArea` (`guard_stone`) and its ZDO.
 - Targets: no character is hit. Other players meet only the vanilla ward rules.
-- Persists in the world: the wards (normal world objects, saved with the world) and the group keys in their ZDOs: `hc_dome` (zone id, the ZDO mark), `hc_dome_cx`, `hc_dome_cz`, `hc_dome_r`, `hc_dome_n`, `hc_dome_sig`.
+- Persists in the world: the wards (normal world objects, saved with the world) and the group keys in their ZDOs: `hc_dome` (zone id, the ZDO mark), `hc_dome_cx`, `hc_dome_cz`, `hc_dome_r`, `hc_dome_n` (wards in the group), `hc_dome_no` (N of Group-N), `hc_dome_sig`. On this PC only: the join history `BepInEx/config/homecheat/dome-players.state`.
 - Who sees it: everyone (networked pieces spawned on the host; vanilla visuals only, nothing drawn on this PC alone).
 - Visual reference: the vanilla ward (`guard_stone`), never a copy of the trader dome (ASSUMPTION A1).
 - Probes: the ward radius (read live from the prefab, printed in every answer); the rest needs the game (open checks below).
@@ -28,9 +49,9 @@ This is build order steps 2 and 3 (single ward, then groups with synced on/off a
 | # | Assumption | Why |
 |---|---|---|
 | A1 | vanilla `guard_stone` visuals (settled in the plan review) | everyone sees the same; a trader-dome copy would show only on this PC |
-| A2 | menu: Protect > Shield (3.5.3-3.5.5), mirrored in Build > Shield (6.6.3-6.6.5) (settled) | Protect would be empty; a shield protects |
+| A2 | menu: Protect > Shield (3.5.3-3.5.5), mirrored in Build > Shield (6.6.3-6.6.5) (settled; replaced 2026-10-25 by one entry each, the ward menu) | Protect would be empty; a shield protects |
 | D1 | the ward radius is the prefab's `PrivateArea.m_radius`, read at run time (the code default is 10 m; the asset sets the real value, about 32 m, to confirm) | no hard-coded radius to go stale |
-| D2 | coverage: a hexagonal lattice with spacing sqrt(3) x 0.9 x ward radius; a blocked spot may move up to 10 % of the radius (rings at 5 % and 10 %, 8 directions) and still leaves no gap; checked offline for ward radius 32 m and 10 m, zone radius 5-150 m, nudged too | each vanilla client checks wards by horizontal distance with the ward's own radius, so the circles must overlap |
+| D2 | coverage: a hexagonal lattice with spacing sqrt(3) x 0.9 x ward radius (0.95 since 2026-10-25, Maksym: overlaps minimal; the slack is then 5 %); a blocked spot may move up to 10 % of the radius (rings at half and all of the slack, 8 directions) and still leaves no gap; checked offline for ward radius 32 m and 10 m, zone radius 5-150 m, nudged too | each vanilla client checks wards by horizontal distance with the ward's own radius, so the circles must overlap |
 | D3 | all or nothing: a spot that cannot take a ward refuses the whole dome and names the spots; `partial=1` places the rest and says how many gaps | a gap is an unprotected hole for other players |
 | D4 | "inside another player's ward" = the two ward areas overlap (centres closer than 2 x radius) for any ward whose creator is someone else, on or off | the hammer refuses overlap with enabled foreign wards (`PrivateArea.CheckAccess` with `wardCheck`); counting switched-off ones too is the safer reading |
 | D5 | height from the terrain (`ZoneSystem.GetGroundHeight`) at the spot and 8 points at 0.6 m (the base edge): a drop over 0.5 m is refused with the excess; the ward sits 0.05 m below the lowest edge, upright, turned to your facing | never in the air, never tilted; a sunk edge is better than a floating one |
@@ -48,6 +69,8 @@ This is build order steps 2 and 3 (single ward, then groups with synced on/off a
 
 | Form | What it does |
 |---|---|
+| `op=dome&step=menu` | the ward menu (section Ward menu): the one spell-bar entry |
+| `op=dome&step=apply&group=new|<n>[&allow=<names>][&status=active|deactivated|deleted]` | the menu's Apply as a command |
 | `op=dome&step=mark` (twice) | stand on a point on one edge, then on the opposite edge; the second answer shows the centre, the radius and how many wards it needs. Same points as `op=coord&set=start` / `end` |
 | `op=dome&from=coords` (or `step=build&from=coords`) | builds the dome between the coord start and end points |
 | `op=dome&from=x,z&to=x,z` | the same between two typed points (X and Z, the ground plane) |
@@ -73,7 +96,7 @@ Answers (first line):
 - `would remove dome d<id> with N ward(s): add confirm=1`, `removed dome d<id>: N ward(s)`
 - errors: `coord 'start' is not set ...`, `the two points are 0.4 m apart ...`, `radius=180.00 is over the cap 150.00`, `wards=61 is over the cap 50`, `cost=1: ...`, `host only: ...`, `no dome at the crosshair ...`
 
-Spell bar (`spells.txt`): Protect > Shield 3.5.3 Place shield (`op=dome&from=coords`), 3.5.4 List shields (`op=dome&step=list`), 3.5.5 Remove shield (`op=dome&step=remove&confirm=1`); the same in Build > Shield 6.6.3-6.6.5. Start and end points are 3.5.1-3.5.2 / 6.6.1-6.6.2 (`coord`).
+Spell bar (`spells.txt`, 2026-10-25): Protect and Lights > Shield 3.5 and Build > Shield 6.6, both `op=dome&step=menu`. Start and end points: Build > Coordinates (`coord`). The former entries 3.5.1-3.5.5 / 6.6.1-6.6.5 (start, end, place, list, remove) are gone; their commands still work typed.
 
 ## How it works
 
@@ -89,7 +112,7 @@ Build: zone from the two points (`DomeLayout.Zone`), lattice (`DomeLayout.Wards`
 
 Sync (`DomeCommand.Tick`, host only, every 2 s): see D11 and D12. It starts with the command (`OnLoad` inside a world), with every dome command, and when the local player spawns (postfix on `Player.OnSpawned`, `DomePatches`); leaving the world stops it, the next spawn starts it again. A sync writes the log line `dome <id>: ward at x,z changed to on|off, N permitted; copied to k other ward(s)`.
 
-Files: `DomeCommand.cs` (command, build, list, remove, sync), `DomeWards.cs` (ward ZDO keys, read / write / remove), `DomeLayout.cs` (Unity-free maths: zone, lattice, a coverage check), `DomePatches.cs` (the spawn postfix), `refs.txt` (`Splatform.dll` for the platform user id).
+Files: `DomeCommand.cs` (command, build, groups and their numbers, apply, list, remove, sync), `DomeMenu.cs` (the ward menu, IMGUI), `DomePlayers.cs` (the join history), `DomeWards.cs` (ward ZDO keys, read / write / remove), `DomeLayout.cs` (Unity-free maths: zone, lattice, a coverage check), `DomePatches.cs` (the spawn postfix, `TextInput.IsVisible` while the menu is open), `refs.txt` (`Splatform.dll` for the platform user id, `UnityEngine.IMGUIModule.dll` and `UnityEngine.TextRenderingModule.dll` for the menu).
 
 Change procedure: edit the files, `bash src/build.sh dome`, `op=reload`, `op=help&cmd=dome`.
 
@@ -120,16 +143,39 @@ Record each first answer line and what was seen below, then set the index status
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
 
+## In-game test 2026-10-25: ward menu
+
+World `ClaudeTest`, hosted on this PC; after the first test pass (section In-game test 2026-10-25 below).
+
+| Command | Answer (first line) | Observation | Verdict |
+|---|---|---|---|
+| `op=dome&step=list` (new build) | `Group-1 (d35e76e7b): centre -7.0,-3.5, radius 15.5 m, wards 1/1, on 1/1, permitted 0` | the older dome got its number on the first rescan | pass |
+| `op=dome&step=apply&group=1&status=deactivated`, then `status=active` | `Group-1: 1 ward(s) deactivated, allowed: you` / `... active ...`; list `on 0/1` between | a far ward changed through its ZDO | pass |
+| `op=dome&step=apply&group=1&allow=Nobody` | `ERROR: allow: 'Nobody' has not joined world ClaudeTest yet (known: Claude, Claude2)` | join history read | pass |
+| `op=dome&step=menu` | `dome menu opened: 1 group(s) of yours, 2 known player(s)` | window as designed: New / Group-1, Claude (you) greyed ticked, Claude2, Active / Deactivated / Deleted (greyed for New), the New line names the zone; Maksym: "all good" | pass |
+| `op=spells&reload=1` after the spell-file change | `56 spells, 21 titles, 5 pins; 0 bad lines` | Protect and Lights > Shield, Build > Shield | pass |
+
+Offline: the lattice at `Fill` 0.95 covers every zone radius 5-150 m for ward radius 10, 20 and 32 m without a gap, and a second overlapping zone with its covered spots left out still covers itself (a scratch Node port of `DomeLayout`; exes are blocked on this PC).
+
 ## Limits
 
-- Monsters are not kept out by HomeCheat yet: only what the vanilla ward does (open check 3). The server monster guard is build order step 4.
-- No owner panel: the vanilla flow only (a player adds or removes themselves while the ward is off); the creator cannot remove another player yet (step 5).
+- Monsters: only what the vanilla ward does (no natural spawns within 20 m of a ward, its `PlayerBase` area); a creature that walks in or is spawned inside stays and attacks. The trader-style guard is parked (Ward menu, Monsters).
+- Allowed offers only players the host has seen while running HomeCheat in this world (join history on this PC); a group's own list is always shown.
+- The menu shows and changes only your own groups; wards placed by hand are not groups.
 - The group follows within about 2 s and only while the host runs HomeCheat. Without it the wards stay normal, separate wards.
 - A far ward (not loaded on the host) changes state without its effect.
 - Build needs the zone's terrain loaded on this PC: stand near the centre of a large zone.
 - Zone radius 150 m, 50 wards; a ward radius smaller than expected (open check 2) raises the ward count (10 m: a 40 m zone needs 37 wards).
-- Nothing tested in game.
+- New, joining, merging and Deleted from the window: see the test log for what was run.
 
 ## Undo
 
 `op=dome&step=remove&confirm=1` aimed at the dome removes all its wards (no materials returned). A single ward can also be demolished with the hammer like any ward; `step=list` then shows the group with fewer wards. To remove the command, delete `HomeCheat.Cmd.dome.*.dll` from `BepInEx/homecheat-commands/` and restart the game ([README.md](README.md#undo-and-uninstall)); the wards stay in the world as normal wards.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. - Shield placed from the spell bar (Build or Protect > Shield: start, end, Place shield): dome `d35e76e7b`, centre -7.0,-3.5, radius 15.5 m, 1 ward, on, permitted 0. V.
+- A Greyling spawned inside the shield stayed inside and attacked: as built. Only the vanilla ward rules apply; keeping monsters out is build step 4, which was not part of steps 2-3. Maksym had expected mobs to leave, which the page and `DomeCommand.cs` already said was not built.
+- Step 4 (keep monsters out) was researched and parked; the Shield entries were redesigned as the ward menu: section Ward menu, test log In-game test 2026-10-25: ward menu.
+
+Still untested (B): ward groups and their gaps, the on/off and permitted sync, the refusals (water, building, slope, another player's ward, the cap), `partial=1`, `cost=1`, remove with `confirm=1`, a group across reload and logout (T-dome 1-14 except placing one ward).

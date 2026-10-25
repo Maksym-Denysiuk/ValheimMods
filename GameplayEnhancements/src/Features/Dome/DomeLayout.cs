@@ -18,9 +18,10 @@ namespace HomeCheat.Features.Dome
 
     internal static class DomeLayout
     {
-        public const float Fill = 0.9f;
+        public const float Fill = 0.95f;   // Maksym 2026-10-25: overlaps as small as possible; 5 % of the radius left for nudges
+        public const float Margin = 1.1f;   // the zone covered is the marked circle plus 10 % (Maksym 2026-10-25)
 
-        // the zone from two points on opposite edges: centre = midpoint, radius = half the distance (R1)
+        // the zone from two points on opposite edges: centre = midpoint, radius = half the distance (R1); callers add Margin
         public static void Zone(float ax, float az, float bx, float bz, out float cx, out float cz, out float radius)
         {
             cx = (ax + bx) * 0.5f;
@@ -66,6 +67,28 @@ namespace HomeCheat.Features.Dome
             ring.Sort(delegate (KeyValuePair<float, DomePoint> x, KeyValuePair<float, DomePoint> y) { return x.Key.CompareTo(y.Key); });
             foreach (KeyValuePair<float, DomePoint> kv in ring) pts.Add(kv.Value);
             return pts;
+        }
+
+        // true when the lattice point's own cell (its hexagon, circumradius Fill * wardRadius) already lies inside the existing
+        // wards: its centre and 12 points on the cell's circumcircle are each within wardRadius of one of them. A new ward there
+        // would only overlap (Maksym 2026-10-25: overlaps minimal), so it is left out.
+        public static bool Covered(DomePoint p, float wardRadius, List<DomePoint> existing)
+        {
+            if (existing.Count == 0) return false;
+            float cell = Fill * wardRadius, r2 = wardRadius * wardRadius;
+            for (int i = -1; i < 12; i++)
+            {
+                float x = p.X, z = p.Z;
+                if (i >= 0) { double a = i * Math.PI / 6.0; x += cell * (float)Math.Cos(a); z += cell * (float)Math.Sin(a); }
+                bool hit = false;
+                foreach (DomePoint w in existing)
+                {
+                    float dx = x - w.X, dz = z - w.Z;
+                    if (dx * dx + dz * dz <= r2) { hit = true; break; }
+                }
+                if (!hit) return false;
+            }
+            return true;
         }
 
         // true when every point of the zone is within wardRadius of some ward (checked on a sample grid: tests and preview)
