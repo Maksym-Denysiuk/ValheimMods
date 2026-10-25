@@ -687,27 +687,22 @@ namespace HomeCheat.Features.Construction
 
         // one raise stamp per 1 m column whose lowest piece (collider bottom; pivot for bushes, stones and other non-pieces)
         // hangs FitMin..FitMax above the base, levelled to that bottom; lower columns first, so a higher stamp's smoothing wins
+        // the fit surface (FitField): every piece's collider box over the 1 m cells it covers (bushes, stones and other non-pieces
+        // as a 0.5 m square at their pivot), then one raise stamp per raised cell, lowest first
         static List<Vector3> FitStamps(List<Job> jobs, float baseY, float levelOffset)
         {
-            Dictionary<long, float> low = new Dictionary<long, float>();
-            Dictionary<long, Vector2> at = new Dictionary<long, Vector2>();
+            List<FitField.Box> boxes = new List<FitField.Box>();
             foreach (Job j in jobs)
             {
                 if (j.Piece == null) continue;
-                long key = ((long)Mathf.FloorToInt(j.Pos.x) << 32) ^ (uint)Mathf.FloorToInt(j.Pos.z);
-                float b = Bottom(j), cur;
-                if (!low.TryGetValue(key, out cur) || b < cur) { low[key] = b; at[key] = new Vector2(Mathf.Floor(j.Pos.x) + 0.5f, Mathf.Floor(j.Pos.z) + 0.5f); }
+                Vector3 lo, hi;
+                if (PieceGhost.Box(j.Prefab, j.Rot, out lo, out hi))
+                    boxes.Add(new FitField.Box(j.Pos.x + lo.x, j.Pos.x + hi.x, j.Pos.z + lo.z, j.Pos.z + hi.z, j.Pos.y + lo.y));
+                else
+                    boxes.Add(new FitField.Box(j.Pos.x - 0.25f, j.Pos.x + 0.25f, j.Pos.z - 0.25f, j.Pos.z + 0.25f, j.Pos.y));
             }
             List<Vector3> stamps = new List<Vector3>();
-            foreach (KeyValuePair<long, float> kv in low)
-            {
-                float d = kv.Value - baseY;
-                if (d < FitMin || d > FitMax) continue;
-                Vector2 c = at[kv.Key];
-                stamps.Add(new Vector3(c.x, kv.Value - levelOffset, c.y));
-                if (stamps.Count >= MaxFitStamps) break;
-            }
-            stamps.Sort(delegate (Vector3 l, Vector3 r) { return l.y.CompareTo(r.y); });
+            foreach (float[] c in FitField.Build(boxes, baseY, FitMin, FitMax, MaxFitStamps)) stamps.Add(new Vector3(c[0], c[1] - levelOffset, c[2]));
             return stamps;
         }
 
@@ -830,6 +825,12 @@ namespace HomeCheat.Features.Construction
         // "<standing> of <placed> standing; support: n full, n good, n weak, n critical (weakest <prefab> 12%)"
         static string SupportLine(string id, int placed)
         {
+            return SupportLine(id, placed, null);
+        }
+
+        // breakdown (when given) collects the weak and critical pieces by prefab
+        static string SupportLine(string id, int placed, Dictionary<string, int> breakdown)
+        {
             List<ZNetView> pieces = Loaded(id);
             int grounded = 0, full = 0, good = 0, weak = 0, critical = 0;
             float worst = 2f;
@@ -844,6 +845,13 @@ namespace HomeCheat.Features.Construction
                 // -1 = at the material's maximum (the hammer's blue): the piece rests on the ground or a rock (IL 1.0.20)
                 if (v < 0f) { grounded++; continue; }
                 if (v >= 0.99f) full++; else if (v >= 0.5f) good++; else if (v >= 0.25f) weak++; else critical++;
+                if (v < 0.5f && breakdown != null)
+                {
+                    string pn = Prefabs.BaseName(nv.gameObject);
+                    int c;
+                    breakdown.TryGetValue(pn, out c);
+                    breakdown[pn] = c + 1;
+                }
                 if (v < worst) { worst = v; worstName = Prefabs.BaseName(nv.gameObject); }
             }
             return pieces.Count + " of " + (placed > 0 ? placed : pieces.Count) + " standing; support " + grounded + " grounded, " + full + " full, " + good + " good, " + weak + " weak, " + critical + " critical"
@@ -855,7 +863,14 @@ namespace HomeCheat.Features.Construction
             Host.RequireWorld();
             string id = a.Str("id", lastId);
             if (id.Length == 0) throw new CommandException("no build in this session: add id= (op=construct&step=status lists the loaded ones)");
-            return "build " + id + ": " + SupportLine(id, 0) + " (loaded pieces; grounded = rests on the ground or a rock, then full / good / weak / critical as the hammer colours them)";
+            Dictionary<string, int> low = new Dictionary<string, int>();
+            string line = SupportLine(id, 0, low);
+            List<KeyValuePair<string, int>> byCount = new List<KeyValuePair<string, int>>(low);
+            byCount.Sort(delegate (KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return r.Value.CompareTo(l.Value); });
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < byCount.Count && i < 12; i++) sb.Append(i == 0 ? "" : ", ").Append(byCount[i].Key).Append(" ").Append(byCount[i].Value);
+            return "build " + id + ": " + line + (sb.Length > 0 ? "; weak and critical by prefab: " + sb : "")
+                + " (loaded pieces; grounded = rests on the ground or a rock, then full / good / weak / critical as the hammer colours them)";
         }
 
         // loaded objects with the build mark: of one build, or of every build when id is empty
