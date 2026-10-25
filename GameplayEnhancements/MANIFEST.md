@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 23:10 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 23:30 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261025175610.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261025173212.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.transform.v20261025230546.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
 
@@ -9,7 +9,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | README.md | 7126 | 18d79d02b8c9d4a0 |
 | check.ps1 | 2271 | ef377005b0ad1b74 |
 | common.ps1 | 6198 | e01932f7436ce07e |
-| docs/FX/README.md | 9396 | d70d506502e1c9ef |
+| docs/FX/README.md | 9876 | 9ca1e6b2789476df |
 | docs/FX/fx_descriptions.md | 48415 | b2908a04c8db3844 |
 | docs/FX/images/fx_Fader_Roar.jpg | 93809 | 323faff117abaf90 |
 | docs/FX/images/fx_fader_meteor_hit.jpg | 81228 | 81b1d79ba2bcd2fc |
@@ -21,34 +21,34 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 20683 | 13634d91b5ed2c23 |
-| docs/HomeCheat-plugin/build-terrain.md | 22618 | bbf7235dd2a43f92 |
-| docs/HomeCheat-plugin/construct.md | 48427 | 7bcb4d8391fb7dda |
+| docs/HomeCheat-plugin/README.md | 22106 | c970a3b6653258b6 |
+| docs/HomeCheat-plugin/build-terrain.md | 22620 | 5e367b9ef1f77aa0 |
+| docs/HomeCheat-plugin/construct.md | 48438 | de541f4c38aec600 |
 | docs/HomeCheat-plugin/despawn.md | 6173 | af3e1209c9f57169 |
-| docs/HomeCheat-plugin/dome.md | 29637 | 64eb0b1a983ea3e8 |
+| docs/HomeCheat-plugin/dome.md | 29987 | 9114b0ba374a7265 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3891 | 4b54d93e3ba15a47 |
-| docs/HomeCheat-plugin/plant-field-place.md | 19565 | d63c66eb27ba8ff0 |
-| docs/HomeCheat-plugin/repair-refill.md | 6447 | fcc45595dc5af2a2 |
+| docs/HomeCheat-plugin/plant-field-place.md | 19871 | 6e6799e42f6c8243 |
+| docs/HomeCheat-plugin/repair-refill.md | 6724 | 4936df6978f69994 |
 | docs/HomeCheat-plugin/ship.md | 9042 | 7e0cabfd3b2a5354 |
 | docs/HomeCheat-plugin/tree-scale.md | 7387 | 5f0aa199ebf4a8a4 |
 | docs/Keybinds/README.md | 932 | de64f4a8395e06a3 |
 | docs/Keybinds/keybinds.md | 7458 | 0b016037d0f615d6 |
-| docs/Spells/README.md | 2978 | a6d79a0eb92485a8 |
+| docs/Spells/README.md | 3163 | 83a17c5cb3ce218c |
 | docs/Spells/earthquake.md | 11708 | 7a5cb7ebb1a4f2fe |
-| docs/Spells/slime.md | 10127 | 395b7498c1839237 |
+| docs/Spells/slime.md | 10200 | 310ae4c52e31286c |
 | docs/Spells/spellbar-design.md | 39023 | cf26f03666530969 |
-| docs/Spells/spellbar.md | 14487 | ef54b533af541749 |
+| docs/Spells/spellbar.md | 14504 | 952457dfb22d62ae |
 | docs/Spells/spellshot.md | 13951 | 1e84268ba193a1d8 |
-| docs/Spells/traps.md | 17892 | 867314b1391fd71b |
+| docs/Spells/traps.md | 17910 | f9599a66470300b3 |
 | docs/Transform/README.md | 1443 | e16785ab64ec53ee |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
-| docs/Transform/hidebody.md | 3129 | 611470fc69a21ccf |
-| docs/Transform/transform.md | 10376 | 5fe0d24d0d3586e9 |
-| docs/architecture/diagrams/homecheat-core.svg | 135390 | 7b6ddaa96a7f0f70 |
-| docs/architecture/diagrams/homecheat-features.svg | 219921 | 59a9f8f0dc7e8d68 |
+| docs/Transform/hidebody.md | 3171 | 724fafabe53e8936 |
+| docs/Transform/transform.md | 10614 | db31b7849545c8f3 |
+| docs/architecture/diagrams/homecheat-core.svg | 138043 | 474eb7de851e57e7 |
+| docs/architecture/diagrams/homecheat-features.svg | 246151 | 8a36e1c6b7a0dec6 |
 | docs/architecture/diagrams/homecheat-spells.svg | 85507 | 766f069ed9081efd |
-| docs/architecture/homecheat-architecture.md | 83982 | f3622bd5b66c6d55 |
-| docs/architecture/homecheat-commands.md | 33708 | b5b2ede2f0f0836d |
+| docs/architecture/homecheat-architecture.md | 84875 | 195145e1dfb6964e |
+| docs/architecture/homecheat-commands.md | 33854 | 422a588a7f9f0468 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5396 | 6f2056c02f530ecc |
@@ -99,16 +99,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 15836 | 614b0bfbc453682a |
-| skills/valheim-spells-craft/baseline.md | 1934 | 759a96fa16b31119 |
-| skills/valheim-spells-craft/evals.md | 37014 | da9b236f5085bd88 |
-| skills/valheim-spells-craft/instructions/done-gate.md | 8135 | 1f3163d7dbcc6c26 |
+| skills/valheim-spells-craft/SKILL.md | 16613 | a6df4ee20d4c1690 |
+| skills/valheim-spells-craft/baseline.md | 1934 | f3ab8b11960c32e8 |
+| skills/valheim-spells-craft/evals.md | 39414 | 210302331b49c3b0 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 8902 | 71092e2929316c76 |
 | skills/valheim-spells-craft/instructions/implement.md | 12758 | 5fc89e4dbb337c61 |
 | skills/valheim-spells-craft/instructions/plan.md | 5942 | 2e05c05717896bee |
 | skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
 | skills/valheim-spells-craft/instructions/spec-card.md | 6148 | 2a441916c0026ce3 |
-| skills/valheim-spells-craft/scripts/commands-check.js | 13503 | eaa8404c03922eb3 |
-| skills/valheim-spells-craft/skill-meta-data.md | 15909 | 7d0e8e2943c432be |
+| skills/valheim-spells-craft/scripts/commands-check.js | 14847 | 1285bed016e8b6a0 |
+| skills/valheim-spells-craft/skill-meta-data.md | 17005 | 50c2ec5c1b586ff6 |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |

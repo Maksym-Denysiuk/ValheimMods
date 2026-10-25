@@ -4,7 +4,8 @@
 // Usage: node commands-check.js [--list] [--json] [--baseline <baseline.md>] [--mods <ValheimMods folder>] [--pkg <GameplayEnhancements folder>] [--game <Valheim folder>]
 //   (no flag)   compare: command names in src/ (Core built-ins + Features/<F>), the catalog docs/homecheat-commands.md,
 //               (names and the Feature column), the command index GameplayEnhancements/docs/HomeCheat-plugin/README.md, the op= values
-//               in the game folder's spells.txt (--game, VALHEIM_DIR, VALHEIM_DIR_WIN, Steam libraries; else the payload copy, said so)
+//               in the game folder's spells.txt (--game, VALHEIM_DIR, VALHEIM_DIR_WIN, Steam libraries; else the payload copy, said so);
+//               every row of the catalog and index tables has its header's cell count (an unescaped | breaks the row)
 //   --list      print every command: name, feature, class, file
 //   --baseline  also check the anchors listed in baseline.md and how far its knowledge-sha is behind HEAD (git, HomeOS only)
 // Exit: 0 clean, 1 differences found, 2 a folder or file was not found.
@@ -81,6 +82,26 @@ function tableNames(file, heading) {
     }
   }
   return names;
+}
+
+// rows of the first table after a heading whose cell count differs from its header: an unescaped | in a cell (GFM
+// splits the row even inside a code span; write \|) shifts the status and page cells
+function badRows(file, heading) {
+  const lines = read(file).split(/\r?\n/);
+  let i = lines.findIndex(l => l.trim() === heading);
+  if (i < 0) return [];
+  const cells = l => l.replace(/\\\|/g, '').split('|').length - 2;
+  const out = [];
+  let want = 0;
+  for (i++; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (l.startsWith('#')) break;
+    if (!l.startsWith('|')) { if (want) break; continue; }
+    if (!want) { want = cells(l); continue; }
+    if (/^\|[-| :]+\|$/.test(l)) continue;
+    if (cells(l) !== want) out.push({ line: i + 1, name: l.split('|')[1].trim(), cells: cells(l), want });
+  }
+  return out;
 }
 
 // feature cell of each catalog row: { name: feature }
@@ -191,6 +212,11 @@ else {
   for (const n of names) if (!index.includes(n)) problems.push(`'${n}' is in the code but not in the command index`);
   for (const n of index) if (!names.has(n)) problems.push(`command index row '${n}' has no command in the code`);
 }
+
+// 3b. row shape of both tables (an unescaped | inside a cell)
+for (const [file, heading, label] of [[catalogFile, '## Catalog', 'homecheat-commands.md'], [indexFile, '## Command index', 'command index']])
+  for (const b of badRows(file, heading))
+    problems.push(`${label} line ${b.line} ('${b.name}') has ${b.cells} cells, the header ${b.want}: escape every | inside a cell as \\|`);
 
 // 4. spell file
 const sf = spellFile(R.pkg);
