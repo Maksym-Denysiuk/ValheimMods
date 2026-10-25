@@ -124,7 +124,10 @@ namespace HomeCheat.Features.Dome
             float bx = x + 140f, by = y;
             List<KeyValuePair<int, string>> picks = new List<KeyValuePair<int, string>>();
             picks.Add(new KeyValuePair<int, string>(0, "New"));
-            foreach (DomeCommand.GroupView g in groups) picks.Add(new KeyValuePair<int, string>(g.No, "Group-" + g.No));
+            Vector3 me3 = Player.m_localPlayer.transform.position;
+            foreach (DomeCommand.GroupView g in groups)   // "Group-1 (5 wards, 65 m)": the count and distance tell groups apart
+                picks.Add(new KeyValuePair<int, string>(g.No, "Group-" + g.No + " (" + g.Wards + (g.Wards == 1 ? " ward, " : " wards, ")
+                    + Fmt.F(DomeWards.DistanceXZ(me3, new Vector3(g.Cx, 0f, g.Cz)), 0) + " m)"));
             foreach (KeyValuePair<int, string> pk in picks)
             {
                 float bw = Mathf.Max(80f, sBtn.CalcSize(new GUIContent(pk.Value)).x + 20f);

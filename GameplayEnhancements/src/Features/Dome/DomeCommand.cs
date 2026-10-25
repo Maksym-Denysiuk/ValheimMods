@@ -260,7 +260,7 @@ namespace HomeCheat.Features.Dome
             }
             else st = wanted ?? DomeWards.Read(placed[0]);
             WriteGroup(all, st);
-            if (touched.Count == 0) groupNos[id] = no;
+            if (touched.Count == 0) { groupNos[id] = no; DomeNumbers.Used(no); }
             Rescan();
 
             return "dome Group-" + no + " (" + id + "): placed " + placed.Count + " ward(s) (" + zone + ")" + (bad > 0 ? ", " + bad + " spot(s) skipped (gaps)" : "")
@@ -303,9 +303,10 @@ namespace HomeCheat.Features.Dome
 
         string GroupName(string id) { return "Group-" + GroupNo(id); }
 
+        // never a number given before in this world, also when that group was deleted since (DomeNumbers)
         int NextGroupNo()
         {
-            int max = 0;
+            int max = DomeNumbers.Highest;
             foreach (int n in groupNos.Values) if (n > max) max = n;
             return max + 1;
         }
@@ -324,7 +325,8 @@ namespace HomeCheat.Features.Dome
                 else groupNos[kv.Key] = no;
             }
             unnumbered.Sort(delegate (string x, string y) { return x.Length != y.Length ? x.Length.CompareTo(y.Length) : string.CompareOrdinal(x, y); });
-            foreach (string id in unnumbered) groupNos[id] = NextGroupNo();
+            foreach (int n in groupNos.Values) DomeNumbers.Used(n);
+            foreach (string id in unnumbered) { groupNos[id] = NextGroupNo(); DomeNumbers.Used(groupNos[id]); }
             foreach (KeyValuePair<string, List<ZDO>> kv in groups)
             {
                 int no = groupNos[kv.Key];
