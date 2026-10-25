@@ -30,13 +30,14 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 - Who sees it: everyone (networked on the host; checked on Claude2, which has no mod) | only this PC (a look other players should see is never left local)
 - Visual reference: <prefab> | to choose with /valheim-spell-fx
 - Probes: <facts only the game can tell (prefab names, asset values, status-effect names), each with the read-only command that reads it> | none
+- Measure: <the read-only step that measures the result on the world (terrain heights against the target, pieces standing, area covered) and the gate on it> | none (required for a command that changes terrain or builds)
 - Defaults: <parameter=value ...> (works with only <essential parameter>)
 - Caps: <limit, why, how reported>
 - Undo: <parameter or way back>
 
 ## How it is built
 - Feature folder: src/Features/<F>/ (existing | new); class <Name>Command : CommandBase | : AttackCommand (damages or pushes characters: the PvP rule) | <Name>Effect : HarmEffect
-- Menu: the level or panel it joins still fits one ring (8 to 12 entries); a safety flag the menu would always send becomes a form question, safe answer first; messages: failures only (no own toast)
+- Menu: the level or panel it joins still fits one ring (8 to 12 entries); `ask=` flags, or a feature-owned window when rows depend on another answer, several picks are made at once or a stateful flow shows its state (models `DomeMenu`, `ConstructPanel`); a safety flag the menu would always send becomes a form question, safe answer first; messages: failures only (no own toast)
 - Sub-actions: <key=...> (read-only helpers)
 - OnLoad needs: patches <...>, owned GameObjects <...> (Own: across worlds | OwnInWorld: until the player leaves the world), timers <...>, OnWorldExit <state reset or none>; refs.txt <dll>
 - Kit reused: <helpers>; game objects reused: <Aoe, Projectile, ...>
