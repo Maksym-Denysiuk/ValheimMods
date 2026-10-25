@@ -15,7 +15,7 @@ using UnityEngine;
 
 namespace HomeCheat.Features.Traps
 {
-    public sealed class TrapCommand : CommandBase
+    public sealed class TrapCommand : AttackCommand
     {
         internal static TrapCommand Current;
 
@@ -42,6 +42,8 @@ namespace HomeCheat.Features.Traps
         const string KeyMult = "hc_trap_mult";
         const string KeyFxBoom = "hc_trap_fxboom";
         const string KeyFxEnd = "hc_trap_fxend";
+        const string KeyPvp = "hc_trap_pvp";       // 0 = no pvp=1 (hits every player), 1 = placer's PvP was on (hits players), 2 = it was off (spares other players)
+        const string KeyPlacer = "hc_trap_placer"; // the placer's player id (with pvp=1 the placer is still hit by his own mine)
 
         readonly List<ZNetView> live = new List<ZNetView>();
         readonly Dictionary<string, TrapWeapon> weapons = new Dictionary<string, TrapWeapon>();
@@ -63,7 +65,7 @@ namespace HomeCheat.Features.Traps
             {
                 return "trap type=" + TrapKind.Names + " [perrow=1] [rows=1] (1..9 each, the matrix is centred on the point; rows run along your look direction) [spacing=2] [at=aim|self] [dist=3 (with at=self: metres ahead)] "
                     + "[life=300 (s, cap 3600, then it vanishes)] [arm=3 (s before it can go off)] [trigger=1.5 (m, cap 5)] [blast=3 (m, cap 10)] [weapon=BowAshlands] [quality=max] [mult=2 (x the weapon damage, cap 10)] "
-                    + "[prefab=<visual with a vanilla Trap; default piece_trap_troll, else fuling_trap>] [fxplace=, fxboom=, fxend= (comma lists of fx prefabs, none = no effect)]; "
+                    + "[prefab=<visual with a vanilla Trap; default piece_trap_troll, else fuling_trap>] [fxplace=, fxboom=, fxend= (comma lists of fx prefabs, none = no effect)] [pvp=0 (1 = the AttackCommand PvP rule, taken when the mine is laid: your PvP on = other players are hit whatever their own setting, off = they are spared; you, creatures and tamed animals are hit either way)]; "
                     + "mine = goes off once when any player or creature (you, other players, tamed, bosses) comes within trigger, hits everyone within blast with no player attacker (like a monster's hit, no PvP needed), then is gone; "
                     + "host only; cap 50 live traps in the loaded area; only the host's loaded area is watched. type=probe&filter=trap lists prefabs with a Trap (read-only).";
             }
@@ -97,6 +99,7 @@ namespace HomeCheat.Features.Traps
             string fxPlace = a.Str("fxplace", kind.FxPlace), fxBoom = a.Str("fxboom", kind.FxBoom), fxEnd = a.Str("fxend", kind.FxEnd);
 
             GameObject visual = PickVisual(a.Str("prefab", ""), kind);
+            int pvpMode = PvpAsked(a) ? (HitsPlayers(a) ? 1 : 2) : 0;   // fixed when laid: the placer may be gone when it goes off
 
             Rescan();
             int count = perrow * rows;
@@ -134,6 +137,8 @@ namespace HomeCheat.Features.Traps
                         z.Set(KeyMult, mult);
                         z.Set(KeyFxBoom, fxBoom);
                         z.Set(KeyFxEnd, fxEnd);
+                        z.Set(KeyPvp, pvpMode);
+                        z.Set(KeyPlacer, p.GetPlayerID());
                         Inert(go, z);
                         Effects(fxPlace, pos);
                         live.Add(nv);
@@ -151,7 +156,7 @@ namespace HomeCheat.Features.Traps
             return "placed " + placed + " " + kind.Name + (placed == 1 ? "" : "s") + " (" + perrow + "x" + rows + ", spacing " + Fmt.F(spacing, 1) + " m) at " + Fmt.Vec(centre)
                 + (aimed ? "" : " (nothing aimed at: 8 m ahead)") + ", visual " + visual.name + ", life " + Fmt.F(life, 0) + " s, arms after " + Fmt.F(arm, 1) + " s, trigger "
                 + Fmt.F(trigger, 1) + " m, blast " + Fmt.F(blast, 1) + " m, damage " + Fmt.F(dmg.GetTotalDamage(), 0) + " (" + Fmt.F(mult, 1) + " x " + w.Label + "); live traps "
-                + live.Count + "/" + MaxLive + "; hits players and creatures alike"
+                + live.Count + "/" + MaxLive + (pvpMode == 0 ? "; hits players and creatures alike" : pvpMode == 1 ? "; other players hit (your PvP on)" : "; other players spared (your PvP off)")
                 + (firstErr != null ? " ; first error: " + firstErr : "");
         }
 
@@ -274,17 +279,20 @@ namespace HomeCheat.Features.Traps
                 Vector3 pos = nv.transform.position;
                 if (now >= z.GetLong(KeyEnd, 0L)) { Vanish(nv, z.GetString(KeyFxEnd, "")); continue; }
                 if (now < z.GetLong(KeyArm, 0L)) continue;
-                Character by = Triggered(pos, z.GetFloat(KeyTrigger, 1.5f), chars);
+                Character by = Triggered(pos, z.GetFloat(KeyTrigger, 1.5f), chars, z.GetInt(KeyPvp, 0) == 2, z.GetLong(KeyPlacer, 0L));
                 if (by != null) Boom(nv, z, pos, by, chars);
             }
         }
 
         // the first living character within the trigger radius (a point trap; the fence will check a segment here)
-        static Character Triggered(Vector3 pos, float radius, List<Character> chars)
+        // (a spared player, pvp=1 laid with PvP off, walks over it safely)
+        static Character Triggered(Vector3 pos, float radius, List<Character> chars, bool spareOthers, long placer)
         {
             foreach (Character c in chars)
             {
                 if (c == null || c.IsDead()) continue;
+                Player pl = c as Player;
+                if (spareOthers && pl != null && pl.GetPlayerID() != placer) continue;
                 Vector3 d = c.transform.position - pos;
                 if (Mathf.Abs(d.y) > HeightReach) continue;
                 d.y = 0f;
@@ -300,6 +308,8 @@ namespace HomeCheat.Features.Traps
             float blast = z.GetFloat(KeyBlast, 3f);
             TrapWeapon w = Weapon(z.GetString(KeyWeapon, "BowAshlands"), z.GetString(KeyQuality, "max"));
             float mult = z.GetFloat(KeyMult, 2f);
+            bool spareOthers = z.GetInt(KeyPvp, 0) == 2;
+            long placer = z.GetLong(KeyPlacer, 0L);
             int hit = 0;
             if (w != null)
             {
@@ -310,6 +320,8 @@ namespace HomeCheat.Features.Traps
                     if (Mathf.Abs(d.y) > HeightReach) continue;
                     d.y = 0f;
                     if (d.magnitude > blast) continue;
+                    Player pl = c as Player;
+                    if (spareOthers && pl != null && pl.GetPlayerID() != placer) continue;   // pvp=1 laid with PvP off
                     HitData h = new HitData();
                     h.m_damage = w.Damage;
                     h.m_damage.Modify(mult);

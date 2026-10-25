@@ -1,4 +1,4 @@
-// Base of every effect aimed at a player (slime, earthquake): target resolution and ring placement.
+// Base of every effect aimed at a player (slime, earthquake): target resolution and ring placement; the PvP rule from AttackCommand.
 // Reachable as op=<name> and as op=harmeffect&kind=<name>.
 using System.Collections.Generic;
 using HomeCheat.Kit;
@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace HomeCheat
 {
-    public abstract class HarmEffect : CommandBase
+    public abstract class HarmEffect : AttackCommand
     {
         // the player the effect is centred on: parameter 'target' (nickname), default the local player
         protected static Player Target(Args a)

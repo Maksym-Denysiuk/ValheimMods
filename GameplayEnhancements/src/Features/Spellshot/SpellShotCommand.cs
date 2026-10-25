@@ -10,14 +10,14 @@ using UnityEngine;
 
 namespace HomeCheat.Features.Spellshot
 {
-    public sealed class SpellShotCommand : CommandBase
+    public sealed class SpellShotCommand : AttackCommand
     {
         public override string Name { get { return "spellshot"; } }
         protected override string Usage
         {
             get
             {
-                return "spellshot type=arrow|balistashot|thunderbolt|harpoon [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [push=1 (x strike push force; enemies are pushed, you are not hit at all)]; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
+                return "spellshot type=arrow|balistashot|thunderbolt|harpoon [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [push=1 (x strike push force; enemies are pushed, you are not hit at all)] " + PvpUsage + "; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
                     + "harpoon = the Abyssal Harpoon's projectile (SpearChitin) carrying its vanilla pull status effect (Harpooned): a hit enemy is reeled in like with the harpoon, costs your stamina by the target's weight, block or attack releases it, bosses break free; [se=<status effect name> (default: the harpoon item's own)] [speed= (default: the harpoon's throw speed)]; "
                     + "perrow/rows are 1..9 (even counts centre the grid between items); formation is centred on the crosshair, all shots fly along it; "
                     + "local player only (owner = you). type=probe&filter=<text> lists projectile prefabs.";
@@ -26,6 +26,8 @@ namespace HomeCheat.Features.Spellshot
 
         const int MaxCount = 81;
         float lastShot = -100f;   // volley cooldown
+        bool pvpHit;              // pvp=1 and the caster's PvP on (set per volley)
+        string pvpNote = "";      // the pvp part of the first answer line
 
         // type -> candidate prefab names (a Projectile prefab, or an ammo item whose attack fires one), first existing wins
         static string[] Candidates(string type)
@@ -73,6 +75,9 @@ namespace HomeCheat.Features.Spellshot
             Player p = Players.Local;
             Camera cam = Camera.main;
             if (p == null || cam == null) return "ERROR: no local player or camera (load a world first)";
+            // pvp=1: the PvP rule of AttackCommand (own PvP on = shots and strikes hit other players, whatever their own setting)
+            pvpHit = HitsPlayers(a);
+            pvpNote = PvpNote(a);
             if (Time.time - lastShot < 0.4f) return "ERROR: cooldown, wait a moment between volleys";
 
             // resolve projectile prefab and (optionally) the ammo item
@@ -150,7 +155,7 @@ namespace HomeCheat.Features.Spellshot
                         if (isProj)
                         {
                             Vector3 pos = C + Rt * dx + Up * dy;
-                            Fire(p, setup, projPrefab, ammoPrefab, pos, D, speed, dmgMul, seHash);
+                            Fire(p, setup, projPrefab, ammoPrefab, pos, D, speed, dmgMul, seHash, pvpHit);
                         }
                         else
                         {
@@ -177,7 +182,7 @@ namespace HomeCheat.Features.Spellshot
                                         foreach (ZSFX au in carrier.GetComponentsInChildren<ZSFX>()) au.enabled = false;
                                         foreach (CamShaker cs in carrier.GetComponentsInChildren<CamShaker>()) cs.enabled = false;
                                     }
-                                    ArmAoe(p, carrier, strikeDamage, a.Float("push", 1f));
+                                    ArmAoe(p, carrier, strikeDamage, a.Float("push", 1f), pvpHit);
                                 }
                             }
                         }
@@ -190,11 +195,11 @@ namespace HomeCheat.Features.Spellshot
                 }
             return "spellshot " + type + " " + perrow + "x" + rows + " = " + ok + " projectiles (" + (isProj ? "prefab " + projPrefab.name : "strike prefab " + projPrefab.name)
                 + (used != null && used != projPrefab.name ? " via " + used : "") + (seName != null ? ", status effect " + seName : "") + ") from " + Fmt.Vec(C) + " along " + Fmt.Vec(D)
-                + (firstErr != null ? " ; first error: " + firstErr : "");
+                + pvpNote + (firstErr != null ? " ; first error: " + firstErr : "");
         }
 
         // gives the biggest Aoe of 'go' lightning damage and hands it the player as owner (so it never hits the player)
-        static void ArmAoe(Player p, GameObject go, float dmg, float push)
+        static void ArmAoe(Player p, GameObject go, float dmg, float push, bool hitPlayers)
         {
             Aoe big = null;
             foreach (Aoe ao in go.GetComponentsInChildren<Aoe>())
@@ -202,8 +207,7 @@ namespace HomeCheat.Features.Spellshot
             foreach (Aoe ao in go.GetComponentsInChildren<Aoe>())
             {
                 ao.m_damage.m_lightning = ao == big ? dmg : 0f;
-                ao.m_hitOwner = false;
-                ao.m_hitFriendly = false; // the player (and friendlies of the owner) are skipped, so only enemies are hit and pushed
+                PvpHits.ArmAoe(ao, hitPlayers);   // never the owner; other players only with pvp=1 and your PvP on
                 ao.m_attackForce *= push;
                 ao.m_knockBackForce *= push;
             }
@@ -212,21 +216,27 @@ namespace HomeCheat.Features.Spellshot
             foreach (MethodInfo m in typeof(Aoe).GetMethods(all))
             {
                 if (m.Name != "Setup" && !m.Name.EndsWith(".Setup")) continue;
-                HitData hit = new HitData();
-                hit.m_damage.m_lightning = dmg;
-                hit.m_pushForce = 100f * push;
-                ParameterInfo[] ps = m.GetParameters();
-                object[] args = new object[ps.Length];
-                for (int k = 0; k < ps.Length; k++)
+                // every Aoe gets the player as owner: lightningAOE also has AOE_ROD (a 100 m column, push 100) next to AOE_AREA,
+                // and an ownerless rod pushed the caster (in-game test 2026-10-25)
+                foreach (Aoe ao in go.GetComponentsInChildren<Aoe>())
                 {
-                    Type t = ps[k].ParameterType;
-                    if (typeof(Character).IsAssignableFrom(t)) args[k] = p;
-                    else if (t == typeof(Vector3)) args[k] = Vector3.zero;
-                    else if (t == typeof(float)) args[k] = 0f;
-                    else if (t == typeof(HitData)) args[k] = hit;
-                    else args[k] = null;
+                    HitData hit = new HitData();
+                    hit.m_damage.m_lightning = ao == big ? dmg : 0f;
+                    hit.m_pushForce = 100f * push;
+                    PvpHits.ArmHit(hit, hitPlayers);
+                    ParameterInfo[] ps = m.GetParameters();
+                    object[] args = new object[ps.Length];
+                    for (int k = 0; k < ps.Length; k++)
+                    {
+                        Type t = ps[k].ParameterType;
+                        if (typeof(Character).IsAssignableFrom(t)) args[k] = p;
+                        else if (t == typeof(Vector3)) args[k] = Vector3.zero;
+                        else if (t == typeof(float)) args[k] = 0f;
+                        else if (t == typeof(HitData)) args[k] = hit;
+                        else args[k] = null;
+                    }
+                    m.Invoke(ao, args);
                 }
-                m.Invoke(big, args);
                 break;
             }
         }
@@ -296,6 +306,7 @@ namespace HomeCheat.Features.Spellshot
                         float segLen = len / n;
                         Player owner = p;
                         float dd = dmg, sc = scale, fs = fxScale, lifeS = life, pushF = push;
+                        bool pvpB = pvpHit;
                         Later(delay, delegate
                         {
                             try
@@ -310,7 +321,7 @@ namespace HomeCheat.Features.Spellshot
                                 foreach (Light l in c.GetComponentsInChildren<Light>()) l.enabled = false;
                                 foreach (ZSFX z in c.GetComponentsInChildren<ZSFX>()) z.enabled = false;
                                 foreach (CamShaker cs in c.GetComponentsInChildren<CamShaker>()) cs.enabled = false;
-                                ArmAoe(owner, c, dd, pushF);
+                                ArmAoe(owner, c, dd, pushF, pvpB);
                             }
                             catch (Exception e) { HomeApi.Log("spellshot beam point: " + e.Message); }
                         });
@@ -319,7 +330,7 @@ namespace HomeCheat.Features.Spellshot
                 }
             return "spellshot thunderbolt beam " + perrow + "x" + rows + " = " + beams + " beams, " + points + " strikes, avg length "
                 + (totalLen / beams).ToString("F1") + " m, damage " + dmg + " per strike, from " + Fmt.Vec(origin) + " along " + Fmt.Vec(D)
-                + (aimed ? " (crosshair " + Fmt.Vec(ap) + ")" : " (nothing aimed at)");
+                + (aimed ? " (crosshair " + Fmt.Vec(ap) + ")" : " (nothing aimed at)") + pvpNote;
         }
 
         static bool Odd(int n) { return n >= 1 && n <= 9; } // any count 1..9; even counts have no centre item, the grid is symmetric around the crosshair
@@ -358,7 +369,7 @@ namespace HomeCheat.Features.Spellshot
         }
 
         // builds the Setup argument list from the parameter types, so a changed signature still works
-        static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul, int seHash)
+        static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul, int seHash, bool hitPlayers)
         {
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(projPrefab, pos, Quaternion.LookRotation(dir));
             Projectile pr = go.GetComponent<Projectile>();
@@ -381,6 +392,7 @@ namespace HomeCheat.Features.Spellshot
             }
             if (dmgMul != 1f) hit.m_damage.Modify(dmgMul);
             hit.m_skill = pr.m_skill;
+            PvpHits.ArmHit(hit, hitPlayers);
             if (seHash != 0) hit.m_statusEffectHash = seHash; // harpoon: applied on hit, the owner becomes the attacker
 
             ParameterInfo[] ps = setup.GetParameters();
@@ -402,6 +414,7 @@ namespace HomeCheat.Features.Spellshot
                 else args[k] = null;
             }
             setup.Invoke(pr, args);
+            if (hitPlayers) PvpHits.MarkProjectile(pr);   // the game's Projectile drops m_ignorePVP on the way to the hit
         }
 
         // discovery helper: projectile prefabs and ammo items matching 'filter'

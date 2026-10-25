@@ -19,7 +19,7 @@ namespace HomeCheat.Features.Earthquake
             get
             {
                 return "earthquake [target=<nick, other player only if this game is the host>] [stages=5] [hits=2] [delay=0.003 s between hits of one point] [stagegap=0.4 s between stages]"
-                    + " [radius=<r m, default the slam radius>] [spacing=<m between points, default 1.4r so neighbouring slams overlap>] [aoe=<slam prefab>] [damage=0 (0 = push only; >0 = x the damage of weapon=, the caster is the attacker)] [weapon=SledgeStagbreaker, with mode=strong SledgeDemolisher (the hammer whose damage the slams carry; auto = the strongest Sledge* item of this game, the debug SledgeCheat excluded)] [quality=max (item level 1..max; damage = base + per-level x (quality - 1))] [mode=simple|strong (push x2.1 = Demolisher sledge value, or x8.4; strong also takes the stronger hammer)] [force=<own multiplier, overrides mode>] [players=1 (also pushes other players and friendly or tamed creatures, never yourself; 0 = enemies only)] [props=0]"
+                    + " [radius=<r m, default the slam radius>] [spacing=<m between points, default 1.4r so neighbouring slams overlap>] [aoe=<slam prefab>] [damage=0 (0 = push only; >0 = x the damage of weapon=, the caster is the attacker)] [weapon=SledgeStagbreaker, with mode=strong SledgeDemolisher (the hammer whose damage the slams carry; auto = the strongest Sledge* item of this game, the debug SledgeCheat excluded)] [quality=max (item level 1..max; damage = base + per-level x (quality - 1))] [mode=simple|strong (push x2.1 = Demolisher sledge value, or x8.4; strong also takes the stronger hammer)] [force=<own multiplier, overrides mode>] [players=1 (also pushes other players and friendly or tamed creatures, never yourself; 0 = enemies only)] " + PvpUsage + " (with pvp=1 it decides instead of players=) [props=0]"
                     + " [stone=rock_7] [stonefrom=2] [stonestep=2 (stones on every 2nd ring from stonefrom: 1 = every ring)] [tilt=45 (deg, top leans away from the player)] [stoney=0 (m, lift)] [stonelife=60 (s from the command until the INNERMOST stone circle breaks, 0 = they stay)] [dropcount=<n or min-max> (stones dropped by each broken rock, default 1; game = as the game rolls it, Rock_7: 3-6)] [stonegap=10 (s each circle further out breaks earlier)] [stoneyaw=90 (deg, spin of each stone about its own axis; 90 puts the wide side along the circle)] [noStones=1]"
                     + " | fx=layered (set five as accepted: rings vfx_troll_groundslam, linger vfx_darkland_groundfog, stone break fx_tombstone_destroyed + sfx_rock_wall_crumble) | fx=earth (DEFAULT, accepted set: cast fx_goblinbrute_groundslam, rings vfx_troll_groundslam, stone-break fx_tombstone_destroyed + sfx_rock_wall_crumble, linger vfx_darkland_groundfog; fx=none = no effect layers; stonefx= adds an effect when stones rise) or castfx= ringfx= stonefx= breakfx= breaksfx= lingerfx= (prefab names) lingerdur=20 fxevery=4 | kill=<radius m> (kills all untamed creatures around you, no effect run)";
             }
@@ -69,6 +69,9 @@ namespace HomeCheat.Features.Earthquake
                 if (!PickWeapon(w, a.Str("quality", "max"))) throw new CommandException("weapon '" + w + "' not found or has no damage (op=list&filter=Sledge)");
             }
             hitPlayers = a.Flag("players", true);
+            // pvp=1: the PvP rule of AttackCommand decides instead of players=
+            bool pvp = PvpAsked(a);
+            if (pvp) hitPlayers = HitsPlayers(a);
             string mode = a.Str("mode", "simple").ToLowerInvariant();
             if (mode != "simple" && mode != "strong" && mode != "1" && mode != "2") return "ERROR: mode must be simple or strong (got '" + mode + "')";
             bool strong = mode == "strong" || mode == "2";
@@ -190,7 +193,7 @@ namespace HomeCheat.Features.Earthquake
                 }
             }
             sb.Append(Probe(center, stages * r + r, stages * stageGap + 2.5f));
-            sb.Append("earthquake: ").Append(totalHits).Append(" slams, ").Append(totalStones).Append(" stones; slam prefab ").Append(slam).Append(" (").Append(slamSrc)
+            sb.Append("earthquake: ").Append(totalHits).Append(" slams, ").Append(totalStones).Append(" stones; players ").Append(hitPlayers ? "hit" : "spared").Append(pvp ? " (your PvP " + (hitPlayers ? "on" : "off") + ")" : "").Append("; slam prefab ").Append(slam).Append(" (").Append(slamSrc)
               .Append("), slam r=").Append(slamR.ToString("F2")).Append(", ring step r=").Append(r.ToString("F2")).Append(", spacing ").Append(spacing.ToString("F2"))
               .Append(", mode ").Append(strong ? "strong" : "simple").Append(", force x").Append(force.ToString("F1")).Append(", damage x").Append(damage.ToString("F2")).Append(weaponName.Length > 0 ? " of " + weaponName + " (" + weaponDamage.ToString().Replace('\n', ' ').Trim() + ", total " + weaponDamage.GetTotalDamage().ToString("F0") + ")" : " (push only)").Append(", props=").Append(props).Append(", delay ").Append(delay.ToString("F3")).Append(" s, centre ").Append(Fmt.Vec(center));
             return sb.ToString();
@@ -213,11 +216,8 @@ namespace HomeCheat.Features.Earthquake
                 try
                 {
                     // the owner (the player in the centre) is the attacker and is never hit; damage 0 = push only
-                    aoe.m_hitOwner = false;
-                    // players and friendly or tamed creatures are pushed too (players=0 turns that off); the owner is still never hit
-                    aoe.m_hitFriendly = hitPlayers;
-                    aoe.m_ignorePVP = hitPlayers;
-                    aoe.m_hitSame = hitPlayers;      // the slam otherwise skips targets of the owner's own kind, i.e. other players
+                    // the owner is never hit; players and friendly or tamed creatures are pushed too when hitPlayers (players=, or pvp=1)
+                    PvpHits.ArmAoe(aoe, hitPlayers);
                     aoe.m_hitProps = props && aoe.m_hitProps;
                     aoe.m_hitTerrain = false;
                     if (damage > 0f && weaponName.Length > 0)

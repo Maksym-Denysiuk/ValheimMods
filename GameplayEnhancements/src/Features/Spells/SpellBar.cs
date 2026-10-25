@@ -152,14 +152,14 @@ namespace HomeCheat.Features.Spells
             Spell s;
             bool has = file.Pins.TryGetValue(cell, out s);
             bool placing = assigning != null;
-            string key = cell[0] == 'S' ? "Shift+" + cell[1] : cell;
+            string key = SpellParse.KeyName(cell);
             GroupElement ge = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
             ge.Init(new SpellLeafConfig(has ? s.Label : "(empty)", has ? IconOf(s) : null), back, radial);
             SetSubTitle(ge, placing ? key + "   click: place \"" + assigning.Label + "\" here" : key + (has ? "   Shift+RMB: empty this cell" : "   Shift+click a spell to place it"));
             ge.Interact = delegate()
             {
                 if (assigning != null) AssignTo(cell);
-                else if (has && s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, cell), 0, null, null), new SpellHotbarConfig(this));
+                else if (has && s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, cell), 0, null, null), new SpellHotbarConfig(this, SpellParse.PanelOf(cell)));
                 else if (has) CastSpell(s, false, cell, null);
                 return true;
             };
@@ -182,7 +182,7 @@ namespace HomeCheat.Features.Spells
         // ---- placing a spell on the bar ---------------------------------------------------------------------------------------
 
         // (re)opens the Hotbar section so it shows the current cells
-        void OpenHotbar(RadialBase radial) { OpenLevel(radial, new SpellHotbarConfig(this), Root()); }
+        void OpenHotbar(RadialBase radial) { OpenLevel(radial, new SpellPanelsConfig(this), Root()); }
 
         // RMB is the radial's Back; with Shift held it must not go back, because Shift+RMB empties a Hotbar cell
         RadialBase backWrappedFor;   // the radial whose Back is already wrapped by this bar
@@ -244,7 +244,7 @@ namespace HomeCheat.Features.Spells
             foreach (string k in SpellFile.PinOrder) { Spell p; if (file.Pins.TryGetValue(k, out p) && p == s) file.Pins.Remove(k); }
             file.Pins[cell] = s;
             file.SaveOverrides();
-            string msg = s.Label + " placed on " + (cell[0] == 'S' ? "Shift+" + cell[1] : cell);
+            string msg = s.Label + " placed on " + SpellParse.KeyName(cell);
             HomeApi.Log("spells: " + msg);
             assigning = null;
             Toast(msg, false);
@@ -254,7 +254,7 @@ namespace HomeCheat.Features.Spells
         {
             if (!file.Pins.Remove(cell)) return;
             file.SaveOverrides();
-            Toast("cell " + (cell[0] == 'S' ? "Shift+" + cell[1] : cell) + " emptied", false);
+            Toast("cell " + SpellParse.KeyName(cell) + " emptied", false);
         }
 
         // SubTitle has a non-public setter in the game: set it by reflection (text under the name in the radial centre)
@@ -373,7 +373,7 @@ namespace HomeCheat.Features.Spells
                 if (!file.Pins.TryGetValue(k, out ps)) continue;
                 bool hit;
                 if (k[0] == 'F') hit = ZInput.GetKeyDown(FKey(k), false);
-                else hit = shift && ZInput.GetButtonDown("Hotbar" + k.Substring(1));
+                else hit = shift && ShiftCellDown(SpellParse.CellNumber(k));
                 if (hit)
                 {
                     // Shift is part of the key for cells 1-5, so it does not select the spell's shift= variant there
@@ -387,14 +387,16 @@ namespace HomeCheat.Features.Spells
 
         static KeyCode FKey(string k)
         {
-            switch (k)
-            {
-                case "F1": return KeyCode.F1;
-                case "F2": return KeyCode.F2;
-                case "F3": return KeyCode.F3;
-                case "F4": return KeyCode.F4;
-                default: return KeyCode.F5;
-            }
+            int n = SpellParse.CellNumber(k);
+            return n >= 1 && n <= 12 ? (KeyCode)((int)KeyCode.F1 + n - 1) : KeyCode.None;
+        }
+
+        // Shift cells 1-8 use the game's Hotbar1..8 buttons (rebindable); 9, 0, - and = have no game button: their keys
+        static bool ShiftCellDown(int n)
+        {
+            if (n >= 1 && n <= 8) return ZInput.GetButtonDown("Hotbar" + n);
+            KeyCode kc = n == 9 ? KeyCode.Alpha9 : n == 10 ? KeyCode.Alpha0 : n == 11 ? KeyCode.Minus : n == 12 ? KeyCode.Equals : KeyCode.None;
+            return kc != KeyCode.None && ZInput.GetKeyDown(kc, false);
         }
 
         // ---- casting -----------------------------------------------------------------------------------------------------------
@@ -526,7 +528,7 @@ namespace HomeCheat.Features.Spells
             return sb.ToString();
         }
 
-        // ---- drawing: the always-on action bar (IMGUI), one row of 10 cells --------------------------------------------------------
+        // ---- drawing: the always-on action bar (IMGUI), two rows: F1-F12, Shift+1..Shift+= --------------------------------------------------------
 
         const float PanelScale = 0.70f;     // whole bar, banner and toast (was 1.0, then 0.85)
         const float CellW = 72f, CellH = 88f, CellGap = 6f, GroupGap = 20f;
@@ -550,12 +552,13 @@ namespace HomeCheat.Features.Spells
             Fill(new Rect(r.x, r.y, t, r.height), c); Fill(new Rect(r.xMax - t, r.y, t, r.height), c);
         }
 
-        // cell i: 0-4 = Shift+1..5 (labelled 1-5), 5-9 = F1-F5; a wider gap between the two groups of five
-        static Rect CellRect(int i, float W, float H)
+        // two rows (Maksym 2026-10-25): row 0 = F1-F12 on top, row 1 = Shift+1..Shift+= below; cell i of 12, a wider gap after the 5th
+        static Rect CellRect(int i, int row, float W, float H)
         {
-            float total = 10 * CellW + 8 * CellGap + GroupGap;
+            float total = 12 * CellW + 10 * CellGap + GroupGap;
             float x = (W - total) / 2f + i * (CellW + CellGap) + (i >= 5 ? GroupGap - CellGap : 0f);
-            return new Rect(x, H - 36f - CellH, CellW, CellH);
+            float y = H - 36f - CellH - (row == 0 ? CellH + CellGap : 0f);
+            return new Rect(x, y, CellW, CellH);
         }
 
         // the spell's icon: the sprite of its group in the game's radial (spells have no icon of their own yet)
@@ -596,19 +599,26 @@ namespace HomeCheat.Features.Spells
             Matrix4x4 old = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(sc, sc, 1f));
             float W = Screen.width / sc, H = Screen.height / sc;
-            Rect first = CellRect(0, W, H), last = CellRect(9, W, H);
+            Rect first = CellRect(0, 1, W, H), last = CellRect(11, 1, W, H);
             if (SpellsSettings.On && barVisible)
             {
                 float a = (inputOk || asg || InRadial()) ? 1f : 0.45f;
-                // only filled cells, packed and centred (empty cells are not shown)
-                List<string> shown = new List<string>();
-                foreach (string cell in SpellFile.PinOrder) if (file.Pins.ContainsKey(cell)) shown.Add(cell);
-                float rowW = shown.Count * CellW + (shown.Count - 1) * CellGap;
-                for (int i = 0; i < shown.Count; i++)
+                // two rows, F keys on top, Shift keys below; only filled cells, packed and centred per row (empty cells are not shown)
+                for (int row = 0; row < 2; row++)
                 {
-                    string cell = shown[i];
-                    Rect r = new Rect((W - rowW) / 2f + i * (CellW + CellGap), first.y, CellW, CellH);
-                    DrawSlot(r, cell, cell[0] == 'S' ? cell.Substring(1) : cell, a, false, false);
+                    char kind = row == 0 ? 'F' : 'S';
+                    List<string> shown = new List<string>();
+                    foreach (string cell in SpellFile.PinOrder) if (cell[0] == kind && file.Pins.ContainsKey(cell)) shown.Add(cell);
+                    if (shown.Count == 0) continue;
+                    float y = CellRect(0, row, W, H).y;
+                    if (y < first.y) first = new Rect(first.x, y, first.width, first.height);   // banner and toast above the top row in use
+                    float rowW = shown.Count * CellW + (shown.Count - 1) * CellGap;
+                    for (int i = 0; i < shown.Count; i++)
+                    {
+                        string cell = shown[i];
+                        Rect r = new Rect((W - rowW) / 2f + i * (CellW + CellGap), y, CellW, CellH);
+                        DrawSlot(r, cell, SpellParse.KeyOf(cell), a, false, false);
+                    }
                 }
             }
             if (asg)

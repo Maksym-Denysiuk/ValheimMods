@@ -7,12 +7,31 @@ namespace HomeCheat.Features.Spells
     // Spell file v4 parser. No Unity or game reference, so it can be compiled into a console check outside the game.
     //   id | label | command | flags      id = dotted numbers of any depth (2, 2.1, 6.1.3); 1 is the Hotbar and cannot be used
     //   a line with an empty command (or only id | label) is a title: a group or sub-section; "6.1 | Flatten | | sticky"
-    //   flags: sticky  pin=F1..F5|S1..S5  shift=<form>  ask=<key>:<Label=value,...>|@players|@crops|@trees|@prefabs (repeatable)
+    //   flags: sticky  pin=F1..F12|S1..S12 (S10..S12 = Shift+0, Shift+-, Shift+=)  shift=<form>  ask=<key>:<Label=value,...>|@players|@crops|@trees|@prefabs (repeatable)
     // Every level may hold any number of entries (the game's radial lays them out as a spiral).
     internal sealed class SpellParse
     {
         public const int MaxDepth = 6, MaxSpells = 1000, MaxNumber = 999;
-        public static readonly string[] PinOrder = new string[] { "S1", "S2", "S3", "S4", "S5", "F1", "F2", "F3", "F4", "F5" };
+        // the 24 bar cells (Maksym 2026-10-25): Shift+1..Shift+= and F1..F12; Panel 1-5 = S1-S5 + F1-F5, Panel 6-= = S6-S12 + F6-F12
+        public static readonly string[] PinOrder = new string[] { "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12",
+            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" };
+        public static readonly string[] PanelNames = new string[] { "Panel 1-5", "Panel 6-=" };
+
+        // the key a cell fires on, as printed on the bar: "1".."9", "0", "-", "=" for S1..S12; "F1".."F12"
+        public static string KeyOf(string cell)
+        {
+            if (cell.Length < 2 || cell[0] != 'S') return cell;
+            int n = CellNumber(cell);
+            return n <= 9 ? n.ToString() : n == 10 ? "0" : n == 11 ? "-" : "=";
+        }
+
+        // "Shift+1" .. "Shift+=", "F1" .. "F12"
+        public static string KeyName(string cell) { return cell.Length > 1 && cell[0] == 'S' ? "Shift+" + KeyOf(cell) : cell; }
+
+        public static int CellNumber(string cell) { int n; return cell.Length > 1 && int.TryParse(cell.Substring(1), out n) ? n : 0; }
+
+        // 0 = Panel 1-5 (cells 1-5), 1 = Panel 6-= (cells 6-12)
+        public static int PanelOf(string cell) { return CellNumber(cell) <= 5 ? 0 : 1; }
         public static readonly string[] Sources = new string[] { "@players", "@crops", "@trees", "@prefabs" };
 
         public SpellNode Root = new SpellNode();                                   // children = the root sections 2, 3, ...

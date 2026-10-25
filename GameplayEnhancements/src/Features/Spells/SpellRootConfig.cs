@@ -6,7 +6,7 @@ using Valheim.UI;
 namespace HomeCheat.Features.Spells
 {
     // ---- the radial configs: our subclasses of the game's extension point ----
-    // root level: section 1 is our Hotbar (the 10 bar cells), 2-8 are our sections (or empty), more sections continue the spiral.
+    // root level: section 1 is our Hotbar (its two panels of bar cells), 2-8 are our sections (or empty), more sections continue the spiral.
     sealed class SpellRootConfig : IRadialConfig
     {
         readonly SpellBar bar;
@@ -31,9 +31,9 @@ namespace HomeCheat.Features.Spells
         {
             bar.CheckFile();
             List<RadialMenuElement> els = new List<RadialMenuElement>();
-            // 1: Hotbar = the 10 cells of the action bar (replaces the game's item hotbar group in this radial)
+            // 1: Hotbar = the two panels of bar cells (replaces the game's item hotbar group in this radial)
             GroupElement hb = UnityEngine.Object.Instantiate<GroupElement>(RadialData.SO.GroupElement);
-            hb.Init(new SpellHotbarConfig(bar), this, radial);
+            hb.Init(new SpellPanelsConfig(bar), this, radial);
             els.Add(hb);
             // 2..8 keep their places (a missing section is an empty slot); sections above 8 follow in order (the spiral takes them)
             int next = 2;

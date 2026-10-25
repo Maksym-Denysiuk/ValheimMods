@@ -5,13 +5,15 @@ using Valheim.UI;
 
 namespace HomeCheat.Features.Spells
 {
-    // Hotbar: the 10 cells of the action bar as radial sections (Shift+1..5, F1..F5). Click = cast, RMB = empty the cell,
-    // and while a spell waits to be placed (Shift+click on it in a group) a click puts it into the clicked cell.
+    // One Hotbar panel (Maksym 2026-10-25): Panel 1-5 = Shift+1..5 and F1..F5, Panel 6-= = Shift+6..Shift+= and F6..F12, as radial
+    // sections (more than the game's ring size continue as its spiral). Click = cast, Shift+RMB = empty the cell, and while a spell
+    // waits to be placed (Shift+click on it in a group) a click puts it into the clicked cell.
     sealed class SpellHotbarConfig : IRadialConfig
     {
         readonly SpellBar bar;
-        public SpellHotbarConfig(SpellBar b) { bar = b; }
-        public string LocalizedName { get { return "Hotbar"; } }
+        readonly int panel;
+        public SpellHotbarConfig(SpellBar b, int panelIndex) { bar = b; panel = panelIndex; }
+        public string LocalizedName { get { return SpellParse.PanelNames[panel]; } }
         public Sprite Sprite { get { return SpellBar.IconFor("hotbar"); } }
 
         public void InitRadialConfig(RadialBase radial)
@@ -22,7 +24,8 @@ namespace HomeCheat.Features.Spells
                 List<RadialMenuElement> els = new List<RadialMenuElement>();
                 bar.ClearCellMap();
                 bar.SuppressBackOnShift(radial);
-                foreach (string cell in SpellFile.PinOrder) els.Add(bar.MakeCellElement(cell, SpellsSettings.ActiveBar.Root(), radial));
+                foreach (string cell in SpellFile.PinOrder)
+                    if (SpellParse.PanelOf(cell) == panel) els.Add(bar.MakeCellElement(cell, new SpellPanelsConfig(bar), radial));
                 radial.ConstructRadial(els);
             }
             catch (Exception e)

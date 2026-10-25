@@ -24,7 +24,7 @@ namespace HomeCheat.Features.Spells
 "#     of entries: past the game's per-layer limit the radial continues as a spiral (like the emote wheel).\n" +
 "#   title (a group or a sub-section): \"id | label\", or \"id | label | | sticky\" (sticky on a title = every spell below it is sticky)\n" +
 "#   command: the form of an inbox file (op=...&k=v); chain commands with ;;   @dummy only shows a toast (a spell not built yet)\n" +
-"#   flags (space separated): sticky (the radial stays on its level after the cast)  pin=F1..F5|S1..S5 (S = Shift+digit)\n" +
+"#   flags (space separated): sticky (the radial stays on its level after the cast)  pin=F1..F12|S1..S12 (S = Shift+key: S1..S9 = Shift+1..9, S10 = Shift+0, S11 = Shift+-, S12 = Shift+=)\n" +
 "#     shift=<form added when Shift is held while casting>\n" +
 "#     ask=<key>:<Label=value,...> one radial level per ask flag, in order; the answer replaces {key} in the command; \"_\" in a\n" +
 "#     label shows as a space; dynamic answers: @players @crops @trees @prefabs (more than 40 answers are split A-Z into sub-levels).\n" +
@@ -263,7 +263,7 @@ namespace HomeCheat.Features.Spells
 
         public static string PinLabel(string pin)
         {
-            return pin.Length == 2 && pin[0] == 'S' ? "[Shift+" + pin[1] + "]" : "[" + pin + "]";
+            return "[" + SpellParse.KeyName(pin) + "]";
         }
 
         public string PinOf(Spell s)
@@ -285,7 +285,7 @@ namespace HomeCheat.Features.Spells
         {
             try
             {
-                StringBuilder sb = new StringBuilder("# written by the spell bar when you place a spell: cell=id (S1..S5 = Shift+1..5, F1..F5). Delete this file (or op=spells&pins=reset) to go back to the pin= flags of the spell file.\n");
+                StringBuilder sb = new StringBuilder("# written by the spell bar when you place a spell: cell=id (S1..S12 = Shift+1..9, Shift+0, Shift+-, Shift+=; F1..F12). Delete this file (or op=spells&pins=reset) to go back to the pin= flags of the spell file.\n");
                 foreach (string k in PinOrder) { Spell s; if (pins.TryGetValue(k, out s)) sb.Append(k).Append('=').Append(IdOf(s)).Append('\n'); }
                 Directory.CreateDirectory(SpellsSettings.Dir);
                 File.WriteAllText(OverrideFile, sb.ToString());

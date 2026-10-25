@@ -44,9 +44,13 @@ namespace HomeCheat
             WorldExitPatch.OnExit = delegate
             {
                 try { Logger.LogInfo(registry.WorldExit(scheduler)); } catch (Exception e) { Logger.LogError("world exit: " + e); }
+                Kit.PvpHits.Forget();
             };
             try { harmony.CreateClassProcessor(typeof(WorldExitPatch)).Patch(); }
             catch (Exception e) { Logger.LogError("Harmony WorldExitPatch: " + e); }
+            // the PvP rule of attack commands for projectiles (Kit.PvpHits): marked shots get HitData.m_ignorePVP back
+            try { harmony.CreateClassProcessor(typeof(PvpProjectileHitPatch)).Patch(); harmony.CreateClassProcessor(typeof(PvpProjectileDamagePatch)).Patch(); }
+            catch (Exception e) { Logger.LogError("Harmony PvpProjectilePatch: " + e); }
 
             registry.RegisterBuiltin(new PingCommand());
             registry.RegisterBuiltin(new StatusCommand());

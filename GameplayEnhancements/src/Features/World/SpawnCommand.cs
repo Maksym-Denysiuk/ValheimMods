@@ -16,7 +16,7 @@ namespace HomeCheat.Features.WorldCommands
             get
             {
                 return "spawn prefab=<name> [count=1 (max " + MaxCount + ")] [dist=4] [level=0 (star level of creatures)]"
-                    + " [player=<nick> (ahead of that player; another player: host only)] [yaw=0] [pitch=0 (degrees, world axes)]";
+                    + " [player=<nick> (ahead of that player; another player: host only)] [yaw=0] [pitch=0 (degrees, world axes)] [tamed=0 (1 = creatures spawn tamed; a test aid for tamed-animal hits)]";
             }
         }
 
@@ -26,6 +26,7 @@ namespace HomeCheat.Features.WorldCommands
             Player p = Players.Local;
             string prefab = a.Str("prefab", "");
             int count = a.Int("count", 1), level = a.Int("level", 0);
+            bool tamed = a.Flag("tamed", false);
             float dist = a.Float("dist", 4f), yaw = a.Float("yaw", 0f), pitch = a.Float("pitch", 0f);
             Caps.Check("count", count, MaxCount);
             GameObject go = Prefabs.Require(prefab, "(try op=list&filter=...)");
@@ -47,11 +48,12 @@ namespace HomeCheat.Features.WorldCommands
                 GameObject inst = (GameObject)UnityEngine.Object.Instantiate(go, pos + jitter, rot);
                 Character c = inst.GetComponent<Character>();
                 if (c != null && level > 0) c.SetLevel(level);
+                if (c != null && tamed && !(c is Player)) c.SetTamed(true);
                 made++;
             }
             string who = at == p ? "" : " ahead of " + at.GetPlayerName();
             string turn = yaw != 0f || pitch != 0f ? " (yaw " + Fmt.F(yaw, 0) + ", pitch " + Fmt.F(pitch, 0) + ")" : "";
-            return "spawned " + made + " " + prefab + (item ? " (items, dropped)" : "") + who + turn;
+            return "spawned " + made + " " + prefab + (item ? " (items, dropped)" : "") + (tamed ? " (tamed)" : "") + who + turn;
         }
     }
 }

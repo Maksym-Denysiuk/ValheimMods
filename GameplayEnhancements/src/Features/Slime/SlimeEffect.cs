@@ -16,7 +16,7 @@ namespace HomeCheat.Features.Slime
         {
             get
             {
-                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=2 (cast effects, set 1..5 of the spell-fx list, 0 = off; 2 = meteor hit + Abomination attack at the caster, Fader roar at 0.3 s)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] | near=<r> (list characters and hp)";
+                return "slime [target=<nick, other player only if this game is the host>] [gap=2] [rings=2 (circle layers)] [delay=0] [cloud=<prefab>] [cloudr=<radius m>] [lifetime=<s>] [lift=1 (m above the ground, so the cloud is visible)] [damage=3 (x Blob attack damage 90 = Poison 270, kills Fulings; 1 = Blob original, 0 = none)] [fx=2 (cast effects, set 1..5 of the spell-fx list, 0 = off; 2 = meteor hit + Abomination attack at the caster, Fader roar at 0.3 s)] [stonefx=0 (1..5: demo of that set's stone-break effects on ring 2 after 3 s)] [hurtself=1 (default: the clouds hit every player and NPC outside the gap, the target too if it leaves the gap; 0 = the target is immune, so moving is safe)] " + PvpUsage + " (with pvp=1 the clouds are yours, so the target is immune; overrides hurtself) | near=<r> (list characters and hp)";
             }
         }
 
@@ -30,6 +30,8 @@ namespace HomeCheat.Features.Slime
         float healMin = 999f;
         readonly List<GameObject> last = new List<GameObject>();
         Character cloudOwner; // owner of the clouds: Aoe does not hit its owner (m_hitOwner=False)
+        bool cloudPvpMode;    // pvp=1 given: the three flags below are set on owned clouds (else the prefab's own values stay)
+        bool cloudPvp;        // pvp=1 with the caster's PvP on: owned clouds also hit other players, whatever their PvP setting
 
         public SlimeEffect()
         {
@@ -71,6 +73,10 @@ namespace HomeCheat.Features.Slime
             float life = a.Float("lifetime", -1f);
             float lift = a.Float("lift", 1f);
             cloudOwner = a.Flag("hurtself", true) ? null : target;
+            // pvp=1: the PvP rule of AttackCommand; owned clouds, so the target stays immune
+            cloudPvpMode = PvpAsked(a);
+            cloudPvp = HitsPlayers(a);
+            if (cloudPvpMode) cloudOwner = target;
             // Blob's own attack damage (Poison from its blob_attack_aoe item) x 'damage'; the poison damage type brings the game's
             // own Poison status effect. damage=0 leaves the prefab as it is (blob_aoe alone does no damage).
             float dmgMul = a.Float("damage", 3f);
@@ -145,7 +151,7 @@ namespace HomeCheat.Features.Slime
                 for (int i = 0; i < demo.Count; i += Mathf.Max(1, demo.Count / 4))
                     StoneFx(stoneSet, demo[i], 3f);
             }
-            return "slime: " + total + " clouds (" + sb.ToString().TrimEnd(' ', ';') + "), prefab " + prefab + ", cloud r=" + radius.ToString("F2")
+            return "slime: " + total + " clouds" + PvpHits.Note(cloudPvpMode) + " (" + sb.ToString().TrimEnd(' ', ';') + "), prefab " + prefab + ", cloud r=" + radius.ToString("F2")
                 + " (from " + src + "), damage " + dmgNote + ", gap " + gap.ToString("F1") + ", centre " + Fmt.Vec(center);
         }
 
@@ -182,6 +188,11 @@ namespace HomeCheat.Features.Slime
                 Component ao = AoeOf(go);
                 FieldInfo fo = ao == null ? null : ao.GetType().GetField("m_owner", AllF);
                 if (fo != null) fo.SetValue(ao, cloudOwner);
+                if (ao != null && cloudPvpMode)
+                {
+                    // owned clouds skip other players (same kind, not enemies, PvP); pvp=1 lifts all three while the caster's PvP is on
+                    PvpHits.ArmAoe(ao as Aoe, cloudPvp);
+                }
             }
             if (dmg != null)
             {
