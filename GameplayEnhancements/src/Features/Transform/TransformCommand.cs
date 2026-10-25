@@ -40,9 +40,19 @@ namespace HomeCheat.Features.TransformCommands
             }
         }
 
+        // for TransformFallPatch: set while this build is loaded
+        internal static TransformCommand Current;
+
+        protected override void OnLoad()
+        {
+            Current = this;
+            Patches.Apply(typeof(TransformFallPatch));   // raven form: no fall damage
+        }
+
         // a replaced build takes its components off the players, so the new build starts from the human form
         protected override void OnUnload()
         {
+            Current = null;
             if (Player.m_localPlayer != null) TransformState.RemoveAll(Player.m_localPlayer);
             foreach (Player pl in Player.GetAllPlayers()) TransformRemote.RemoveAll(pl);
         }
