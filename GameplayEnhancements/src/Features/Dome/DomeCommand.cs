@@ -41,7 +41,8 @@ namespace HomeCheat.Features.Dome
                 + " | step=list (every dome: centre, radius, wards, on/off, permitted)"
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
                 + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
-                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=0 (New: 1 = leave gaps at blocked spots)] (the menu's Apply as a command)",
+                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=0 (New: 1 = leave gaps at blocked spots)] (the menu's Apply as a command)"
+                + " | step=show [alpha=0.1] [on=1] (TEST AID, this PC only: a see-through half-sphere of the ward radius over every active dome ward, a colour per group, redrawn on changes; on=0 removes)",
                 delegate (Args a) { return Step(a); });
         }
 
@@ -76,7 +77,8 @@ namespace HomeCheat.Features.Dome
             if (step == "remove") return Remove(a);
             if (step == "menu") return OpenMenu();
             if (step == "apply") return ApplyStep(a);
-            throw new CommandException("step=" + step + " is unknown: menu, apply, mark, build, list or remove");
+            if (step == "show") return Show(a);
+            throw new CommandException("step=" + step + " is unknown: menu, apply, mark, build, list, remove or show");
         }
 
         // ---- mark -----------------------------------------------------------------------------------
@@ -439,6 +441,17 @@ namespace HomeCheat.Features.Dome
             return n.Count == 0 ? "nobody" : string.Join(", ", n.ToArray());
         }
 
+        // test aid: see DomeShow
+        string Show(Args a)
+        {
+            Host.RequireServer();
+            if (!a.Flag("on", true)) { DomeShow.Off(); return "dome show: off"; }
+            Rescan();
+            float alpha = Mathf.Clamp01(a.Float("alpha", 0.1f));
+            int n = DomeShow.Show(groups, groupNos, WardArea(true).m_radius, alpha);
+            return "dome show (test aid, only on this PC): " + n + " sphere(s) over the active wards, radius " + Fmt.F(WardArea(true).m_radius, 0) + " m in " + groups.Count + " group(s), a colour per group, " + Fmt.F(alpha * 100f, 0) + " % visible; op=dome&step=show&on=0 removes them";
+        }
+
         string OpenMenu()
         {
             Host.RequireServer();
@@ -711,6 +724,7 @@ namespace HomeCheat.Features.Dome
             {
                 if (Time.time >= nextRescan) Rescan();
                 foreach (KeyValuePair<string, List<ZDO>> kv in groups) SyncGroup(kv.Key, kv.Value);
+                if (DomeShow.On) { PrivateArea wa = WardArea(false); if (wa != null) DomeShow.Refresh(groups, groupNos, wa.m_radius); }
             }
             catch (Exception e) { HomeApi.LogError("dome: sync: " + e); }
             Later(SyncSeconds, Tick);
@@ -752,7 +766,7 @@ namespace HomeCheat.Features.Dome
             if (Player.m_localPlayer != null) EnsureSync();
         }
 
-        protected override void OnUnload() { Current = null; DomeMenu.Close(); }
+        protected override void OnUnload() { Current = null; DomeMenu.Close(); DomeShow.Off(); }
 
         protected override void OnWorldExit()
         {
@@ -761,6 +775,7 @@ namespace HomeCheat.Features.Dome
             groupNos.Clear();
             DomeMenu.Close();
             menu = null;
+            DomeShow.Off();
             nextMarkIsEnd = false;
         }
 
