@@ -1,5 +1,5 @@
 ---
-description: construct command of the HomeCheat Valheim plugin (2026-10-25) - builds a saved PlanBuild or InfinityHammer blueprint as if built with the hammer - a list of constructions (a folder = versions of one), a preview with marker columns and torches, a panel, material families, the ground levelled exactly per terrain vertex and raised under stone, a stone foundation where the game's 8 m terrain limit stops, the space cleared, stacking of repeating blueprints, support and breakage reports, undo with the dropped items; tested in game with stairs, the gumdrop house and the portal hub
+description: construct command of the HomeCheat Valheim plugin (2026-10-25) - builds a saved PlanBuild or InfinityHammer blueprint as if built with the hammer - a list of constructions (a folder = versions of one), a preview with marker columns, torches and the plan's doors on support poles, a panel, material families, the ground levelled exactly per terrain vertex and raised under stone, a stone foundation where the game's 8 m terrain limit stops, the space cleared, stacking of repeating blueprints, support and breakage reports, undo with the dropped items; tested in game with stairs, the gumdrop house and the portal hub
 ---
 # construct (blueprints, feature Construction)
 
@@ -23,23 +23,23 @@ Before: a blueprint downloaded for PlanBuild or InfinityHammer could not be used
 |---|---|---|
 | list | `op=construct&step=list` | every construction: pieces, footprint, versions of a folder, "stacks" for a repeating blueprint, missing prefabs |
 | panel | `op=construct&panel=1` (spell 6.7.1) | the panel: constructions and versions, material, ground, the state of the plan, one button per step; every button sends the forms below |
-| preview | `op=construct&step=preview&name=<n>[&material=][&ground=][&base=][&at=][&yaw=]` | 5 columns of 5 core-wood poles with a ground torch at the corners and the centre of the turned footprint; the plan is kept per world in `construct.state`; nothing else changes |
-| rotate | `op=construct&step=rotate&by=90` | turns the plan, moves the columns |
-| start | `op=construct&step=start&confirm=1` | columns down, ground step, ground check, stone foundation, the space cleared, the pieces placed; a stopped start puts the plan and columns back |
-| remove | `op=construct&step=remove` | columns down, plan dropped, nothing built |
+| preview | `op=construct&step=preview&name=<n>[&material=][&ground=][&base=][&at=][&yaw=]` | 5 columns of 5 core-wood poles with a ground torch at the corners and the centre of the turned footprint, and every door of the plan (doors, gates, grates; not window shutters) at its exact place and turn, on core-wood poles under both ends where it hangs more than 0.15 m; the plan is kept per world in `construct.state`; nothing else changes |
+| rotate | `op=construct&step=rotate&by=90` | turns the plan, moves the columns and the doors |
+| start | `op=construct&step=start&confirm=1` | the preview down (columns, torches, doors), ground step, ground check, stone foundation, the space cleared, the pieces placed; a stopped start puts the plan and the preview back |
+| remove | `op=construct&step=remove` | the preview down (columns, torches, doors), plan dropped, nothing built |
 | place | `op=construct&step=place&name=<n>[keys as preview]` | the same build without a preview |
 | level | `op=construct&step=level&name=<n>[&ground=flatten|fit][keys]` | the ground step alone, measured; the plan is kept with `ground=none` |
 | continue | `op=construct&step=place&continue=1[&count=1..20][&material=]` | aim at a build of a repeating blueprint: the next copy stacks on it by the blueprint's own repeat, the ground is not touched |
 | reports | `step=status`, `step=support[&id=]`, `step=ground[&id=]`, `step=flatness`, `step=materials&name=` | read-only: plan and builds; support colours and the weak pieces by prefab, plus the last breakage; terrain under every 1 m cell; the last ground step against its targets; the material families |
 | undo | `op=construct&step=undo[&id=][&items=1]&confirm=1` | removes a build's loaded pieces (with `items=1` also the items dropped inside its box + 2 m); without `confirm=1` it only says what it would remove; the ground stays |
 
-Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x,z|x,y,z`; `yaw=` world degrees (default your facing, snapped to 22.5); `ground=auto` (default: on terrain `fit`, on a piece or rock `none`) `|fit|flatten|pillars|none`; `base=floor` (default) `|lowest`; `material=blueprint` (default) `|<family>`; `overlap=1` builds over player-built pieces. Caps (refused): 4 000 pieces, 64 m a side, 6 000 levelled vertices, 20 copies, 50 listed; the foundation stops at 1 500 pieces.
+Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x,z|x,y,z`; `yaw=` world degrees (default your facing, snapped to 22.5); `ground=auto` (default: on terrain, a rock, a tree or a bush `fit`, on a player-built piece `none`; a natural object under the crosshair is cleared before the build, so the base is the terrain under it) `|fit|flatten|pillars|none`; `base=floor` (default) `|lowest`; `material=blueprint` (default) `|<family>`; `overlap=1` builds over player-built pieces. Caps (refused): 4 000 pieces, 64 m a side, 6 000 levelled vertices, 20 copies, 50 listed; the foundation stops at 1 500 pieces.
 
 ## Files and settings
 
 - Blueprints: `BepInEx/config/homecheat/blueprints/` (game folder, never this repository: other creators' content). A file = one construction; a folder = the versions of one construction.
 - Formats read: PlanBuild (`#Name`, `#Creator`, `#Description`, `#Category`, `#SnapPoints`, `#Pieces`, a line `prefab;category;x;y;z;qx;qy;qz;qw;"text";sx;sy;sz`) and InfinityHammer (headers `#Center`, `#Coordinates`, `#Rotation`; a 14th field with the object's saved data in base64, counted, not applied). The text field goes to signs and to portal tags (`TextReceiver`).
-- State: `BepInEx/config/homecheat/construct.state`, one plan per world. Every placed object carries the ZDO keys `hc_construct` (build id), `hc_construct_o`, `hc_construct_yaw`, `hc_construct_name`; preview columns `hc_construct_pillar`.
+- State: `BepInEx/config/homecheat/construct.state`, one plan per world. Every placed object carries the ZDO keys `hc_construct` (build id), `hc_construct_o`, `hc_construct_yaw`, `hc_construct_name`; the preview's columns, torches, doors and door poles `hc_construct_pillar` (the plan id).
 
 ## How it works
 
@@ -48,6 +48,8 @@ Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x
 3. **Check.** The terrain is measured against every target. More than 5 % off stops the build. Vertices more than 8 m from the world's own ground (the game's limit) get a **stone foundation**: 2 x 2 m `stone_floor_2x2` tiles turned with the build, `stone_wall_2x1` stacked under each down to the real ground.
 4. **Clear the space.** Inside the pieces' box + 1 m, from 3 m under the base: trees, logs, rocks, stumps, bushes, pickables, saplings and items go. Never characters, player-built pieces or own marks.
 5. **Pieces** bottom-up in batches of 100 every 0.1 s, each with `Piece.SetCreator` and `WearNTear.OnPlaced` as `Player.PlacePiece` does. Support is reported at 5 s (settling) and 30 s (settled) with the broken pieces by prefab and reason (no ground under it, resting on pieces that gave way, on the ground).
+
+6. **Preview doors** (`PreviewDoors`, 2026-10-25). The preview runs the same layout as the build and places every piece with a `Door` component except window shutters (at most 40) at its exact place and turn, without a creator or `OnPlaced`, so the keep-away check and the clearing ignore it. Its collider bottom (`PieceGhost.Box`) is raycast down at both ends of its width, 0.25 m in; a gap over 0.15 m gets `wood_pole_log_4` stacked from the bottom down to the surface (at most 10 a column). The rays skip objects of an older preview and objects destroyed in this frame (`PreviewDoors.SurfaceBelow`): a new preview or a rotate places its objects in the frame the old ones are taken down. 30 s later (unless the preview changed) the log reports how many doors stand and what each end rests on; `step=status` repeats that measurement; a fallen door shows on screen.
 
 ## What failed first
 
@@ -59,13 +61,14 @@ Code in `src/Features/Construction/`; `bash src/build.sh construction`; `op=relo
 
 ## Undo
 
-`op=construct&step=undo&items=1&confirm=1` (the last build, or `id=`), or the hammer: the pieces are yours. The terrain is not restored. Preview columns: `step=remove`.
+`op=construct&step=undo&items=1&confirm=1` (the last build, or `id=`), or the hammer: the pieces are yours. The terrain is not restored. The preview (columns, torches, doors): `step=remove`.
 
 ## Open
 
 - `Placeable_Stone` (a Pickable + Piece + WearNTear decor stone): about a third vanish, some on the ground; cause not found.
 - The stone foundation breaks where the drop is about 9 m (5 of 111 pieces at the portal hub).
 - Resume after leaving the world in the middle of a large build: not built (builds finish in seconds).
+- A preview door or pole that breaks, or that someone takes down with the hammer, drops its materials (`WearNTear.Destroy` calls `Piece.DropResources`), as the marker poles did before the doors; `step=remove` and `step=start` destroy them without drops.
 - Families such as `loot`, `rug`, `scale` (furniture prefixes) are offered where a shape matches.
 
 ## Decisions (the card's assumptions)
@@ -78,6 +81,12 @@ Code in `src/Features/Construction/`; `bash src/build.sh construction`; `op=relo
 | A4 | material = a family swap, building free | built; `cost=` not built |
 | A5 | the lowest piece on the base | replaced: the ground floor on the base, foundations sink, the ground fitted under stone |
 | A6 | one plan per world, blueprints outside the repository | built |
+| A7 | preview doors (Maksym 2026-10-25: "if there are any doors in the planned construction I want to see them in a preview. Place pillars under them") | built and measured, run unattended; the assumptions below wait for Maksym's review |
+| A7.1 | ASSUMPTION: a door = a piece with a `Door` component whose name has no `window` (doors, gates, `iron_grate`); window shutters (`wood_window`, also a `Door`) are left out (why: 8 shutters on the gumdrop facade would add 8 pole columns that mark no entrance); `piece_cloth_hanging_door` has no `Door` component and is not shown | built |
+| A7.2 | ASSUMPTION: at most 40 doors a preview (clamped, named in the answer), 10 poles a column, poles 0.25 m inside both ends of the door's width, gap tolerance 0.15 m as the build's poles (why: the gumdrop has 29 doors; 10 x 4 m covers its highest door at 4.4 m many times over) | built |
+| A7.3 | ASSUMPTION: a preview door or pole that breaks or is taken down with the hammer drops its materials, as the marker poles already did (why: a guard would need a patch on `Piece.DropResources` for marked objects; measured: 29 of 29 doors stood after 30 s, so nothing broke in the tests) | open for Maksym |
+| A7.4 | `ground=auto` with a rock, tree or bush under the crosshair = terrain, `fit` (Maksym's yes, 2026-10-25, after the portal hub aimed at a `Rock_4` got `ground=none`, the rock was cleared and 482 pieces broke) | built |
+| A7.5 | ASSUMPTION: the panel button "Remove poles" is now "Remove preview" (it removes the doors too) | built |
 
 ## Test log (2026-10-25)
 | Time | Command | Answer (first line) | Observation | Verdict |
@@ -130,3 +139,14 @@ Code in `src/Features/Construction/`; `bash src/build.sh construction`; `op=relo
 | 2026-10-25 20:21 | Maksym: "continue the card: material choice, the panel, spell lines 6.7.1-6.7.2, then docs and the done gate". Built v20261025202156: `MaterialSwap` (families from the game's building pieces: the name before the first `_`; a piece swaps when the family has the same shape), `material=` on preview/place/level/continue, kept in the plan; read-only `step=materials`; `ConstructPanel` (IMGUI, `panel=1`: constructions and versions, material, ground, the state from `step=status`, buttons Preview here, Rotate 90, Rotate 22.5, Start construction, Remove poles, Undo last build with a second click; every button sends the inbox form), `ConstructPatches` (TextInput.IsVisible while it is open) | - | - | built |
 | 2026-10-25 20:22 | `op=construct&step=materials&name=` x 3, `op=construct&panel=1` | `EarlySpiralStairs (65 pieces): ... ashwood 34, iron 34, darkwood 14, woodiron 14` / gumdrop endgame: `ashwood 454, darkwood 429, woodiron 408, iron 365, stave 201, wood 169, scale 50, stone 32, blackmarble 27, loot 4, rug 3, blackforge 1` / portal hub: `iron 1324, ashwood 237, blackmarble 116, wood 115, darkwood 17, stave 5, woodiron 4` / `construct panel open (Esc or Close hides it)` | families such as `loot`, `rug`, `scale` are furniture prefixes, offered only where a shape matches; the panel's look and buttons wait for Maksym | pass (look) |
 | 2026-10-25 20:23 | spell file: `6.7.1 Construction... | op=construct&panel=1`, `6.7.2 Construction status | op=construct&step=status` under `6.7 | Construct` (game folder, fresh read; no other session running), `op=spells&reload=1` | `spells.txt: 58 spells, 21 titles, 5 pins; 0 bad lines` | - | pass |
+| 2026-10-25 21:02 | Maksym: "if there are any doors in the planned construction I want to see them in a preview. Place pillars under them to not spawn them mid-air". Built v20261025210232: `PreviewDoors` (doors from the plan's layout at their place, poles under hanging ends, marked `hc_construct_pillar`), preview and rotate answers name them, panel button "Remove preview"; `op=cheatstate` before | `registered construct from HomeCheat.Cmd.construction.v20261025210232.dll` | cheat state as at 18:03 (`Terminal.m_cheat` on before the test) | built |
+| 2026-10-25 21:21 | `op=construct&step=preview&name=modestypooh-portalhub` (Maksym aiming) | `... 2 door(s) shown at their place (darkwood_gate 2), 2 hanging up to 1.00 m on 3 pole(s)` | the 30 s log said `0 of 2 door(s) standing`: Maksym had previewed again, rotated and started from the panel within 30 s, so the doors were taken down on purpose; the check now skips a preview that changed, and a rotate gets new marks | fix, v20261025212233 |
+| 2026-10-25 21:22 | Maksym's start from the panel, crosshair on `Rock_4` | `start placing 2059 ... on the crosshair on Rock_4 (base 31.93, terrain 31.90) ... ground none` | settled `1577 of 2059 standing ... 482 broke: 471 with no ground under them (worst 13.42 m)`: the rock was the base, nothing was levelled, the clearing removed the rock. Maksym: "ground level wasnt adjusted and half of the structure got ruined"; his yes: undo with items, and a rock counts as terrain (A7.4) | fail, fixed v20261025212413 |
+| 2026-10-25 21:23 | `op=construct&step=undo&id=modestypooh-portalhub-20261025212206&items=1&confirm=1` | `removed 1467 piece(s) of build ... and 107 dropped item(s) inside its box` | the other standing pieces were out of the loaded area or fell meanwhile | pass |
+| 2026-10-25 21:26 | (unattended from here, Maksym's instruction) `op=construct&step=preview&name=modestypooh-portalhub&at=-607.7,-211.3&yaw=135` | `... ground fit ...; 2 door(s) shown at their place (darkwood_gate 2), all on the surface` | 30 s: `2 of 2 door(s) standing; door ends: 0 on a preview pole, 4 on the ground ... largest gap 0.00 m` | pass |
+| 2026-10-25 21:27 | `op=construct&step=rotate&by=67.5` | `... 2 hanging up to 0.97 m on 3 pole(s)` | 30 s: `2 of 2 door(s) standing; door ends: 3 on a preview pole, 1 on the ground ... largest gap 0.00 m` | pass |
+| 2026-10-25 21:27 | `op=construct&step=preview&name=brueplint-gumdropboth&at=-607.7,-211.3&yaw=202.5` | `37 door(s) shown at their place (wood_window 8, darkwood_gate 2, iron_grate 1, wood_fence_gate 26), 34 hanging up to 4.43 m on 74 pole(s)` | 30 s: 37 of 37 standing; window shutters counted as doors (A7.1) | partial |
+| 2026-10-25 21:28 | the same preview again at the same spot | `... all on the surface` | 30 s: `74 more than 0.15 m over a surface (largest gap 5.46 m ... over _Zone)`: the new rays hit the old preview's poles, which are destroyed in the same frame; `SurfaceBelow` skips older preview objects and destroyed ones (the centre marker column had the same flaw: 21.48 m over the terrain on an old torch); shutters left out | fail, fixed v20261025212940 and v20261025213209 |
+| 2026-10-25 21:29 | the same preview again | `29 door(s) shown at their place (darkwood_gate 2, iron_grate 1, wood_fence_gate 26), 29 hanging up to 4...` | 30 s: `29 of 29 door(s) standing; door ends: 58 on a preview pole, 0 on the ground, 0 on other objects, 0 more than 0.15 m over a surface (largest gap 0.00 m)` | pass |
+| 2026-10-25 21:32 | `op=construct&step=rotate&by=90`, again `by=90`, `by=22.5` | `... 28 hanging up to 4.30 m on 57 pole(s)` / `29 ... 4.43 m on 66` / `29 ... 4.01 m on 59` | log: `column feet at most 0.00 m over the terrain` each time; the first two checks `doors not checked, the preview changed within 30 s`; the last `29 of 29 door(s) standing; door ends: 58 on a preview pole ... largest gap 0.00 m`; `step=status` repeats the measurement | pass |
+| 2026-10-25 21:33 | `op=construct&step=remove`, `step=status`, `op=cheatstate` (after) | `removed the plan of brueplint-gumdropboth/Brueplint_gumdropendgame and its 118 preview objects (poles, torches, doors)` | 118 = 25 column poles + 5 torches + 29 doors + 59 door poles; `nothing planned`; no HomeCheat errors in the log; cheat state unchanged. `step=status` named a versioned plan "its blueprint file is gone" (Find instead of Resolve): fixed | pass |

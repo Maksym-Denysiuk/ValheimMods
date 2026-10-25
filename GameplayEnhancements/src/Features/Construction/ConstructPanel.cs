@@ -155,7 +155,7 @@ namespace HomeCheat.Features.Construction
                 bx += 106f;
             }
             ry += 38f;
-            GUI.Label(new Rect(rx, ry, rw, 40f), "auto: on terrain levelled and raised under stone (fit), on a piece or a rock unchanged; flatten: one flat level; none: as it is", sText);
+            GUI.Label(new Rect(rx, ry, rw, 40f), "auto: on terrain levelled and raised under stone (fit), on your own build unchanged (rocks count as terrain); flatten: one flat level; none: as it is", sText);
 
             // the state of this world's plan and builds (step=status)
             float sy = y + 344f;
@@ -173,7 +173,7 @@ namespace HomeCheat.Features.Construction
             if (GUI.Button(new Rect(x + 180f, by, 120f, 36f), "Rotate 90", sBtn)) Send("op=construct&step=rotate&by=90");
             if (GUI.Button(new Rect(x + 310f, by, 130f, 36f), "Rotate 22.5", sBtn)) Send("op=construct&step=rotate&by=22.5");
             if (GUI.Button(new Rect(x + 450f, by, 200f, 36f), "Start construction", sBtnOn)) Send("op=construct&step=start&confirm=1");
-            if (GUI.Button(new Rect(x + 660f, by, 170f, 36f), "Remove poles", sBtn)) Send("op=construct&step=remove");
+            if (GUI.Button(new Rect(x + 660f, by, 170f, 36f), "Remove preview", sBtn)) Send("op=construct&step=remove");
             if (GUI.Button(new Rect(x + 840f, by, 220f, 36f), undoArmed ? "Click again: undo" : "Undo last build", undoArmed ? sBtnOn : sBtn))
             {
                 if (undoArmed) { undoArmed = false; Send("op=construct&step=undo&items=1&confirm=1"); }

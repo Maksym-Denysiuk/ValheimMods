@@ -15,7 +15,8 @@ namespace HomeCheat.Features.Construction
     // Placement: the centre of the footprint at the crosshair (or at your feet), turned to your facing snapped to 22.5°, the
     // lowest collider bottom on the aimed surface (on the terrain without a hit). The ground step depends on that base
     // (Maksym 2026-10-25: stacking stairs must not raise the ground): on terrain the footprint is levelled to the base first and
-    // gaps left under the bottom pieces get core-wood poles; on a piece or a rock nothing is changed, the support comes from it.
+    // gaps left under the bottom pieces get core-wood poles; on a player-built piece nothing is changed, the support comes from it
+    // (a rock, tree or bush under the crosshair counts as terrain: the space clearing removes it).
     // continue=1 stacks the next copy exactly on the build under the crosshair, by the blueprint's own repeat (BlueprintRepeat).
     // Pieces go bottom-up in batches; every piece gets the creator and OnPlaced as in Player.PlacePiece and the ZDO mark
     // hc_construct with its build's origin, turn and name, so continue and undo find it again.
@@ -66,6 +67,8 @@ namespace HomeCheat.Features.Construction
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
 
         GroundJob lastGround;
+        PreviewDoors.Result lastDoors;      // the doors of the last preview in this session, measured again by step=status
+        string lastDoorsMark = "";
         string lastBroken = "";
         string lastId = "", lastName = "";
         int lastPlaced;
@@ -92,11 +95,11 @@ namespace HomeCheat.Features.Construction
             get
             {
                 return "construct step=list | step=preview&name=<construction> [at=aim|self|x,z|x,y,z] [yaw=<world degrees, default your facing snapped to 22.5>]"
-                    + " [ground=auto|fit|flatten|pillars|none (auto: on terrain = fit; on a piece or rock = none. fit = flatten the footprint + " + (int)FlattenMargin
+                    + " [ground=auto|fit|flatten|pillars|none (auto: on terrain, a rock, tree or bush = fit; on a player-built piece = none. fit = flatten the footprint + " + (int)FlattenMargin
                     + " m to the base, then raise the terrain under every 1 m column whose lowest piece hangs " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0)
                     + " m up (pieces that need ground: stone, other non-wood, loose objects); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)] [material=blueprint|<family> (step=materials lists them)]"
-                    + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
+                    + " (5 columns of " + PillarStack + " poles at the corners and centre, and the plan's doors at their place, on poles where they hang; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
                     + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only) | step=materials&name= (read-only)"
                     + " | step=place&name=<construction> (direct, no preview; same keys)"
@@ -147,6 +150,7 @@ namespace HomeCheat.Features.Construction
         {
             ConstructPanel.Current = null;
             lastId = ""; lastName = ""; lastPlaced = 0;
+            lastDoors = null; lastDoorsMark = "";
         }
 
         protected override string Execute(Args a)
@@ -307,13 +311,20 @@ namespace HomeCheat.Features.Construction
             RaycastHit hit = new RaycastHit();
             bool aimed = at == "aim" && AimHit(out hit);
             Vector3 anchor = point ? given : at == "self" ? p.transform.position : (aimed ? hit.point : p.transform.position + p.transform.forward * 8f);
-            bool onTerrain = !aimed || IsTerrain(hit.collider);
+            // only a player-built piece under the crosshair carries the build (ground none). A rock, tree or bush counts as
+            // terrain (Maksym 2026-10-25): the space clearing removes it before the pieces go down, so it can never be the
+            // support (the portal hub aimed at a Rock_4 kept its base on the rock with no levelling: 482 pieces broke)
+            Piece aimedPiece = aimed && !IsTerrain(hit.collider) ? hit.collider.GetComponentInParent<Piece>() : null;
+            bool onTerrain = !aimed || IsTerrain(hit.collider) || aimedPiece == null || !aimedPiece.IsPlacedByPlayer();
+            bool natural = aimed && onTerrain && !IsTerrain(hit.collider);
+            if (natural) anchor.y = Ground.Height(anchor);
             Plan pl = new Plan();
             pl.World = Host.RequireWorld();
             pl.Name = e.Name;
             pl.Anchor = anchor;
             pl.BaseY = aimed || point ? anchor.y : Ground.Height(anchor);
-            pl.BaseText = point ? "given point " + Fmt.Vec(anchor) : aimed ? (onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
+            pl.BaseText = point ? "given point " + Fmt.Vec(anchor) : aimed ? (natural ? "terrain under " + Prefabs.BaseName(hit.collider.transform.root.gameObject) + " at the crosshair (cleared before the build)"
+                : onTerrain ? "terrain at the crosshair" : "crosshair on " + Prefabs.BaseName(hit.collider.transform.root.gameObject))
                 : (at == "self" ? "terrain at your feet" : "terrain 8 m ahead (no crosshair hit)");
             pl.Ground = ground == "auto" ? (onTerrain ? "fit" : "none") : ground;
             pl.BaseRule = baseRule;
@@ -594,8 +605,15 @@ namespace HomeCheat.Features.Construction
             return pts;
         }
 
-        // PillarStack poles on the surface under each point; no creator, so they never count as player-built (keep-away)
-        static int PlacePillars(Plan pl, BlueprintEntry e)
+        int PlacePillars(Plan pl, BlueprintEntry e)
+        {
+            string doors;
+            return PlacePillars(pl, e, out doors);
+        }
+
+        // PillarStack poles on the surface under each point, and the plan's doors at their place (PreviewDoors); no creator, so
+        // they never count as player-built (keep-away). doors = the doors' line for the answer
+        int PlacePillars(Plan pl, BlueprintEntry e, out string doors)
         {
             GameObject pole = Prefabs.Require(Pole, "(the core-wood pole)");
             float lo, hi;
@@ -607,12 +625,19 @@ namespace HomeCheat.Features.Construction
             float tlo = 0f, thi = 0f;
             if (torch != null && !PieceGhost.Measure(torch, Quaternion.identity, out tlo, out thi)) tlo = 0f;
             int n = 0;
+            float columnRise = 0f;
+            string columnOn = "";
             foreach (Vector3 pt in PillarPoints(pl, e))
             {
                 float surface = Ground.Height(pt);
                 RaycastHit h;
-                if (Physics.Raycast(new Vector3(pt.x, Mathf.Max(surface, pl.BaseY) + 50f, pt.z), Vector3.down, out h, 200f, Masks.SolidAndTerrain, QueryTriggerInteraction.Ignore))
+                if (PreviewDoors.SurfaceBelow(new Vector3(pt.x, Mathf.Max(surface, pl.BaseY) + 50f, pt.z), 200f, pl.PillarId, out h))
                     surface = h.point.y;
+                if (surface - Ground.Height(pt) > columnRise)
+                {
+                    columnRise = surface - Ground.Height(pt);
+                    columnOn = h.collider == null ? "nothing" : Prefabs.BaseName(h.collider.transform.root.gameObject) + " at " + Fmt.F(pt.x, 1) + "," + Fmt.F(pt.z, 1);
+                }
                 for (int k = 0; k < PillarStack; k++)
                 {
                     GameObject go = (GameObject)UnityEngine.Object.Instantiate(pole, new Vector3(pt.x, surface - lo + k * len, pt.z), Quaternion.identity);
@@ -630,6 +655,40 @@ namespace HomeCheat.Features.Construction
                     else tn.GetZDO().Set(KeyPillar, pl.PillarId);
                 }
             }
+            // the doors with the same positions, turn, ground-floor rule and material as the real build (Maksym 2026-10-25)
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<PreviewDoors.Spot> spots = new List<PreviewDoors.Spot>();
+            foreach (Job j in Layout(pl, e, missing, out skipped, out origin, out floorText))
+            {
+                if (!PreviewDoors.IsDoor(j.Prefab)) continue;
+                PreviewDoors.Spot s = new PreviewDoors.Spot();
+                s.Prefab = j.Prefab; s.Pos = j.Pos; s.Rot = j.Rot;
+                spots.Add(s);
+            }
+            PreviewDoors.Result r = PreviewDoors.Place(spots, pl.PillarId, pole, lo, len, GapTolerance);
+            doors = r.Text();
+            if (r.Doors > 0)
+            {
+                // measure: do the doors stand once the game has computed their support
+                string name = pl.Name, world = pl.World, mark = pl.PillarId;
+                lastDoors = r; lastDoorsMark = mark;
+                Later(SettleCheck, delegate
+                {
+                    // a preview replaced, rotated, removed or started in the meantime took its doors down on purpose
+                    Plan now = LoadPlan(world);
+                    if (now == null || now.PillarId != mark) { HomeApi.Log("construct: preview of " + name + ": doors not checked, the preview changed within " + Fmt.F(SettleCheck, 0) + " s"); return; }
+                    string msg = "construct: preview of " + name + " after " + Fmt.F(SettleCheck, 0) + " s: " + PreviewDoors.Check(r, GapTolerance);
+                    HomeApi.Log(msg);
+                    int standing = 0;
+                    foreach (ZNetView nv in r.Placed) if (nv != null && nv.IsValid()) standing++;
+                    if (standing < r.Placed.Count) Notify.Error(msg);
+                });
+            }
+            // measure: a column foot over the terrain stands on something (a rock, a tree; an old preview before the fix)
+            HomeApi.Log("construct: preview of " + pl.Name + ": " + doors + "; column feet at most " + Fmt.F(columnRise, 2) + " m over the terrain" + (columnOn.Length > 0 ? " (on " + columnOn + ")" : ""));
             return n;
         }
 
@@ -673,12 +732,13 @@ namespace HomeCheat.Features.Construction
             Plan old = LoadPlan(Host.RequireWorld());
             int removed = old != null ? RemovePillars(old.PillarId) : 0;
             Plan pl = MakePlan(a, p, e);
-            pl.PillarId = "plan-" + DateTime.Now.ToString("yyyyMMddHHmmss");
-            int n = PlacePillars(pl, e);
+            pl.PillarId = "plan-" + DateTime.Now.ToString("yyyyMMddHHmmssfff");
+            string doors;
+            int n = PlacePillars(pl, e, out doors);
             SavePlan(pl);
-            return "preview " + Describe(pl, e) + "; " + n + " poles in 5 columns at the corners and the centre, a ground torch on each"
-                + (removed > 0 ? " (the previous plan" + (old.Name != pl.Name ? " of " + old.Name : "") + " and its " + removed + " poles replaced)" : "")
-                + ". Next: step=start&confirm=1 builds it, step=rotate&by=90 turns it, step=preview again moves it, step=remove takes the poles down";
+            return "preview " + Describe(pl, e) + "; " + n + " poles in 5 columns at the corners and the centre, a ground torch on each; " + doors
+                + (removed > 0 ? " (the previous plan" + (old.Name != pl.Name ? " of " + old.Name : "") + " and its " + removed + " preview objects replaced)" : "")
+                + ". Next: step=start&confirm=1 builds it, step=rotate&by=90 turns it, step=preview again moves it, step=remove takes the preview down";
         }
 
         string Rotate(Args a)
@@ -689,9 +749,11 @@ namespace HomeCheat.Features.Construction
             float by = a.Float("by", 90f);
             RemovePillars(pl.PillarId);
             pl.Yaw = Mathf.Repeat(pl.Yaw + by, 360f);
-            int n = PlacePillars(pl, e);
+            pl.PillarId = "plan-" + DateTime.Now.ToString("yyyyMMddHHmmssfff");   // new marks: the door check of the old turn skips
+            string doors;
+            int n = PlacePillars(pl, e, out doors);
             SavePlan(pl);
-            return "rotated by " + Fmt.F(by, 1) + ": " + Describe(pl, e) + "; " + n + " poles moved";
+            return "rotated by " + Fmt.F(by, 1) + ": " + Describe(pl, e) + "; " + n + " poles moved; " + doors;
         }
 
         string Start(Args a)
@@ -716,7 +778,7 @@ namespace HomeCheat.Features.Construction
                     HomeApi.Log("construct: start refused: " + ex.Message + " (plan and poles restored)");
                 }
             });
-            return "building " + pl.Name + ": " + removed + " preview poles removed, construction starts in " + Fmt.F(PillarClear, 1) + " s (the result shows on screen; op=construct&step=support)";
+            return "building " + pl.Name + ": " + removed + " preview objects removed (poles, torches, doors), construction starts in " + Fmt.F(PillarClear, 1) + " s (the result shows on screen; op=construct&step=support)";
         }
 
         string RemovePlan()
@@ -725,7 +787,7 @@ namespace HomeCheat.Features.Construction
             Plan pl = RequirePlan();
             int n = RemovePillars(pl.PillarId);
             ClearPlan(pl.World);
-            return "removed the plan of " + pl.Name + " and its " + n + " preview poles; nothing was built";
+            return "removed the plan of " + pl.Name + " and its " + n + " preview objects (poles, torches, doors); nothing was built";
         }
 
         // continue=1: the next copy (or count= copies) on the build under the crosshair, shifted by the blueprint's repeat
@@ -1287,9 +1349,11 @@ namespace HomeCheat.Features.Construction
             }
             else sb.Append("no build in this session");
             Plan pl = LoadPlan(Host.RequireWorld());
-            BlueprintEntry pe = pl != null ? BlueprintLibrary.Find(BlueprintLibrary.Scan(Dir), pl.Name) : null;
+            string versionNote;   // Resolve, not Find: a plan of one version is named <folder>/<version>
+            BlueprintEntry pe = pl != null ? BlueprintLibrary.Resolve(BlueprintLibrary.Scan(Dir), pl.Name, out versionNote) : null;
             if (pl != null)
                 sb.Append("; planned (preview poles standing): ").Append(pe != null ? Describe(pl, pe) : pl.Name + " (its blueprint file is gone: step=remove)")
+                  .Append(lastDoors != null && lastDoorsMark == pl.PillarId && lastDoors.Placed.Count > 0 ? "; preview " + PreviewDoors.Check(lastDoors, GapTolerance) : "")
                   .Append(" - step=start&confirm=1 to build, step=remove to drop it");
             else sb.Append("; nothing planned");
             sb.Append("; ").Append(g.Count).Append(" build(s) loaded around you");
