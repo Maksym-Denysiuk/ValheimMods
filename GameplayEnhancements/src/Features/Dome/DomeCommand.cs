@@ -24,6 +24,7 @@ namespace HomeCheat.Features.Dome
         const float SyncSeconds = 2f;      // how often the host copies a changed ward's state to its group
         const float RescanSeconds = 30f;   // how often the host looks for dome wards again (built or removed elsewhere)
         const int MaxListed = 8;           // spots named in an answer
+        const float MaxBeach = 0.5f;       // a ward may stand on a beach whose ground is up to this far below the water line (Maksym 2026-10-25)
         const float SlideMax = 0.5f;       // partial=1: a blocked ward slides toward the zone centre by up to this x the ward radius
         const float SlideStep = 1f;        // ... in steps of this many metres (Maksym 2026-10-25)
 
@@ -568,7 +569,7 @@ namespace HomeCheat.Features.Dome
                     probe.z += Mathf.Sin(ang) * BaseRadius;
                 }
                 float h = Ground.Height(probe);
-                if (h < water) { why = "on water (ground " + Fmt.F(water - h, 1) + " m below the water line)"; return false; }
+                if (h < water - MaxBeach) { why = "on water (ground " + Fmt.F(water - h, 1) + " m below the water line, " + Fmt.F(MaxBeach, 1) + " m allowed)"; return false; }
                 if (h < min) min = h;
                 if (h > max) max = h;
             }
