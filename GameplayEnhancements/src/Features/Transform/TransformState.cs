@@ -7,24 +7,34 @@ using UnityEngine;
 
 namespace HomeCheat.Features.TransformCommands
 {
-    // Lives on the player while transformed. Hides the human renderers every frame (equipment can re-create them),
-    // drives the movement mode, reverts on duration end, on op=transform&type=human and when the player object goes away.
-    // Order 1000: runs after the game's own FixedUpdate, so the values set here are the last write before physics.
-    //   raven   : Character flight (m_flying) with the Crow's own numbers (RandomFlyingBird: speed, flap/sail durations),
-    //             momentum, bank into turns, pitch with climb, flap/sail switching, landed model when standing on the ground
-    //   serpent : the Serpent prefab's own swim numbers (speed, turn, acceleration, depth), fists hit like Serpent_attack at 1 star
-    //   fish    : swim x2
-    //   all     : stamina is never used up
+    // Lives on the player while transformed: what every form shares (TransformForm holds what differs). Hides the human renderers
+    // every frame (equipment can re-create them), shows the form to other players (share: a networked stand-in of the prefab, host
+    // only; hide: the human body sent away for them), keeps stamina full, runs the movement mode (Flies: Character flight with the
+    // Crow's numbers, momentum, banking, flap/sail, landed model; Swims: the game's swim code with diving), calls the form's
+    // Begin / Step / Pose / PrepareStandIn / SyncStandIn, and reverts on duration end, on op=transform&type=human and when the
+    // player object goes away. Order 1000: runs after the game's own FixedUpdate, so the values set here are the last write before physics.
     [DefaultExecutionOrder(1000)]
     public sealed class TransformState : MonoBehaviour
     {
         const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         static readonly FieldInfo fMoveDir = typeof(Character).GetField("m_moveDir", BF);
         static readonly FieldInfo fRun = typeof(Character).GetField("m_run", BF);
-        static readonly int landedHash = (int)typeof(Player).Assembly.GetType("ZDOVars").GetField("s_landed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).GetValue(null);
+        internal static readonly int LandedHash = (int)typeof(Player).Assembly.GetType("ZDOVars").GetField("s_landed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).GetValue(null);
         float humanOffset;
         Vector3 visOrigin;
         public bool Shared { get { return share; } }
+
+        // for the forms (TransformForm)
+        internal TransformForm Form { get { return form; } }
+        internal GameObject Model { get { return model; } }
+        internal Rigidbody Body { get { return body; } }
+        internal float SpeedMul { get { return mul; } }
+        internal float OrigSwimSpeed { get { return oSwim; } }
+        internal float ModelBaseY { get { return baseY; } }
+        internal bool Airborne { get { return airborne; } }
+        internal bool LastFlap { get { return lastFlapState; } }
+        internal bool LastWet { get { return lastWet; } }
+        internal void Trigger(string param) { SetTrigger(param); }
 
         // diagnostics for type=probe
         public string ShareInfo()
@@ -86,6 +96,7 @@ namespace HomeCheat.Features.TransformCommands
         float mul;
         bool flyForm, swimForm, flyingBefore, damageSet;
         float oFlySlow, oFlyFast, oFlyTurn, oWalk, oRun, oSwim, oSwimTurn, oSwimAcc, oSwimDepth, oAccel;
+        float oSwimDrainMin, oSwimDrainMax;   // swim stamina drain (Player.OnSwimming), 0 while a fish
         HitData.DamageTypes oFist;
         readonly List<Renderer> hidden = new List<Renderer>();
         readonly List<Renderer> scratch = new List<Renderer>();
@@ -100,31 +111,32 @@ namespace HomeCheat.Features.TransformCommands
         float cruise = 15f, energy = 1f, oFov = 65f, oCamMax, oCamDist;
         bool hover = true, lookDive = true, camSet, airborne, lastUp;
         float groundTime, takeoffT, curY, hopPhase;
-        // serpent / fish
-        float baseDepth, diveOff, baseY, landLift;
-        int groundMask;
-        readonly List<Transform> tailJoints = new List<Transform>();
+        // swimming
+        float baseDepth, diveOff, baseY;
         bool lastAttack, lastBlock;
         float nextRoar;
-        string kind;
+        TransformForm form;
 
-        public void Init(Player p, GameObject m, float untilTime, string k, float speedMul, GameObject prefab, bool allowHover, bool allowLookDive, bool shareWithOthers, float humanOffsetY)
+        internal void Init(Player p, GameObject m, float untilTime, TransformForm f, float speedMul, GameObject prefab, bool allowHover, bool allowLookDive, bool shareWithOthers, bool hideBody, float humanOffsetY)
         {
+            form = f;
+            string k = f.Name;
             humanOffset = humanOffsetY;
             GameObject vis0 = p.GetVisual();
             if (vis0 != null) visOrigin = vis0.transform.localPosition;
-            player = p; model = m; until = untilTime; kind = k; mul = Mathf.Max(0.1f, speedMul); hover = allowHover; lookDive = allowLookDive;
-            // share (raven, host only): a real networked Crow follows the local model, so other players see it without any mod
-            share = shareWithOthers && (k == "raven" || k == "serpent") && ZNet.instance != null && ZNet.instance.IsServer();
+            player = p; model = m; until = untilTime; mul = Mathf.Max(0.1f, speedMul); hover = allowHover; lookDive = allowLookDive;
+            // share (host only): a real networked copy of the prefab follows the local model, so other players see it without any mod
+            share = shareWithOthers && f.Shareable && ZNet.instance != null && ZNet.instance.IsServer();
             sharePrefab = prefab.name;
             body = p.GetComponent<Rigidbody>();
             anims.AddRange(m.GetComponentsInChildren<Animator>(true));
             oFlySlow = p.m_flySlowSpeed; oFlyFast = p.m_flyFastSpeed; oFlyTurn = p.m_flyTurnSpeed; oAccel = p.m_acceleration;
             oWalk = p.m_walkSpeed; oRun = p.m_runSpeed;
             oSwim = p.m_swimSpeed; oSwimTurn = p.m_swimTurnSpeed; oSwimAcc = p.m_swimAcceleration; oSwimDepth = p.m_swimDepth;
+            oSwimDrainMin = p.m_swimStaminaDrainMinSkill; oSwimDrainMax = p.m_swimStaminaDrainMaxSkill;
             flyingBefore = p.m_flying;
-            flyForm = k == "raven";
-            swimForm = k == "serpent" || k == "fish";
+            flyForm = f.Flies;
+            swimForm = f.Swims;
             lastYaw = p.transform.eulerAngles.y;
             baseY = m.transform.localPosition.y;
             curY = baseY;
@@ -154,29 +166,20 @@ namespace HomeCheat.Features.TransformCommands
                     camSet = true;
                 }
             }
-            baseDepth = k == "serpent" ? (prefab.GetComponent<Humanoid>() != null ? prefab.GetComponent<Humanoid>().m_swimDepth : p.m_swimDepth) : p.m_swimDepth;
-            if (k == "serpent")
-            {
-                // tail segments stay above the terrain on land (terrain only: rocks and buildings are not checked)
-                foreach (Tail tl in m.GetComponentsInChildren<Tail>(true))
-                {
-                    tl.m_groundCheck = true;
-                    if (tl.m_tailJoints != null) tailJoints.AddRange(tl.m_tailJoints);
-                }
-                Humanoid sh = prefab.GetComponent<Humanoid>();
-                if (sh != null)
-                {
-                    p.m_swimSpeed = sh.m_swimSpeed * mul; p.m_swimTurnSpeed = sh.m_swimTurnSpeed;
-                    p.m_swimAcceleration = sh.m_swimAcceleration; p.m_swimDepth = sh.m_swimDepth;
-                    SetFistDamage(sh);
-                }
-            }
-            else if (k == "fish") p.m_swimSpeed = oSwim * 2f * mul;
+            f.Begin(this, p, prefab);
+            baseDepth = p.m_swimDepth;   // after Begin: a form may set its own swim depth
             HideHuman();
+            // hide (with share): the human body goes away for other players (op=hidebody) until human again
+            if (share && hideBody)
+            {
+                string hb = HomeApi.Exec("op=hidebody&on=1");
+                HidBody = !hb.StartsWith("ERROR");
+                if (!HidBody) HomeApi.Log("transform hide: " + hb);
+            }
         }
 
         // fists hit like the serpent's bite as a 1-star creature (Attack.GetLevelDamageFactor: 1 + 0.5 per star)
-        void SetFistDamage(Humanoid serpent)
+        internal void SetFistDamage(Humanoid serpent)
         {
             try
             {
@@ -372,12 +375,6 @@ namespace HomeCheat.Features.TransformCommands
                 bool atk = player.InAttack();
                 if (atk && !lastAttack) SetTrigger("attack");
                 lastAttack = atk;
-                if (kind == "serpent" && callNow)
-                {
-                    SetTrigger("taunt");
-                    GameObject sfx = Prefabs.Spawn("sfx_serpent_taunt", player.transform.position + Vector3.up, Quaternion.identity);
-                    if (sfx == null) HomeApi.Log("transform: sfx_serpent_taunt prefab missing");
-                }
                 // diving: the game's swim code holds the body at (water level - m_swimDepth), so a deeper m_swimDepth sinks it.
                 // Looking down while swimming moves the depth down (3 m/s), looking up brings it back; never closer than 1.5 m to the floor.
                 if (wet)
@@ -398,6 +395,7 @@ namespace HomeCheat.Features.TransformCommands
                 else diveOff = 0f;
                 player.m_swimDepth = baseDepth + diveOff;
             }
+            form.Step(this, player, dt, player.InWater() || player.IsSwimming(), callNow);
         }
 
         // the networked crow: a real Crow object owned by this (host) game, AI removed, hidden on our own screen, placed on our local model
@@ -410,21 +408,7 @@ namespace HomeCheat.Features.TransformCommands
                 if (netCrow == null) { share = false; HomeApi.Log("transform share: prefab " + sharePrefab + " missing"); return; }
                 netView = netCrow.GetComponent<ZNetView>();
                 netAnim = netCrow.GetComponent<ZSyncAnimation>();
-                RandomFlyingBird b = netCrow.GetComponent<RandomFlyingBird>();
-                if (b != null) UnityEngine.Object.DestroyImmediate(b); // no wandering: we place it
-                if (kind == "serpent")
-                {
-                    // a real Serpent object, but with no brain and no creature script on the host: AI, loot, then the Character itself
-                    // (its OnDestroy removes it from the world's creature list); the body stays kinematic so physics does not fight us
-                    foreach (Type tp in new Type[] { typeof(MonsterAI), typeof(CharacterDrop), typeof(Humanoid) })
-                    {
-                        Component cp = netCrow.GetComponent(tp);
-                        if (cp != null) { try { UnityEngine.Object.DestroyImmediate(cp); } catch (Exception e) { HomeApi.Log("transform share strip " + tp.Name + ": " + e.Message); } }
-                    }
-                    Rigidbody nb = netCrow.GetComponent<Rigidbody>();
-                    if (nb != null) { nb.isKinematic = true; nb.useGravity = false; }
-                }
-                foreach (Collider c in netCrow.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+                form.PrepareStandIn(netCrow);   // no AI, no own movement, no colliders, not usable
                 netRenderers.Clear();
                 netRenderers.AddRange(netCrow.GetComponentsInChildren<Renderer>(true));
                 HomeApi.Log("transform share: spawned networked " + sharePrefab);
@@ -435,15 +419,7 @@ namespace HomeCheat.Features.TransformCommands
             if (netView != null && netView.IsValid())
             {
                 if (Time.time >= nextClaim) { nextClaim = Time.time + 2f; if (!netView.IsOwner()) netView.ClaimOwnership(); }
-                if (netView.IsOwner())
-                {
-                    if (kind == "raven")
-                    {
-                        netView.GetZDO().Set(landedHash, !airborne);
-                        if (netAnim != null) netAnim.SetBool("flapping", airborne && lastFlapState);
-                    }
-                    else if (netAnim != null) netAnim.SetBool("inWater", lastWet);
-                }
+                if (netView.IsOwner()) form.SyncStandIn(this, netView, netAnim);
             }
         }
 
@@ -459,30 +435,7 @@ namespace HomeCheat.Features.TransformCommands
                 if (vis != null) vis.transform.localPosition = visOrigin + Vector3.up * humanOffset;
             }
             if (share && model != null) UpdateShared();
-            if (kind == "serpent" && model != null)
-            {
-                // the body pivot sits low: on land lift the model so the head clears the ground, in water leave it sunk
-                bool wetNow = player.InWater() || player.IsSwimming();
-                landLift = Mathf.Lerp(landLift, wetNow ? 0f : 1.3f, 1f - Mathf.Exp(-6f * Mathf.Max(0.0001f, Time.deltaTime)));
-                Vector3 lp = model.transform.localPosition;
-                model.transform.localPosition = new Vector3(lp.x, baseY + landLift, lp.z);
-                // on land lift every tail bone above whatever is under it (rocks, buildings, terrain): a ray down from 4 m above the bone
-                if (!wetNow && tailJoints.Count > 0)
-                {
-                    if (groundMask == 0) groundMask = LayerMask.GetMask("Default", "static_solid", "terrain", "piece", "Default_small");
-                    foreach (Transform j in tailJoints)
-                    {
-                        if (j == null) continue;
-                        RaycastHit hit;
-                        Vector3 o = j.position + Vector3.up * 4f;
-                        if (Physics.Raycast(o, Vector3.down, out hit, 8f, groundMask, QueryTriggerInteraction.Ignore))
-                        {
-                            float want = hit.point.y + 0.7f;
-                            if (j.position.y < want) j.position = new Vector3(j.position.x, want, j.position.z);
-                        }
-                    }
-                }
-            }
+            if (model != null) form.Pose(this, player, model, Time.deltaTime);
             if (flyForm && model != null && body != null)
             {
                 float dt = Mathf.Max(0.0001f, Time.deltaTime);
@@ -511,8 +464,12 @@ namespace HomeCheat.Features.TransformCommands
             }
         }
 
+        // hide=1 with share: the human body was sent away for other players (op=hidebody); brought back when the transform ends
+        public bool HidBody;
+
         void OnDestroy()
         {
+            if (HidBody) { try { HomeApi.Exec("op=hidebody&on=0"); } catch (Exception) { } }
             foreach (Renderer r in hidden) if (r != null) r.enabled = true;
             hidden.Clear();
             if (model != null) UnityEngine.Object.Destroy(model);
@@ -528,6 +485,7 @@ namespace HomeCheat.Features.TransformCommands
                 player.m_flySlowSpeed = oFlySlow; player.m_flyFastSpeed = oFlyFast; player.m_flyTurnSpeed = oFlyTurn; player.m_acceleration = oAccel;
                 player.m_walkSpeed = oWalk; player.m_runSpeed = oRun;
                 player.m_swimSpeed = oSwim; player.m_swimTurnSpeed = oSwimTurn; player.m_swimAcceleration = oSwimAcc; player.m_swimDepth = oSwimDepth;
+                player.m_swimStaminaDrainMinSkill = oSwimDrainMin; player.m_swimStaminaDrainMaxSkill = oSwimDrainMax;
                 player.m_flying = flyingBefore;
                 if (camSet && GameCamera.instance != null)
                 {

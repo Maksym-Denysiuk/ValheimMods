@@ -5,7 +5,7 @@ using Valheim.UI;
 
 namespace HomeCheat.Features.Spells
 {
-    // The two Harmony prefixes, applied through the command's PatchSet (id com.homeos.homecheat.spells).
+    // The Harmony patches (two prefixes, one postfix), applied through the command's PatchSet (id com.homeos.homecheat.spells).
     public static class SpellPatches
     {
         // RadialBase.Open(config, backConfig): the vanilla main radial (ValheimRadialConfig) is replaced by ours. Everything else
@@ -30,6 +30,13 @@ namespace HomeCheat.Features.Spells
             SpellsSettings s = SpellsSettings.Current;
             if (s == null || !s.Enabled) return true;
             return Time.frameCount != s.ConsumedFrame;
+        }
+
+        // TextInput.IsVisible: true while the answer form is open, so the game frees the cursor and the player takes no input
+        // (GameCamera.UpdateMouseCapture, Player.TakeInput and PlayerController.TakeInput all ask it)
+        public static void TextInputPostfix(ref bool __result)
+        {
+            if (SpellForm.Current != null) __result = true;
         }
 
         // a radial that still holds a config from a replaced build (op=reload while it was open): show the vanilla radial, change no settings
@@ -66,11 +73,13 @@ namespace HomeCheat.Features.Spells
             foreach (MethodInfo m in typeof(RadialBase).GetMethods(all))
                 if (m.Name == "Open" && m.GetParameters().Length == 2) { m1 = m; break; }
             MethodInfo m2 = typeof(Player).GetMethod("UseHotbarItem", all);
-            if (m1 == null || m2 == null) return "ERROR: target methods not found (game version changed?)";
+            MethodInfo m3 = typeof(TextInput).GetMethod("IsVisible", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (m1 == null || m2 == null || m3 == null) return "ERROR: target methods not found (game version changed?)";
             s.Patches.Patch(m1, typeof(SpellPatches).GetMethod("OpenPrefix"), null);
             s.Patches.Patch(m2, typeof(SpellPatches).GetMethod("HotbarPrefix"), null);
+            s.Patches.Patch(m3, null, typeof(SpellPatches).GetMethod("TextInputPostfix"));
             s.Patched = true;
-            return "patches applied (RadialBase.Open, UseHotbarItem)";
+            return "patches applied (RadialBase.Open, UseHotbarItem, TextInput.IsVisible)";
         }
     }
 }

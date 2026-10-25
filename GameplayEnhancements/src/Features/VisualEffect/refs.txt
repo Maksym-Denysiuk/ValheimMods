@@ -1,0 +1,2 @@
+# ParticleSystem (probe scale= and speed=)
+UnityEngine.ParticleSystemModule.dll

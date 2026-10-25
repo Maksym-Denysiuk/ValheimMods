@@ -15,19 +15,22 @@ namespace HomeCheat.Features.WorldCommands
     // (FieldPatch.Sample). rows/perrow/dist are ignored there; crops= bands repeat along world Z.
     public sealed class FieldCommand : CommandBase
     {
-        const int MaxCells = 40000, MaxPlanted = 2500;
+        const int MaxCells = 40000, MaxPlanted = 10000;   // planted per cast (was 2500: a 4000 m2 patch stopped at a third, test 2026-10-25)
+        const int BatchSize = 500;                         // crops spawned per step, BatchGap s apart, so a big field neither freezes a frame nor floods the network
+        const float BatchGap = 0.1f;
 
         public override string Name { get { return "field"; } }
         protected override string Usage
         {
-            get { return "field prefab=<Pickable_*> | crops=<a:n,b:n> [rows=1] [perrow=1] [spacing=<minimum for the crops, from the game: carrot 0.68 m>] [scale=1] [clear=0.4] [dist=<m from you to row 1, default 0 = your own cell>] [area=coords|patch (coords: every cultivated cell in the rectangle of op=coord start and end; patch: the whole cultivated patch you stand on; rows, perrow, dist ignored)] - crops on the cultivated soil connected to your cell (own grid, may be denser than op=cultivate); caps " + MaxCells + " cells examined, " + MaxPlanted + " planted"; }
+            get { return "field prefab=<Pickable_*> | crops=<a:n,b:n> [rows=1] [perrow=1] [spacing=<minimum for the crops, from the game: carrot 0.68 m>] [scale=1] [clear=0.4] [dist=<m from you to row 1, default 0 = your own cell>] [area=aim|coords|patch (aim = left out: rows and perrow from your cell; coords: every cultivated cell in the rectangle of op=coord start and end; patch: the whole cultivated patch you stand on; rows, perrow, dist ignored)] - crops on the cultivated soil connected to your cell (own grid, may be denser than op=cultivate); caps " + MaxCells + " cells examined, " + MaxPlanted + " planted"; }
         }
 
         protected override string Execute(Args a)
         {
             string prefab = a.Str("prefab", ""), crops = a.Str("crops", "");
             string area = a.Str("area", "").ToLowerInvariant();
-            if (area.Length > 0 && area != "coords" && area != "patch") throw new CommandException("area must be coords or patch (or left out)");
+            if (area == "aim") area = "";   // the spell form's "Crosshair": rows and perrow from your cell, as with no area (plant takes aim the same way)
+            if (area.Length > 0 && area != "coords" && area != "patch") throw new CommandException("area must be aim, coords or patch (or left out)");
             if (prefab.Length == 0 && crops.Length == 0) throw new CommandException("prefab (or crops) required, e.g. prefab=Pickable_Carrot");
             int rows = a.Int("rows", 1), cols = a.Int("perrow", a.Int("cols", 1));
             float spacing = a.Float("spacing", 0f), scale = a.Float("scale", 1f), clear = a.Float("clear", 0.4f);
@@ -78,7 +81,9 @@ namespace HomeCheat.Features.WorldCommands
             bool[,] reached = FieldPatch.Connected(soil, 0, Mathf.FloorToInt(centre), Mathf.CeilToInt(centre), out startSoil);
             if (a.Flag("map", false)) return Map(soil, reached, totalRows, cols, centre, an, spacing, spacingNote);
             if (!startSoil) return "nothing planted: the soil under you is not cultivated (stand on cultivated soil; op=cultivate; op=field&map=1 shows the grid)";
-            int made = 0, noSoil = 0, apart = 0, blocked = 0, capped = 0;
+            int made = 0, noSoil = 0, apart = 0, blocked = 0, capped = 0, noGrow = 0;
+            string noGrowWhy = "";
+            List<KeyValuePair<GameObject, Vector3>> todo = new List<KeyValuePair<GameObject, Vector3>>();
             int[] madeOf = new int[prefabs.Count];
             for (int r = 0; r < totalRows; r++)
                 for (int c = 0; c < cols; c++)
@@ -88,14 +93,16 @@ namespace HomeCheat.Features.WorldCommands
                     if (made >= MaxPlanted) { capped++; continue; }
                     if (Ground.IsBlocked(pos[r, c], clear)) { blocked++; continue; }
                     int k = cropOfRow[r];
-                    GameObject inst = (GameObject)UnityEngine.Object.Instantiate(prefabs[k], pos[r, c], Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
-                    Trees.SetScale(inst, scale);
+                    string why;
+                    if (!GrowRules.Allowed(GrowRules.PlantOf(prefabs[k]), pos[r, c], out why)) { noGrow++; if (noGrowWhy.Length == 0) noGrowWhy = names[k] + ": " + why; continue; }
+                    todo.Add(new KeyValuePair<GameObject, Vector3>(prefabs[k], pos[r, c]));
                     made++; madeOf[k]++;
                 }
             StringBuilder per = new StringBuilder();
             for (int k = 0; k < prefabs.Count; k++) per.Append(" ").Append(names[k]).Append("=").Append(madeOf[k]);
-            return "planted " + made + " (" + per.ToString().Trim() + ") on the soil connected to your cell; " + apart + " cultivated cells not connected, "
-                + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + (capped > 0 ? ", " + capped + " over the cap of " + MaxPlanted : "") + "; " + spacingNote;
+            string batches = Spawn(todo, scale);
+            return "planted " + made + batches + " (" + per.ToString().Trim() + ") on the soil connected to your cell; " + apart + " cultivated cells not connected, "
+                + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + NoGrow(noGrow, noGrowWhy) + Capped(capped) + "; " + spacingNote;
         }
 
         // area=coords | patch: a world X/Z grid over the rectangle (coords) or the patch's bounding box (patch), GridMath.RectCells
@@ -130,7 +137,9 @@ namespace HomeCheat.Features.WorldCommands
             List<int> cropOfBand = new List<int>();
             for (int k = 0; k < counts.Count; k++) for (int i = 0; i < counts[k]; i++) cropOfBand.Add(k);
             if (cropOfBand.Count == 0) cropOfBand.Add(0);
-            int made = 0, noSoil = 0, apart = 0, blocked = 0, capped = 0;
+            int made = 0, noSoil = 0, apart = 0, blocked = 0, capped = 0, noGrow = 0;
+            string noGrowWhy = "";
+            List<KeyValuePair<GameObject, Vector3>> todo = new List<KeyValuePair<GameObject, Vector3>>();
             int[] madeOf = new int[prefabs.Count];
             for (int i = 0; i < pts.Count; i++)
             {
@@ -142,17 +151,51 @@ namespace HomeCheat.Features.WorldCommands
                 if (made >= MaxPlanted) { capped++; continue; }
                 if (Ground.IsBlocked(pos, clear)) { blocked++; continue; }
                 int k = cropOfBand[(i / cols) % cropOfBand.Count];
-                GameObject inst = (GameObject)UnityEngine.Object.Instantiate(prefabs[k], pos, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
-                Trees.SetScale(inst, scale);
+                string why;
+                if (!GrowRules.Allowed(GrowRules.PlantOf(prefabs[k]), pos, out why)) { noGrow++; if (noGrowWhy.Length == 0) noGrowWhy = names[k] + ": " + why; continue; }
+                todo.Add(new KeyValuePair<GameObject, Vector3>(prefabs[k], pos));
                 made++; madeOf[k]++;
             }
             StringBuilder per = new StringBuilder();
             for (int k = 0; k < prefabs.Count; k++) per.Append(" ").Append(names[k]).Append("=").Append(madeOf[k]);
             bool ignored = a.Has("rows") || a.Has("perrow") || a.Has("cols") || a.Has("dist");
-            return "planted " + made + " (" + per.ToString().Trim() + ") in " + where + ", grid " + cols + " x " + rows + "; "
-                + (patch != null ? apart + " cultivated cells not in this patch, " : "") + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects"
-                + (capped > 0 ? ", " + capped + " over the cap of " + MaxPlanted : "") + "; " + spacingNote
+            string batches = Spawn(todo, scale);
+            return "planted " + made + batches + " (" + per.ToString().Trim() + ") in " + where + ", grid " + cols + " x " + rows + "; "
+                + (patch != null ? apart + " cultivated cells not in this patch, " : "") + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + NoGrow(noGrow, noGrowWhy)
+                + Capped(capped) + "; " + spacingNote
                 + (ignored ? "; rows/perrow/dist ignored with area=" : "");
+        }
+
+        // spawns the crops BatchSize at a time, BatchGap s apart; " in 18 batches over 1.7 s" when more than one
+        string Spawn(List<KeyValuePair<GameObject, Vector3>> todo, float scale)
+        {
+            int n = (todo.Count + BatchSize - 1) / BatchSize;
+            for (int b = 0; b < n; b++)
+            {
+                int from = b * BatchSize, to = Mathf.Min(todo.Count, from + BatchSize);
+                Action step = delegate
+                {
+                    for (int i = from; i < to; i++)
+                    {
+                        GameObject inst = (GameObject)UnityEngine.Object.Instantiate(todo[i].Key, todo[i].Value, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+                        Trees.SetScale(inst, scale);
+                    }
+                };
+                if (b == 0) step(); else Later(b * BatchGap, step);
+            }
+            return n > 1 ? " in " + n + " batches over " + Fmt.F((n - 1) * BatchGap, 1) + " s" : "";
+        }
+
+        // the cells left over the cap: planted crops block their cell, so casting again plants the rest
+        static string Capped(int capped)
+        {
+            return capped > 0 ? ", " + capped + " over the cap of " + MaxPlanted + " per cast: cast again to plant the rest" : "";
+        }
+
+        // ", 3 not planted: the game would not let them grow there (Flax: wrong biome (Meadows; grows in Plains))"
+        static string NoGrow(int n, string why)
+        {
+            return n > 0 ? ", " + n + " not planted: the game would not let them grow there (" + why + ")" : "";
         }
 
         // map=1: the grid as text, farthest row on top; @ your cell, # cultivated and connected, o cultivated but cut off, . no soil

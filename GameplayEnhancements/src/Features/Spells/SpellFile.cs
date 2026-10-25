@@ -392,7 +392,7 @@ namespace HomeCheat.Features.Spells
             string pk = PinOf(s);
             sb.Append("  -> ").Append(s.Cmd);
             foreach (SpellAsk a in s.Asks) sb.Append("  ask ").Append(a.Key).Append(':').Append(a.Source.Length > 0 ? a.Source : a.Options.Count + " answers");
-            sb.Append(s.Sticky ? "  sticky" : "").Append(pk.Length > 0 ? "  " + PinLabel(pk) : "").Append('\n');
+            sb.Append(s.Sticky ? "  sticky" : "").Append(pk.Length > 0 ? "  " + PinLabel(pk) : "").Append(s.ShiftName.Length > 0 ? "  Shift+F: " + s.ShiftName : "").Append('\n');
         }
 
         public string SetPin(string key, string spellId)

@@ -17,7 +17,7 @@ namespace HomeCheat.Features.Spellshot
         {
             get
             {
-                return "spellshot type=arrow|balistashot|thunderbolt|harpoon [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [push=1 (x strike push force; enemies are pushed, you are not hit at all)] " + PvpUsage + "; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
+                return "spellshot type=arrow|balistashot|thunderbolt|harpoon [perrow=1] [rows=1] [dist=1] [spacing=0.6] [speed=] [projectile=<prefab>] [damage=1] [scale=1 (strike size)] [strikedamage=40 (lightning damage of a strike, 0 = visual only)] [at=aim|self] [spread=0 (degrees between neighbouring shots of the grid, cap 45: 0 = all parallel; 15 = a fan like a numpad, the centre straight, 8 up, 2 down, 4 left, 6 right, 7 up-left ...)] [push=1 (x strike push force; enemies are pushed, you are not hit at all)] " + PvpUsage + "; thunderbolt = Eikthyr-style lightning strikes on the ground at the aim point, spacing default 1.5; "
                     + "harpoon = the Abyssal Harpoon's projectile (SpearChitin) carrying its vanilla pull status effect (Harpooned): a hit enemy is reeled in like with the harpoon, costs your stamina by the target's weight, block or attack releases it, bosses break free; [se=<status effect name> (default: the harpoon item's own)] [speed= (default: the harpoon's throw speed)]; "
                     + "perrow/rows are 1..9 (even counts centre the grid between items); formation is centred on the crosshair, all shots fly along it; "
                     + "local player only (owner = you). type=probe&filter=<text> lists projectile prefabs.";
@@ -25,6 +25,7 @@ namespace HomeCheat.Features.Spellshot
         }
 
         const int MaxCount = 81;
+        const float MaxSpread = 45f;   // degrees between neighbouring shots
         float lastShot = -100f;   // volley cooldown
         bool pvpHit;              // pvp=1 and the caster's PvP on (set per volley)
         string pvpNote = "";      // the pvp part of the first answer line
@@ -67,6 +68,8 @@ namespace HomeCheat.Features.Spellshot
             float dist = Mathf.Max(0.5f, a.Float("dist", 1f));
             float spacing = Mathf.Max(0.1f, a.Float("spacing", 0.6f));
             bool spacingGiven = a.Has("spacing");
+            float spread = Caps.Check("spread", a.Float("spread", 0f), MaxSpread);
+            if (spread < 0f) return "ERROR: spread must be 0 to " + MaxSpread;
             float scale = a.Float("scale", 1f);
             float strikeDamage = a.Float("strikedamage", type == "thunderbolt" ? 40f : 0f);
             float dmgMul = a.Float("damage", 1f);
@@ -155,7 +158,11 @@ namespace HomeCheat.Features.Spellshot
                         if (isProj)
                         {
                             Vector3 pos = C + Rt * dx + Up * dy;
-                            Fire(p, setup, projPrefab, ammoPrefab, pos, D, speed, dmgMul, seHash, pvpHit);
+                            // spread (Maksym 2026-10-25): each shot turns by its grid offset, columns to the right, rows up (a numpad fan)
+                            Vector3 dirShot = spread > 0f
+                                ? Quaternion.AngleAxis(-(i - (rows - 1) / 2f) * spread, Rt) * Quaternion.AngleAxis((j - (perrow - 1) / 2f) * spread, Up) * D
+                                : D;
+                            Fire(p, setup, projPrefab, ammoPrefab, pos, dirShot.normalized, speed, dmgMul, seHash, pvpHit);
                         }
                         else
                         {
@@ -194,7 +201,7 @@ namespace HomeCheat.Features.Spellshot
                     }
                 }
             return "spellshot " + type + " " + perrow + "x" + rows + " = " + ok + " projectiles (" + (isProj ? "prefab " + projPrefab.name : "strike prefab " + projPrefab.name)
-                + (used != null && used != projPrefab.name ? " via " + used : "") + (seName != null ? ", status effect " + seName : "") + ") from " + Fmt.Vec(C) + " along " + Fmt.Vec(D)
+                + (used != null && used != projPrefab.name ? " via " + used : "") + (seName != null ? ", status effect " + seName : "") + ") from " + Fmt.Vec(C) + " along " + Fmt.Vec(D) + (spread > 0f && isProj ? ", fan " + Fmt.F(spread, 0) + " deg between shots" : "")
                 + pvpNote + (firstErr != null ? " ; first error: " + firstErr : "");
         }
 

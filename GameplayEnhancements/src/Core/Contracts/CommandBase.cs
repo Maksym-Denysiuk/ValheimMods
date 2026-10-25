@@ -53,7 +53,15 @@ namespace HomeCheat
             subActions.Add(new SubActionEntry { Key = key, Help = help, IsFlag = true, Run = run });
         }
 
+        // every "ERROR: ..." answer, thrown or returned, is also shown to the player in the middle of the screen (Kit.Notify)
         public string Run(Dictionary<string, string> raw)
+        {
+            string r = RunInner(raw);
+            if (r != null && r.StartsWith("ERROR")) Kit.Notify.Error(r);
+            return r;
+        }
+
+        string RunInner(Dictionary<string, string> raw)
         {
             Args a = new Args(raw);
             try

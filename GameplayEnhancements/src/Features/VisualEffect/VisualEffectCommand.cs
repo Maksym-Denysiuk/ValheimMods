@@ -17,7 +17,7 @@ namespace HomeCheat.Features.VisualEffect
             get
             {
                 return "visualeffect name=<effect> [at=aim|self|x,y,z] [scale=1] [duration=sec] [count=1] [spacing=2] [lift=0.2] [ground=1] [share=1: all players see it; share=0: local only, scale/duration work] | list=1 | name=reset | name=status"
-                    + " | probe: name=_probe&prefab=<vfx prefab>&duration=8 | name=_envs";
+                    + " | probe: name=_probe&prefab=<vfx prefab>&duration=8 [scale=1] [speed=1 (x particle speed: 2 = plays twice as fast)] | name=_envs";
             }
         }
 
@@ -223,6 +223,8 @@ namespace HomeCheat.Features.VisualEffect
             Vector3 pos = Where(a);
             float dur = a.Float("duration", 8f);
             float scale = a.Float("scale", 1f);
+            float speed = a.Float("speed", 1f);
+            if (speed <= 0f || speed > 10f) return "ERROR: speed must be above 0 and at most 10";
             Dictionary<string, int> comps = new Dictionary<string, int>();
             foreach (Component c in src.GetComponentsInChildren<Component>(true))
             {
@@ -238,8 +240,24 @@ namespace HomeCheat.Features.VisualEffect
             GameObject go = Prefabs.Spawn(prefab, pos, Quaternion.identity);
             if (go == null) return "ERROR: spawn failed";
             if (Math.Abs(scale - 1f) > 0.001f) Trees.SetScale(go, scale);
+            Tune(go, scale, speed);
             Kill(go, dur);
-            return "probe " + prefab + " at " + Fmt.Vec(pos) + " removed after " + dur.ToString("F0") + " s; components: " + sb;
+            return "probe " + prefab + " at " + Fmt.Vec(pos) + (scale != 1f ? " scale " + Fmt.F(scale, 2) : "") + (speed != 1f ? " speed x" + Fmt.F(speed, 1) : "")
+                + " removed after " + dur.ToString("F0") + " s; components: " + sb;
+        }
+
+        // smaller or faster (Maksym 2026-10-25, mine effects): particles follow the root's scale (Hierarchy; many prefabs use Local,
+        // which ignores it), play speed x 'speed', lights shrink with the scale. Small copy in Traps (TrapCommand.Tune), promotion candidate for Kit.Fx.
+        internal static void Tune(GameObject go, float scale, float speed)
+        {
+            if (go == null) return;
+            foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                ParticleSystem.MainModule m = ps.main;
+                if (scale != 1f) m.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                if (speed != 1f) m.simulationSpeed = m.simulationSpeed * speed;
+            }
+            if (scale != 1f) foreach (Light l in go.GetComponentsInChildren<Light>(true)) l.range = l.range * scale;
         }
 
         // name=_count: how many prefabs start with vfx_ / fx_ / sfx_; with filter=<text> also lists every matching name

@@ -12,12 +12,13 @@ namespace HomeCheat.Features.WorldCommands
         const int MaxPieces = 2500;
 
         public override string Name { get { return "cultivate"; } }
-        protected override string Usage { get { return "cultivate [rows=1] [perrow=1] [spacing=1.5] [dist=<m from you to row 1, default 0 = your own cell>] [area=coords (the rectangle of op=coord start and end, edges along world X/Z; rows, perrow, dist ignored)] - cultivated soil from your cell along your look direction, for op=field; cap " + MaxPieces + " cells"; } }
+        protected override string Usage { get { return "cultivate [rows=1] [perrow=1] [spacing=1.5] [dist=<m from you to row 1, default 0 = your own cell>] [area=self|coords (self = left out: from your cell; coords = the rectangle of op=coord start and end, edges along world X/Z; rows, perrow, dist ignored)] - cultivated soil from your cell along your look direction, for op=field; cap " + MaxPieces + " cells"; } }
 
         protected override string Execute(Args a)
         {
             string area = a.Str("area", "").ToLowerInvariant();
-            if (area.Length > 0 && area != "coords") throw new CommandException("area must be coords (or left out)");
+            if (area == "self") area = "";   // the spell form's "From me": rows and perrow from your cell, as with no area
+            if (area.Length > 0 && area != "coords") throw new CommandException("area must be self or coords (or left out)");
             if (area == "coords") return Rectangle(a);
             int rows = a.Int("rows", 1), cols = a.Int("perrow", a.Int("cols", 1));
             float spacing = a.Float("spacing", 1.5f);

@@ -1,0 +1,4 @@
+# ParticleSystem (blast sets: scale and speed)
+UnityEngine.ParticleSystemModule.dll
+# GetStableHashCode (status effect of tar mines)
+assembly_utils.dll

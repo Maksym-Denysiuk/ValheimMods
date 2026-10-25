@@ -12,7 +12,10 @@ namespace HomeCheat.Features.WorldCommands
     // avoid=1: a cell with a player-built piece within clear x scale + PieceMargin is skipped (Constructions.Near).
     public sealed class PlantCommand : CommandBase
     {
-        const int MaxSaplings = 400;
+        const int MaxSaplings = 2000;   // planted per cast (was 400 and refused a larger Start-end as a whole, test 2026-10-25)
+        const int MaxCells = 20000;     // grid cells examined with area=coords; above that the area is refused
+        const int BatchSize = 100;      // saplings spawned per step, BatchGap s apart (no frame freeze, no network flood)
+        const float BatchGap = 0.1f;
         const float MaxScale = 20f;
         const float PieceMargin = 2f;   // Constructions measures to a piece's pivot: a wall's end reaches past it
 
@@ -22,8 +25,8 @@ namespace HomeCheat.Features.WorldCommands
             get
             {
                 return "plant prefab=<Sapling> [rows=1] [perrow=1] [spacing=<2 x grow radius x scale>] [aimcol=<middle>] [scale=1 (cap " + MaxScale
-                    + ")] [clear=<auto>] [area=aim|coords (coords = the rectangle of op=coord start and end, edges along world X/Z; rows, perrow, aimcol ignored)]"
-                    + " [avoid=0 (1 = skip cells within clear x scale + " + PieceMargin + " m of a player-built piece)] - saplings at the crosshair; cap " + MaxSaplings + " saplings";
+                    + ")] [clear=<auto>] [area=aim|self|coords (self = from you: row 1 one spacing ahead, rows run towards the crosshair; coords = the rectangle of op=coord start and end, edges along world X/Z; rows, perrow, aimcol ignored)]"
+                    + " [avoid=0 (1 = skip cells within clear x scale + " + PieceMargin + " m of a player-built piece)] - saplings at the crosshair; cap " + MaxSaplings + " saplings per cast (more: cast again), " + MaxCells + " cells with area=coords";
             }
         }
 
@@ -32,7 +35,7 @@ namespace HomeCheat.Features.WorldCommands
             Host.RequireWorld();
             string prefab = a.Required("prefab", "e.g. prefab=Birch_Sapling (op=list&filter=sapling)");
             string area = a.Str("area", "aim").ToLowerInvariant();
-            if (area != "aim" && area != "coords") throw new CommandException("area must be aim or coords (or left out)");
+            if (area != "aim" && area != "coords" && area != "self") throw new CommandException("area must be aim, self or coords (or left out)");
             int rows = a.Int("rows", 1), cols = a.Int("perrow", a.Int("cols", 1));
             int aimcol = a.Int("aimcol", (cols - 1) / 2);
             float spacing = a.Float("spacing", 0f), scale = a.Float("scale", 1f), clear = a.Float("clear", 0f);
@@ -55,9 +58,9 @@ namespace HomeCheat.Features.WorldCommands
                 int rc, rr;
                 GridMath.RectSize(s.x, s.z, e.x, e.z, spacing, out rc, out rr);
                 long count = (long)rc * rr;
-                if (count > MaxSaplings) throw new CommandException("cells=" + count + " is over the cap " + MaxSaplings + " (" + rc + " x " + rr + " at "
+                if (count > MaxCells) throw new CommandException("cells=" + count + " is over the cap " + MaxCells + " (" + rc + " x " + rr + " at "
                     + Fmt.F(spacing, 1) + " m): move the points closer or use a larger spacing=");
-                foreach (GridPoint pt in GridMath.RectCells(s.x, s.z, e.x, e.z, spacing, MaxSaplings))
+                foreach (GridPoint pt in GridMath.RectCells(s.x, s.z, e.x, e.z, spacing, MaxCells))
                 {
                     Vector3 pos = new Vector3(pt.X, 0f, pt.Z);
                     pos.y = Ground.Height(pos);
@@ -71,14 +74,25 @@ namespace HomeCheat.Features.WorldCommands
             {
                 if (rows * cols > MaxSaplings) throw new CommandException("max " + MaxSaplings + " saplings");
                 Anchor an = Anchor.AtAim(p);
+                if (area == "self")
+                {
+                    // self (Maksym 2026-10-25): the block starts at you, row 1 one spacing ahead, and runs towards the crosshair
+                    an.Origin = p.transform.position + an.Fwd * spacing;
+                    an.Origin.y = Ground.Height(an.Origin);
+                    if (!a.Has("aimcol")) aimcol = (cols - 1) / 2;
+                }
                 for (int r = 0; r < rows; r++)
                     for (int c = 0; c < cols; c++)
                         cells.Add(an.Cell(r, c, aimcol, spacing));
                 where = "(" + rows + " rows x " + cols + ")";
-                tail = ", tree " + (aimcol + 1) + " of row 1 at " + Fmt.Vec(an.Origin) + (an.Aimed ? " (crosshair)" : " (no crosshair hit, 8 m ahead)");
+                tail = area == "self"
+                    ? ", from you towards " + (an.Aimed ? "the crosshair" : "where you look") + ", row 1 at " + Fmt.Vec(an.Origin)
+                    : ", tree " + (aimcol + 1) + " of row 1 at " + Fmt.Vec(an.Origin) + (an.Aimed ? " (crosshair)" : " (no crosshair hit, 8 m ahead)");
             }
 
-            int made = 0, blocked = 0, nearPieces = 0;
+            int made = 0, blocked = 0, nearPieces = 0, noGrow = 0, capped = 0;
+            List<Vector3> todo = new List<Vector3>();
+            string noGrowWhy = "";
             Piece firstPiece = null;
             Vector3 firstCell = Vector3.zero;
             foreach (Vector3 pos in cells)
@@ -94,15 +108,39 @@ namespace HomeCheat.Features.WorldCommands
                     }
                 }
                 if (Ground.IsBlocked(pos, clear)) { blocked++; continue; }
-                GameObject inst = (GameObject)UnityEngine.Object.Instantiate(go, pos, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
-                Trees.SetScale(inst, scale);   // the grown tree copies this scale when the sapling grows
+                string why;
+                if (!GrowRules.Allowed(pl, pos, out why)) { noGrow++; if (noGrowWhy.Length == 0) noGrowWhy = why; continue; }
+                if (made >= MaxSaplings) { capped++; continue; }
+                todo.Add(pos);
                 made++;
             }
             string avoided = avoid ? ", " + nearPieces + " skipped near buildings (keep " + Fmt.F(keep, 1) + " m"
                 + (firstPiece != null ? ", e.g. " + Constructions.Describe(firstPiece, firstCell) : "") + ")" : "";
-            return "planted " + made + " " + prefab + " x" + scale.ToString("F2") + " " + where + ", " + blocked
-                + " blocked by objects (clear radius " + clear.ToString("F2") + ")" + avoided + ", spacing " + spacing.ToString("F2")
+            string batches = Spawn(go, todo, scale);
+            return "planted " + made + batches + " " + prefab + " x" + scale.ToString("F2") + " " + where + ", " + blocked
+                + " blocked by objects (clear radius " + clear.ToString("F2") + ")"
+                + (capped > 0 ? ", " + capped + " over the cap of " + MaxSaplings + " per cast: cast again to plant the rest" : "")
+                + (noGrow > 0 ? ", " + noGrow + " not planted: the game would not let them grow there (" + noGrowWhy + ")" : "") + avoided + ", spacing " + spacing.ToString("F2")
                 + " m (growRadius " + need.ToString("F2") + ")" + tail;
+        }
+        // the saplings BatchSize at a time, BatchGap s apart; " in 7 batches over 0.6 s" when more than one
+        string Spawn(GameObject go, List<Vector3> todo, float scale)
+        {
+            int n = (todo.Count + BatchSize - 1) / BatchSize;
+            for (int b = 0; b < n; b++)
+            {
+                int from = b * BatchSize, to = Mathf.Min(todo.Count, from + BatchSize);
+                System.Action step = delegate
+                {
+                    for (int i = from; i < to; i++)
+                    {
+                        GameObject inst = (GameObject)UnityEngine.Object.Instantiate(go, todo[i], Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+                        Trees.SetScale(inst, scale);   // the grown tree copies this scale when the sapling grows
+                    }
+                };
+                if (b == 0) step(); else Later(b * BatchGap, step);
+            }
+            return n > 1 ? " in " + n + " batches over " + Fmt.F((n - 1) * BatchGap, 1) + " s" : "";
         }
     }
 }

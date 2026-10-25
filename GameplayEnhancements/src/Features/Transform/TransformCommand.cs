@@ -19,21 +19,16 @@ namespace HomeCheat.Features.TransformCommands
         {
             get
             {
-                return "op=transform&type=human|raven|serpent|fish[&duration=<s, 0=until human>][&speed=<x, default 1>][&hover=0 (raven keeps gliding forward)][&lookdive=0 (altitude only with Space/Ctrl)][&share=1 (raven, host only: a real networked Crow follows you so other players see it)][&scale=<x>][&yoff=<m>][&model=<prefab>]"
-                    + " - raven flies (look up/down to climb/dive, shift = fast), serpent/fish swim fast and crawl on land; local player only (other players' clients would not see it); type=human always restores; type=models lists candidate prefabs";
+                return "op=transform&type=human|raven|serpent|fish[&duration=<s, 0=until human>][&speed=<x, default 1>][&hover=0 (raven keeps gliding forward)][&lookdive=0 (altitude only with Space/Ctrl)][&share=1 (default, host only: a networked copy of the creature follows you so other players see it; 0 = only you see the form)][&hide=1 (default, with share: your human body is hidden from other players, op=hidebody, until you are human again)][&scale=<x>][&yoff=<m>][&model=<prefab>]"
+                    + " - raven flies (look up/down to climb/dive, shift = fast), serpent/fish swim fast and crawl on land; other players see the form through share (default on, host only); type=human always restores; type=models lists candidate prefabs";
             }
         }
 
-        // prefab names tried in order; the first that exists in ZNetScene is used
+        // prefab names tried in order (the form's own list); the first that exists in ZNetScene is used
         static string[] Candidates(string type)
         {
-            switch (type)
-            {
-                case "raven": return new string[] { "Crow", "Seagal", "Raven", "Hugin" };
-                case "serpent": return new string[] { "Serpent" };
-                case "fish": return new string[] { "Fish1", "Fish2", "Fish3", "Fish4_cave" };
-                default: return new string[0];
-            }
+            TransformForm f = TransformForm.Get(type);
+            return f != null ? f.Prefabs : new string[0];
         }
 
         // visual scale when the caller gives none: natural size (scale=<x> overrides)
@@ -71,10 +66,11 @@ namespace HomeCheat.Features.TransformCommands
             int removed = TransformState.RemoveAll(p);
             if (type == "human") return "human: restored (removed " + removed + " transform state)";
 
-            string[] names = Candidates(type);
+            TransformForm form = TransformForm.Get(type);
+            if (form == null) return "ERROR: unknown type '" + type + "' (human|" + TransformForm.Names + ")";
+            string[] names = form.Prefabs;
             string model = a.Str("model", "");
             if (model.Length > 0) names = new string[] { model };
-            if (names.Length == 0) return "ERROR: unknown type '" + type + "' (human|raven|serpent|fish, or model=<prefab>)";
 
             GameObject prefab = null;
             string used = null;
@@ -86,19 +82,22 @@ namespace HomeCheat.Features.TransformCommands
             if (prefab == null) return "ERROR: no prefab among [" + string.Join(", ", names) + "] (try op=transform&type=models)";
 
             float scale = a.Float("scale", DefaultScale(type));
-            float yoff = a.Float("yoff", type == "raven" ? 0.6f : 0f); // raven: pivot near body centre so banking looks right
+            float yoff = a.Float("yoff", form.YOffset);
             float duration = a.Float("duration", 0f);
 
             GameObject clone = MakeVisualClone(prefab, p.transform, scale, yoff);
             TransformState st = p.gameObject.AddComponent<TransformState>();
-            st.Init(p, clone, duration > 0f ? Time.time + duration : 0f, type, a.Float("speed", 1f), prefab, a.Flag("hover", true), a.Flag("lookdive", true), a.Flag("share", false), a.Float("humanoffset", 0f));
+            // share and hide are on for every form (Maksym 2026-10-25: other players must see the form, not the human); share=0 / hide=0 opt out
+            bool share = a.Flag("share", true), hide = a.Flag("hide", true);
+            st.Init(p, clone, duration > 0f ? Time.time + duration : 0f, form, a.Float("speed", 1f), prefab, a.Flag("hover", true), a.Flag("lookdive", true), share, hide, a.Float("humanoffset", 0f));
 
             StringBuilder sb = new StringBuilder();
             sb.Append("transformed into ").Append(type).Append(" (prefab ").Append(used).Append(", scale ").Append(scale.ToString("F2")).Append(")");
             if (duration > 0f) sb.Append(", back to human in ").Append(duration.ToString("F0")).Append(" s");
-            if (a.Flag("share", false))
-                sb.Append(st.Shared ? "\nshared: a networked " + used + " follows you for other players (your human body stays visible to them)"
-                                    : "\nshare NOT active (raven and serpent only, and only when this game is the host)");
+            if (share)
+                sb.Append(st.Shared ? "\nother players see: a networked " + used + (st.HidBody ? ", your human body is hidden from them" : ", and your human body (hide=0)")
+                                    : "\nother players see your human body: share works only when this game is the host");
+            else sb.Append("\nother players see your human body (share=0)");
             sb.Append("\nrevert: op=transform&type=human");
             sb.Append("\n").Append(Describe(clone));
             return sb.ToString();
@@ -292,7 +291,7 @@ namespace HomeCheat.Features.TransformCommands
         static string Models()
         {
             StringBuilder sb = new StringBuilder("candidate prefabs (found = exists in this world):\n");
-            foreach (string t in new string[] { "raven", "serpent", "fish" })
+            foreach (string t in TransformForm.AllNames)
                 foreach (string n in Candidates(t))
                     sb.Append(t).Append(": ").Append(n).Append(Prefabs.Get(n) != null ? " found" : " missing").Append('\n');
             sb.Append("other: op=list&filter=<text> lists every prefab name");

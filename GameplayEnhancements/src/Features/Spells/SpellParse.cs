@@ -7,7 +7,8 @@ namespace HomeCheat.Features.Spells
     // Spell file v4 parser. No Unity or game reference, so it can be compiled into a console check outside the game.
     //   id | label | command | flags      id = dotted numbers of any depth (2, 2.1, 6.1.3); 1 is the Hotbar and cannot be used
     //   a line with an empty command (or only id | label) is a title: a group or sub-section; "6.1 | Flatten | | sticky"
-    //   flags: sticky  pin=F1..F12|S1..S12 (S10..S12 = Shift+0, Shift+-, Shift+=)  shift=<form>  ask=<key>:<Label=value,...>|@players|@crops|@trees|@prefabs (repeatable)
+    //   flags: sticky  pin=F1..F12|S1..S12 (S10..S12 = Shift+0, Shift+-, Shift+=)  shift=<form>  button=<cast button text>
+    //          ask=<key>[/<Label>][><other key>]:<Label=value,...>|@players|@crops|@trees|@prefabs (repeatable; value @off = greyed)
     // Every level may hold any number of entries (the game's radial lays them out as a spiral).
     internal sealed class SpellParse
     {
@@ -57,6 +58,7 @@ namespace HomeCheat.Features.Spells
                 if (why != null) p.Bad.Add("line " + lineNo + " (" + why + ")");
             }
             p.Finish(p.Root, false);
+            p.ResolveShifts();
             return p;
         }
 
@@ -81,13 +83,15 @@ namespace HomeCheat.Features.Spells
             if (!title && existing != null && existing.Children.Count > 0) return "id " + id + " has entries below it, so it must be a title (empty command)";
 
             string flags = f.Length > 3 ? string.Join("|", f, 3, f.Length - 3) : "";
-            bool sticky = false; string pin = "", shift = "";
+            bool sticky = false; string pin = "", shift = "", shiftLabel = "", button = "";
             List<SpellAsk> asks = new List<SpellAsk>();
             foreach (string tok in flags.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (tok == "sticky") sticky = true;
                 else if (tok.StartsWith("pin=")) pin = tok.Substring(4).ToUpperInvariant();
                 else if (tok.StartsWith("shift=")) shift = tok.Substring(6);
+                else if (tok.StartsWith("shiftlabel=")) shiftLabel = tok.Substring(11).Replace('_', ' ');
+                else if (tok.StartsWith("button=")) button = tok.Substring(7).Replace('_', ' ');
                 else if (tok.StartsWith("ask="))
                 {
                     string err;
@@ -97,9 +101,11 @@ namespace HomeCheat.Features.Spells
                     asks.Add(a);
                 }
             }
-            if (title && (pin.Length > 0 || shift.Length > 0 || asks.Count > 0)) return "a title takes only the sticky flag";
+            if (title && (pin.Length > 0 || shift.Length > 0 || shiftLabel.Length > 0 || asks.Count > 0)) return "a title takes only the sticky flag";
+            bool shiftRef = shift.StartsWith("@");
+            if (shiftRef && ParseId(shift.Substring(1)) == null) return "shift=" + shift + " is not shift=@<spell id>";
             if (!title && pin.Length > 0 && Array.IndexOf(PinOrder, pin) < 0) return "pin " + pin + " is not one of " + string.Join(" ", PinOrder);
-            string missing = title ? null : MissingAnswer(f[2] + "&" + shift, asks);
+            string missing = title ? null : MissingAnswer(f[2] + (shiftRef ? "" : "&" + shift), asks);
             if (missing != null) return "{" + missing + "} in the command has no ask=" + missing + ":...";
 
             SpellNode node = Node(nums);           // only now: a skipped line leaves no node behind
@@ -110,7 +116,10 @@ namespace HomeCheat.Features.Spells
                 return null;
             }
             Spell s = new Spell();
-            s.Id = id; s.Top = nums[0]; s.Label = f[1]; s.Cmd = f[2]; s.Shift = shift; s.Pin = pin; s.Sticky = sticky; s.Asks = asks;
+            s.Id = id; s.Top = nums[0]; s.Label = f[1]; s.Cmd = f[2]; s.Pin = pin; s.Sticky = sticky; s.Asks = asks;
+            if (shiftRef) s.ShiftId = shift.Substring(1); else s.Shift = shift;
+            s.ShiftLabel = shiftLabel;
+            s.Button = button;
             node.Title = f[1]; node.Spell = s; node.Declared = true;
             Spells[id] = s;
             if (pin.Length > 0) Pins[pin] = s;
@@ -141,7 +150,24 @@ namespace HomeCheat.Features.Spells
             int c = body.IndexOf(':');
             if (c <= 0) { err = "ask needs key:options (ask=count:1,5,10)"; return null; }
             SpellAsk a = new SpellAsk();
-            a.Key = body.Substring(0, c).Trim().ToLowerInvariant();
+            // key[/Label_text][>other][?other=value]: the form's name of the question, "only answers above the answer of other",
+            // and "only while other is answered value"
+            string head = body.Substring(0, c).Trim();
+            int qm = head.IndexOf('?');
+            if (qm >= 0)
+            {
+                string cond = head.Substring(qm + 1).Trim();
+                int eq = cond.IndexOf('=');
+                if (eq <= 0) { err = "ask " + head + ": the condition must be ?other=value"; return null; }
+                a.WhenKey = cond.Substring(0, eq).Trim().ToLowerInvariant();
+                a.WhenValue = cond.Substring(eq + 1).Trim();
+                head = head.Substring(0, qm);
+            }
+            int gt = head.IndexOf('>');
+            if (gt >= 0) { a.GreaterThan = head.Substring(gt + 1).Trim().ToLowerInvariant(); head = head.Substring(0, gt); }
+            int sl = head.IndexOf('/');
+            if (sl >= 0) { a.Label = head.Substring(sl + 1).Replace('_', ' ').Trim(); head = head.Substring(0, sl); }
+            a.Key = head.Trim().ToLowerInvariant();
             for (int i = 0; i < a.Key.Length; i++)
             {
                 char ch = a.Key[i];
@@ -156,11 +182,16 @@ namespace HomeCheat.Features.Spells
             }
             foreach (string opt in rest.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                int eq = opt.IndexOf('=');
-                string label = eq > 0 ? opt.Substring(0, eq) : opt;
-                string value = eq > 0 ? opt.Substring(eq + 1) : opt;
+                string o1 = opt;
+                bool def = o1.StartsWith("*");   // *value: the form starts on this answer
+                if (def) o1 = o1.Substring(1);
+                int eq = o1.IndexOf('=');
+                string label = eq > 0 ? o1.Substring(0, eq) : o1;
+                string value = eq > 0 ? o1.Substring(eq + 1) : o1;
                 if (value.Length == 0) { err = "ask " + a.Key + ": option '" + opt + "' has no value"; return null; }
-                a.Options.Add(new SpellAskOption(label.Replace('_', ' '), value, ""));
+                SpellAskOption so = new SpellAskOption(label.Replace('_', ' '), value, "");
+                so.Default = def;
+                a.Options.Add(so);
             }
             if (a.Options.Count == 0) { err = "ask " + a.Key + " has no options"; return null; }
             return a;
@@ -205,6 +236,18 @@ namespace HomeCheat.Features.Spells
         }
 
         // sorts the children and passes sticky titles down to the spells below them
+        // shift=@<id>: the spell it names (a spell, not itself); a bad one is reported and the Shift variant dropped
+        void ResolveShifts()
+        {
+            foreach (Spell s in Spells.Values)
+            {
+                if (s.ShiftId.Length == 0) continue;
+                Spell t;
+                if (Spells.TryGetValue(s.ShiftId, out t) && t != s) s.ShiftRef = t;
+                else Bad.Add("spell " + s.Id + " (shift=@" + s.ShiftId + " is not another spell)");
+            }
+        }
+
         void Finish(SpellNode n, bool sticky)
         {
             bool st = sticky || n.Sticky;

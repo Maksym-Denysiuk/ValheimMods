@@ -22,7 +22,6 @@ namespace HomeCheat.Features.Spells
 
         SpellRootConfig root;
         bool barVisible, inputOk;
-        string toast = ""; float toastUntil; bool toastErr;
         string baseline = "";
         string lastCast = "-";
         GUIStyle sKey, sName, sToast;
@@ -116,11 +115,11 @@ namespace HomeCheat.Features.Spells
             ge.Interact = delegate()
             {
                 if (SpellsSettings.ShiftHeld()) BeginPlace(s, radial);
-                else if (s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, null), 0, null, null), owner);
+                else if (s.Asks.Count > 0) SpellForm.Open(this, new SpellAskChain(s, false, null));   // the radial closes, the form opens
                 else CastSpell(s, false, null, null);
                 return true;
             };
-            ge.CloseOnInteract = delegate() { return SpellsSettings.ShiftHeld() || s.Asks.Count > 0 ? false : !s.Sticky; };
+            ge.CloseOnInteract = delegate() { return SpellsSettings.ShiftHeld() ? false : s.Asks.Count > 0 || !s.Sticky; };
             return ge;
         }
 
@@ -144,7 +143,7 @@ namespace HomeCheat.Features.Spells
         }
 
         // the last answer of a chain was picked: substitute {key} and cast
-        internal void CastChain(SpellAskChain c) { CastSpell(c.Spell, c.Shift, c.PinKey, c.Answers); }
+        internal void CastChain(SpellAskChain c) { CastSpell(c.Spell, c.Shift, c.PinKey, c.Answers, c.Skip); }
 
         // a Hotbar section: the spell of one bar cell (or an empty slot). Click casts it; while a spell waits to be placed a click puts it here.
         internal RadialMenuElement MakeCellElement(string cell, IRadialConfig back, RadialBase radial)
@@ -159,11 +158,11 @@ namespace HomeCheat.Features.Spells
             ge.Interact = delegate()
             {
                 if (assigning != null) AssignTo(cell);
-                else if (has && s.Asks.Count > 0) OpenLevel(radial, new SpellAskConfig(this, new SpellAskChain(s, false, cell), 0, null, null), new SpellHotbarConfig(this, SpellParse.PanelOf(cell)));
+                else if (has && s.Asks.Count > 0) SpellForm.Open(this, new SpellAskChain(s, false, cell));
                 else if (has) CastSpell(s, false, cell, null);
                 return true;
             };
-            ge.CloseOnInteract = delegate() { return placing || !has || (!s.Sticky && s.Asks.Count == 0); };
+            ge.CloseOnInteract = delegate() { return placing || !has || s.Asks.Count > 0 || !s.Sticky; };
             cellOf[ge] = cell;
             return ge;
         }
@@ -176,7 +175,7 @@ namespace HomeCheat.Features.Spells
             string k = file.PinOf(s);
             string q = "";
             foreach (SpellAsk a in s.Asks) q += (q.Length == 0 ? "   asks: " : ", ") + a.Key;
-            return id + (k.Length > 0 ? "  " + SpellFile.PinLabel(k) : "") + q + "   Shift+click: to the bar";
+            return id + (k.Length > 0 ? "  " + SpellFile.PinLabel(k) : "") + q + (s.ShiftName.Length > 0 ? "   Shift+F: " + s.ShiftName : "") + "   Shift+click: to the bar";
         }
 
         // ---- placing a spell on the bar ---------------------------------------------------------------------------------------
@@ -378,8 +377,11 @@ namespace HomeCheat.Features.Spells
                 {
                     // Shift is part of the key for cells 1-5, so it does not select the spell's shift= variant there
                     if (k[0] == 'S') SpellsSettings.MarkConsumed();
-                    if (ps.Asks.Count > 0) OpenChainRadial(new SpellAskChain(ps, k[0] == 'F' && shift, k));
-                    else CastSpell(ps, k[0] == 'F' && shift, k, null);
+                    bool adv = k[0] == 'F' && shift;
+                    // Shift+F with shift=@<id>: the advanced version is another spell, cast as it is
+                    if (adv && ps.ShiftRef != null) { ps = ps.ShiftRef; adv = false; }
+                    if (ps.Asks.Count > 0) { flash[k] = Time.unscaledTime + 0.25f; SpellForm.Open(this, new SpellAskChain(ps, adv, k)); }
+                    else CastSpell(ps, adv, k, null);
                     return;
                 }
             }
@@ -401,27 +403,11 @@ namespace HomeCheat.Features.Spells
 
         // ---- casting -----------------------------------------------------------------------------------------------------------
 
-        // a pinned spell with questions: open the radial on its first question (the same Open the G key makes; ours is not swapped)
-        void OpenChainRadial(SpellAskChain c)
-        {
-            try
-            {
-                RadialBase radial = (RadialBase)typeof(Hud).GetField("m_radialMenu", AllF).GetValue(Hud.instance);
-                if (radial == null) { Toast(c.Spell.Label + ": radial menu not available, pick it with G", true); return; }
-                PropertyInfo can = radial.GetType().GetProperty("CanOpen", AllF);
-                if (can != null && can.CanWrite) can.SetValue(radial, true, null);
-                flash[c.PinKey] = Time.unscaledTime + 0.25f;
-                radial.Open(new SpellAskConfig(this, c, 0, null, null), null);
-            }
-            catch (Exception e)
-            {
-                HomeApi.Log("spells: cannot open the questions of " + c.Spell.Label + ": " + (e.InnerException != null ? e.InnerException.Message : e.Message));
-                Toast(c.Spell.Label + " asks questions: pick it with G", true);
-            }
-        }
-
         // pinKey: the bar slot that fired (for the flash), null when the spell was picked in the radial; answers: of its questions, or null
-        void CastSpell(Spell s, bool shift, string pinKey, Dictionary<string, string> answers)
+        void CastSpell(Spell s, bool shift, string pinKey, Dictionary<string, string> answers) { CastSpell(s, shift, pinKey, answers, null); }
+
+        // skip: questions left out of the command ("&key={key}" removed), e.g. the quantity when placing by coordinates
+        void CastSpell(Spell s, bool shift, string pinKey, Dictionary<string, string> answers, ICollection<string> skip)
         {
             if (Time.unscaledTime < s.Next) return;
             s.Next = Time.unscaledTime + 0.3f;
@@ -439,6 +425,8 @@ namespace HomeCheat.Features.Spells
             }
             string form = s.Cmd;
             if (shift && s.Shift.Length > 0) form = form + "&" + s.Shift;
+            if (skip != null)
+                foreach (string k in skip) form = form.Replace("&" + k + "={" + k + "}", "").Replace(k + "={" + k + "}&", "");
             form = SpellParse.Substitute(form, answers);
             if (form.IndexOf('{') >= 0 && form.IndexOf('}') > form.IndexOf('{'))
             {
@@ -465,7 +453,7 @@ namespace HomeCheat.Features.Spells
                 try { SpellPatches.Apply(false); } catch (Exception e) { HomeApi.Log("spells: unpatch failed: " + e.Message); }
                 return;
             }
-            Toast(s.Label + ": " + res, err);
+            if (!err) Toast(s.Label + ": " + res, false);
         }
 
         // toast text: the first line, except for results that start with progress lines (earthquake: "stage 0 ..."), then the last line
@@ -492,7 +480,9 @@ namespace HomeCheat.Features.Spells
             return HomeApi.Exec(form);
         }
 
-        void Toast(string t, bool err) { toast = t; toastErr = err; toastUntil = Time.unscaledTime + 3.5f; }
+        // the bar's messages in the game's style, in the middle of the screen (Kit.Notify); a command's own ERROR answer is already
+        // shown there by the core (CommandBase.Run), so an error result of a cast is not shown twice
+        void Toast(string t, bool err) { HomeCheat.Kit.Notify.Center(t); }
 
         // ---- cheat-state snapshot (read only), compared before/after every cast -------------------------------------------------
 
@@ -532,6 +522,7 @@ namespace HomeCheat.Features.Spells
 
         const float PanelScale = 0.70f;     // whole bar, banner and toast (was 1.0, then 0.85)
         const float CellW = 72f, CellH = 88f, CellGap = 6f, GroupGap = 20f;
+        const float ShiftStrip = 16f;       // under an F cell: the name of its Shift+F version
 
         void MakeStyles()
         {
@@ -541,12 +532,12 @@ namespace HomeCheat.Features.Spells
             sToast = new GUIStyle(GUI.skin.label); sToast.fontSize = 16; sToast.alignment = TextAnchor.MiddleCenter; sToast.wordWrap = true; sToast.normal.textColor = Color.white;
         }
 
-        static void Fill(Rect r, Color c)
+        internal static void Fill(Rect r, Color c)
         {
             Color o = GUI.color; GUI.color = c; GUI.DrawTexture(r, Texture2D.whiteTexture); GUI.color = o;
         }
 
-        static void Frame(Rect r, float t, Color c)
+        internal static void Frame(Rect r, float t, Color c)
         {
             Fill(new Rect(r.x, r.y, r.width, t), c); Fill(new Rect(r.x, r.yMax - t, r.width, t), c);
             Fill(new Rect(r.x, r.y, t, r.height), c); Fill(new Rect(r.xMax - t, r.y, t, r.height), c);
@@ -557,7 +548,7 @@ namespace HomeCheat.Features.Spells
         {
             float total = 12 * CellW + 10 * CellGap + GroupGap;
             float x = (W - total) / 2f + i * (CellW + CellGap) + (i >= 5 ? GroupGap - CellGap : 0f);
-            float y = H - 36f - CellH - (row == 0 ? CellH + CellGap : 0f);
+            float y = H - 36f - CellH - (row == 0 ? CellH + CellGap + ShiftStrip : 0f);
             return new Rect(x, y, CellW, CellH);
         }
 
@@ -571,7 +562,7 @@ namespace HomeCheat.Features.Spells
             return sp;
         }
 
-        static void DrawSprite(Rect r, Sprite sp, float alpha)
+        internal static void DrawSprite(Rect r, Sprite sp, float alpha)
         {
             if (sp == null) return;
             try
@@ -590,9 +581,14 @@ namespace HomeCheat.Features.Spells
         void OnGUI()
         {
             if (SpellsSettings.Current == null) return;
+            // the answer form takes every event (buttons, the search line), above the bar
+            if (SpellForm.Current != null)
+            {
+                if (!SpellsSettings.On || Player.m_localPlayer == null) SpellForm.Close();
+                else { try { SpellForm.Current.Draw(); } catch (Exception e) { HomeApi.Log("spells: form failed: " + e.Message); SpellForm.Close(); } }
+            }
             bool asg = SpellsSettings.On && assigning != null;
-            bool showToast = SpellsSettings.On && toast.Length > 0 && Time.unscaledTime < toastUntil;
-            if (!(SpellsSettings.On && barVisible) && !showToast) return;
+            if (!(SpellsSettings.On && barVisible)) return;
             if (Event.current.type != EventType.Repaint) return;
             MakeStyles();
             float sc = Screen.height / 1080f * PanelScale;
@@ -611,7 +607,7 @@ namespace HomeCheat.Features.Spells
                     foreach (string cell in SpellFile.PinOrder) if (cell[0] == kind && file.Pins.ContainsKey(cell)) shown.Add(cell);
                     if (shown.Count == 0) continue;
                     float y = CellRect(0, row, W, H).y;
-                    if (y < first.y) first = new Rect(first.x, y, first.width, first.height);   // banner and toast above the top row in use
+                    if (y < first.y) first = new Rect(first.x, y, first.width, first.height);   // the placing banner above the top row in use
                     float rowW = shown.Count * CellW + (shown.Count - 1) * CellGap;
                     for (int i = 0; i < shown.Count; i++)
                     {
@@ -626,12 +622,6 @@ namespace HomeCheat.Features.Spells
                 Rect br = new Rect(first.x - 40f, first.y - 46f, last.xMax - first.x + 80f, 34f);
                 Fill(br, new Color(0.30f, 0.22f, 0.04f, 0.92f));
                 GUI.Label(br, "Place \"" + assigning.Label + "\": click a cell in the radial Hotbar (closing the radial cancels)", sToast);
-            }
-            else if (showToast)
-            {
-                Rect tr = new Rect(first.x - 40f, first.y - 46f, last.xMax - first.x + 80f, 34f);
-                Fill(tr, toastErr ? new Color(0.45f, 0.08f, 0.08f, 0.88f) : new Color(0.06f, 0.18f, 0.08f, 0.88f));
-                GUI.Label(tr, toast, sToast);
             }
             GUI.matrix = old;
         }
@@ -652,6 +642,12 @@ namespace HomeCheat.Features.Spells
             if (!has) return;
             DrawSprite(new Rect(r.x + (r.width - 38f) / 2f, r.y + 18f, 38f, 38f), IconOf(s), alpha);
             GUI.Label(new Rect(r.x + 2f, r.y + 58f, r.width - 4f, r.height - 58f), s.Label, sName);
+            if (pinKey[0] == 'F' && s.ShiftName.Length > 0)
+            {
+                // the cell has a Shift+F version: a strip right under it, no text (Maksym 2026-10-25; the name is in the radial)
+                Rect sr = new Rect(r.x, r.yMax + 1f, r.width, ShiftStrip - 2f);
+                Fill(sr, new Color(0.25f, 0.19f, 0.04f, 0.80f * alpha));
+            }
             float cd = s.Next - Time.unscaledTime;
             if (cd > 0f) Fill(new Rect(r.x, r.y, r.width, r.height * Mathf.Clamp01(cd / 0.3f)), new Color(0f, 0f, 0f, 0.5f));
         }
