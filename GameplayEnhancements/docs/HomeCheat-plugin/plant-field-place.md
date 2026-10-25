@@ -1,5 +1,5 @@
 ---
-description: plant, field, cultivate, harvest and place commands of the HomeCheat Valheim plugin (2026-10-24, areas and harvest 2026-10-25) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run
+description: plant, field, cultivate, harvest and place commands of the HomeCheat Valheim plugin (2026-10-24, areas and harvest 2026-10-25, trees in an area 2026-10-25) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run
 ---
 # plant, field, cultivate, place (HomeCheat core ops)
 
@@ -18,14 +18,14 @@ Every command builds a block of `rows` x `perrow` objects. Row 1 starts at the c
 
 | Command | Required | Parameters (default) |
 |---|---|---|
-| `op=plant` | `prefab` (find names with `op=list&filter=sapling`) | `rows` (1), `perrow` (1, alias `cols`), `spacing` (auto), `aimcol` ((perrow-1)/2), `scale` (1), `clear` (auto) |
+| `op=plant` | `prefab` (find names with `op=list&filter=sapling`) | `rows` (1), `perrow` (1, alias `cols`), `spacing` (auto), `aimcol` ((perrow-1)/2), `scale` (1, cap 20), `clear` (auto), `area` (aim; coords = between the two stored points), `avoid` (0; 1 = keep away from buildings): see [Trees in an area](#trees-in-an-area-since-2026-10-25) |
 | `op=field` | `prefab` or `crops` | `rows` (1), `perrow` (1), `spacing` (1.5), `scale` (1), `clear` (0.4), `dist` (anchor in metres ahead of the player instead of the crosshair) |
 | `op=cultivate` | none | `rows` (1), `perrow` (1), `spacing` (1.5), `dist` |
 | `op=place` | `prefab` | `rows` (1), `perrow` (1), `spacing` (1.5), `aimcol`, `scale` (1), `amount` (1, stack size for items), `level` (0, star level for creatures), `lift` (0 m above ground), `clear` (0 = no check, so pieces can be placed anywhere) |
 
 Examples: `op=plant&prefab=Birch_Sapling&rows=3&perrow=5`, `op=cultivate&rows=3&perrow=5`, `op=field&crops=Pickable_Carrot:2,Pickable_Onion:1&perrow=5`, `op=plant&prefab=Birch_Sapling&scale=2`.
 
-Limits: plant and place refuse above 400 objects, field examines at most 40000 cells and plants at most 2500. `scale` above 0 only. A missing `prefab` returns an error on purpose (no default, so a typo cannot plant the wrong thing). Answers: `planted N <prefab> x<scale> (R rows x C), B blocked by objects (clear radius ...), spacing ... m (growRadius ...), tree K of row 1 at x,y,z (crosshair)`; `placed N ...`; `nothing planted: no cultivated soil in the RxC grid (use op=cultivate first)`.
+Limits: plant and place refuse above 400 objects, field examines at most 40000 cells and plants at most 2500. `scale` above 0 only (plant: at most 20). A missing `prefab` returns an error on purpose (no default, so a typo cannot plant the wrong thing). Answers: `planted N <prefab> x<scale> (R rows x C), B blocked by objects (clear radius ...), spacing ... m (growRadius ...), tree K of row 1 at x,y,z (crosshair)`; `placed N ...`; `nothing planted: no cultivated soil in the RxC grid (use op=cultivate first)`.
 
 `scale` on these commands sets the object's local scale and the ZDO key `scale`. For trees see [tree-scale.md](tree-scale.md).
 
@@ -90,6 +90,46 @@ World `ClaudeTest`, one command at a time. `op=reload` must name the new `HomeCh
 11. `op=cheatstate` (after); compare.
 
 Undo: soil and crops as above (Hoe, Cultivator, pick or a world backup); picked crops are gone, replant with `op=field`.
+
+## Trees in an area (since 2026-10-25)
+
+Built 2026-10-25 in the unattended, no-game session W3-world-plant of the Valheim work plan (backlog card 3.13 plant-area; Valheim 1.0.20, BepInEx 5.4.2351). Goal: plant saplings between the two stored points, keep them away from buildings, and pick area, tree and size from the spell bar (7.9 Plant trees...). Before: `plant` only laid a `rows` x `perrow` block at the crosshair, with no size limit and no keep-away from buildings. Source: `src/Features/World/PlantCommand.cs`.
+
+| Parameter | Default | Does |
+|---|---|---|
+| `area=aim\|coords` | `aim` | `aim` = the block at the crosshair, as before. `coords` = the cells of the rectangle with `op=coord` start and end as opposite corners, edges along world X and Z, the grid centred in it (`GridMath.RectCells`, both edges included); `rows`, `perrow` (`cols`) and `aimcol` are ignored and the answer says so. Over 400 cells it is refused as a whole. |
+| `avoid=0\|1` | 0 | 1 = a cell with a player-built piece (`Kit.Constructions.Near`) within `clear` x `scale` + 2 m is skipped and counted; works with both areas. The 2 m margin is there because the distance is measured to a piece's pivot. |
+| `scale` | 1 | now capped at 20: `scale=25` answers `ERROR: scale=25.00 is over the cap 20.00` and plants nothing. |
+
+Spacing without `spacing=` stays twice the sapling's grow radius times the scale, in both areas. Answers (first line): `planted N Birch_Sapling x5.00 in the rectangle start x,y,z - end x,y,z (C x R cells), B blocked by objects (clear radius ...), K skipped near buildings (keep K m, e.g. wood_wall at 3.2 m), spacing ... m (growRadius ...)`; the crosshair form keeps its old answer, with the `skipped near buildings` part only when `avoid=1`. No points: `ERROR: coord 'start' is not set in world <world>: op=coord&set=start`.
+
+The grown tree copies the sapling's scale (ZDO key `scale`). As with `op=scale`, only players with HomeCheat see a scaled tree at its size ([tree-scale.md](tree-scale.md), ASSUMPTION A7).
+
+Assumptions taken in the unattended run (Maksym reviews):
+
+| # | Assumption | Instead of | Why |
+|---|---|---|---|
+| A7 | size cap 20 on `plant`; scaled trees visible only with HomeCheat | no cap; sync-only prefabs | plan (Q3) |
+| A16 | the rectangle's edges run along world X and Z | along the start-end line | plan; same as `cultivate area=coords` |
+| W3-1 | keep-away radius = `clear` x `scale` + 2 m margin | `clear` x `scale` only (the card) | `Constructions` measures to a piece's pivot (its own note: pass your radius plus a margin); a wall's end reaches past its pivot |
+| W3-2 | `plant area=coords` over 400 cells is refused as a whole | planting the first 400 | same rule as `cultivate area=coords` (W2-1) |
+| W3-3 | `area=aim` is the explicit name of today's crosshair block | a new aim behaviour | the spell line 7.9 asks `Start-end=coords,Crosshair=aim`; the default stays unchanged |
+
+### Test list for Maksym (trees, not run yet)
+
+World `ClaudeTest`, one command at a time. `op=reload` must name the new `HomeCheat.Cmd.world.v<stamp>.dll`; `op=help&cmd=plant` shows the usage with `area` and `avoid`.
+
+1. `op=cheatstate` (before).
+2. Next to a wall: `op=coord&set=start`, walk about 15 m so the wall lies inside the rectangle, `op=coord&set=end`.
+3. `op=plant&area=coords&prefab=Birch_Sapling&scale=5&avoid=1`: expect `planted N ... in the rectangle ... K skipped near buildings (keep ... m, e.g. <piece> at ... m)`; no sapling near the wall.
+4. Same without `avoid=1` on fresh points: saplings also land next to the wall (default unchanged).
+5. `op=plant&prefab=Birch_Sapling&scale=25`: `ERROR: scale=25.00 is over the cap 20.00`, nothing planted.
+6. Points 300 m apart, `op=plant&area=coords&prefab=Birch_Sapling`: `ERROR: cells=... is over the cap 400`.
+7. Crosshair form unchanged: `op=plant&prefab=Birch_Sapling&rows=1&perrow=5`: the 3rd sapling on the crosshair, answer ends `tree 3 of row 1 at ... (crosshair)`.
+8. Spell bar 7.9 Plant trees...: asks area (Start-end / Crosshair), then tree, then size (1, 3, 5, 10, 20); always `avoid=1`.
+9. `op=cheatstate` (after); compare.
+
+Undo: saplings and grown trees are ordinary world objects (an axe, or a world backup).
 
 ## Undo
 
