@@ -13,13 +13,13 @@ namespace HomeCheat.Features.Earthquake
     {
         public override string Name { get { return "earthquake"; } }
         const float SimpleForce = 2.1f;      // the Demolisher sledge push (210) against the slam prefab's 100
-        const float StrongForce = 4.2f;      // simple x 2
+        const float StrongForce = 8.4f;      // simple x 4 (was x 2 = 4.2; raised by Maksym 2026-10-25)
         protected override string Usage
         {
             get
             {
                 return "earthquake [target=<nick, other player only if this game is the host>] [stages=5] [hits=2] [delay=0.003 s between hits of one point] [stagegap=0.4 s between stages]"
-                    + " [radius=<r m, default the slam radius>] [spacing=<m between points, default 1.4r so neighbouring slams overlap>] [aoe=<slam prefab>] [damage=0 (0 = push only; >0 = x the damage of weapon=, the caster is the attacker)] [weapon=SledgeStagbreaker (the hammer whose damage the slams carry; auto = the strongest Sledge* item of this game, the debug SledgeCheat excluded)] [quality=max (item level 1..max; damage = base + per-level x (quality - 1))] [mode=simple|strong (push x2.1 = Demolisher sledge value, or x4.2)] [force=<own multiplier, overrides mode>] [players=1 (also pushes other players and friendly or tamed creatures, never yourself; 0 = enemies only)] [props=0]"
+                    + " [radius=<r m, default the slam radius>] [spacing=<m between points, default 1.4r so neighbouring slams overlap>] [aoe=<slam prefab>] [damage=0 (0 = push only; >0 = x the damage of weapon=, the caster is the attacker)] [weapon=SledgeStagbreaker, with mode=strong SledgeDemolisher (the hammer whose damage the slams carry; auto = the strongest Sledge* item of this game, the debug SledgeCheat excluded)] [quality=max (item level 1..max; damage = base + per-level x (quality - 1))] [mode=simple|strong (push x2.1 = Demolisher sledge value, or x8.4; strong also takes the stronger hammer)] [force=<own multiplier, overrides mode>] [players=1 (also pushes other players and friendly or tamed creatures, never yourself; 0 = enemies only)] [props=0]"
                     + " [stone=rock_7] [stonefrom=2] [stonestep=2 (stones on every 2nd ring from stonefrom: 1 = every ring)] [tilt=45 (deg, top leans away from the player)] [stoney=0 (m, lift)] [stonelife=60 (s from the command until the INNERMOST stone circle breaks, 0 = they stay)] [dropcount=<n or min-max> (stones dropped by each broken rock, default 1; game = as the game rolls it, Rock_7: 3-6)] [stonegap=10 (s each circle further out breaks earlier)] [stoneyaw=90 (deg, spin of each stone about its own axis; 90 puts the wide side along the circle)] [noStones=1]"
                     + " | fx=layered (set five as accepted: rings vfx_troll_groundslam, linger vfx_darkland_groundfog, stone break fx_tombstone_destroyed + sfx_rock_wall_crumble) | fx=earth (DEFAULT, accepted set: cast fx_goblinbrute_groundslam, rings vfx_troll_groundslam, stone-break fx_tombstone_destroyed + sfx_rock_wall_crumble, linger vfx_darkland_groundfog; fx=none = no effect layers; stonefx= adds an effect when stones rise) or castfx= ringfx= stonefx= breakfx= breaksfx= lingerfx= (prefab names) lingerdur=20 fxevery=4 | kill=<radius m> (kills all untamed creatures around you, no effect run)";
             }
@@ -63,7 +63,9 @@ namespace HomeCheat.Features.Earthquake
             weaponName = "";
             if (damage > 0f)
             {
-                string w = a.Str("weapon", "SledgeStagbreaker");   // the first hammer: chosen by Maksym 2026-10-25
+                // normal cast: the first hammer; mode=strong: a hammer that kills a troll in one cast (both chosen by Maksym 2026-10-25)
+                string md = a.Str("mode", "simple").ToLowerInvariant();
+                string w = a.Str("weapon", md == "strong" || md == "2" ? "SledgeDemolisher" : "SledgeStagbreaker");
                 if (!PickWeapon(w, a.Str("quality", "max"))) throw new CommandException("weapon '" + w + "' not found or has no damage (op=list&filter=Sledge)");
             }
             hitPlayers = a.Flag("players", true);

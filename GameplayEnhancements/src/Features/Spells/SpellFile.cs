@@ -31,7 +31,7 @@ namespace HomeCheat.Features.Spells
 "2.6 | Slime ring | op=slime\n" +
 "3 | Protect\n" +
 "3.1 | Push away | op=earthquake&noStones=1 | pin=F2 shift=mode=strong\n" +
-"3.2 | Stone circle | op=earthquake | pin=S2\n" +
+"3.2 | Stone circle | op=earthquake&damage=1 | pin=S2 shift=mode=strong\n" +
 "3.3 | Strong push | op=earthquake&mode=strong&noStones=1\n" +
 "3.4 | Slime moat | op=slime&gap=3\n" +
 "4 | Fun\n" +
@@ -60,7 +60,7 @@ namespace HomeCheat.Features.Spells
 "7.1 | Cultivate 3x5 | op=cultivate&rows=3&perrow=5 | pin=S1\n" +
 "7.2 | Carrots 3x5 | op=field&prefab=Pickable_Carrot&rows=3&perrow=5\n" +
 "7.3 | Oak grove | op=plant&prefab=Oak_Sapling&rows=3&perrow=5&scale=3\n" +
-"7.4 | Place wall | op=place&prefab=wood_wall&perrow=3\n" +
+"7.4 | Place wall | op=place&prefab=woodwall&perrow=3\n" +
 "7.5 | Place campfire | op=place&prefab=fire_pit\n" +
 "8 | Repair\n" +
 "8.1 | Repair (aim) | op=repair | sticky\n" +

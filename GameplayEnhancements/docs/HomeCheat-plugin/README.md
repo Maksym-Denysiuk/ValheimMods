@@ -32,14 +32,14 @@ Syntax in short; defaults and details on the linked pages. Status: V = run in ga
 
 | Command | Syntax | Status | Documented in |
 |---|---|---|---|
-| repair | `op=repair[&aim=1][&radius=10][&amount=0]` | B | [repair-refill.md](repair-refill.md) |
-| refill | `op=refill[&aim=1][&radius=10][&amount=0]` | B | [repair-refill.md](repair-refill.md) |
-| plant | `op=plant&prefab=<Sapling>[&rows][&perrow][&spacing][&aimcol][&scale][&clear]` | B | [plant-field-place.md](plant-field-place.md) |
+| repair | `op=repair[&aim=1][&radius=10][&amount=0]`, `op=repair&report=1[&radius=10]` (health of every piece, changes nothing) | V (2026-10-25) | [repair-refill.md](repair-refill.md) |
+| refill | `op=refill[&aim=1][&radius=10][&amount=0]` | V (no fuel object in range) | [repair-refill.md](repair-refill.md) |
+| plant | `op=plant&prefab=<Sapling>[&rows][&perrow][&spacing][&aimcol][&scale][&clear]` | V (2026-10-25) | [plant-field-place.md](plant-field-place.md) |
 | field | `op=field&prefab=<Pickable_*>\|crops=<a:n,b:n>[&rows][&perrow][&spacing][&scale][&clear]` | V (carrots) | [plant-field-place.md](plant-field-place.md) |
 | cultivate | `op=cultivate[&rows][&perrow][&spacing]` | V (with field) | [plant-field-place.md](plant-field-place.md) |
-| place | `op=place&prefab=<name>[&rows][&perrow][&spacing][&aimcol][&scale][&amount][&level][&lift][&clear]` | B | [plant-field-place.md](plant-field-place.md) |
+| place | `op=place&prefab=<name>[&rows][&perrow][&spacing][&aimcol][&scale][&amount][&level][&lift][&clear]` | V (woodwall) | [plant-field-place.md](plant-field-place.md) |
 | scale (tree resize) | `op=scale&filter=<tree name>[&factor=2][&radius=50]` | V (oak, beech, birch) | [tree-scale.md](tree-scale.md) |
-| heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | B | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [src/Features/Heal](../../src/Features/Heal/) |
+| heal, cleanse, bless | `op=heal`, `op=cleanse`, `op=bless&name=<boss>` | V (2026-10-25) | [heal-cleanse-bless.md](heal-cleanse-bless.md), source [src/Features/Heal](../../src/Features/Heal/) |
 | earthquake, slime | `op=earthquake`, `op=slime` (also `op=harmeffect&kind=<name>`) | V | [../Spells/earthquake.md](../Spells/earthquake.md), [../Spells/slime.md](../Spells/slime.md) |
 | spellshot | `op=spellshot&type=...` | V | [../Spells/spellshot.md](../Spells/spellshot.md) |
 | transform, hidebody | `op=transform&type=...`, `op=hidebody&on=1` | V | [../Transform/transform.md](../Transform/transform.md), [../Transform/hidebody.md](../Transform/hidebody.md) |
@@ -47,15 +47,15 @@ Syntax in short; defaults and details on the linked pages. Status: V = run in ga
 | give | `op=give&prefab=<item>[&amount=1][&quality=1]` | V (50 wood) | this page only |
 | spawn | `op=spawn&prefab=<name>[&count=1][&dist=4][&level=0]` | V (Greyling) | this page only |
 | list | `op=list[&filter=<text>]` (prefab names, max 200) | V | this page only |
-| groundlevel, path | `op=groundlevel[&delta=0][&radius=4][&tool=raise]`, `op=path[&type=dirt][&length=5][&width=2][&tool]` | ? | this page only |
-| inspect, status, ping, reload, commands | `op=inspect&prefab=<name>`, `op=status`, `op=ping`, `op=reload`, `op=commands` | V for reload and commands (used by every build), ? for the rest | this page only |
-| cheatstate, cheatinfo | discovery helpers that read the world's real cheat flags and game members containing "heat" (code review: delete cheatinfo) | ? | this page only |
-| killmobs | `op=killmobs[&radius=30][&boss=1][&tamed=1]`: hits every creature within the radius with 100000 normal damage (attacker = the local player); skips players, tamed animals and bosses unless asked; test helper, answer lists the kills per prefab | ? | [src/Features/KillMobs](../../src/Features/KillMobs/) |
-| fxdump | `op=fxdump[&out=<folder>]`: read-only inventory of every fx_/vfx_/sfx_ prefab (components, particles, clips, lifetime, used-by) into `fxdump.csv` and `fxdump-usedby.csv`; basis of the FX description files | ? | [src/Features/FxDump](../../src/Features/FxDump/), [../FX/README.md](../FX/README.md) |
-| spells (spell bar) | `op=spells&enabled=1`; G opens the radial with spell groups, action bar with 10 cells | V in placeholder mode (real casts through the bar not verified) | [../Spells/spellbar.md](../Spells/spellbar.md), [../Spells/spellbar-design.md](../Spells/spellbar-design.md) |
+| groundlevel, path | `op=groundlevel[&delta=0][&radius=4][&tool=raise]`, `op=path[&type=dirt][&length=5][&width=2][&tool]` | V (2026-10-25) | this page only |
+| inspect, status, ping, reload, commands, help | `op=inspect&prefab=<name>`, `op=status`, `op=ping`, `op=reload`, `op=commands[&builds=1]`, `op=help&cmd=<name>` | V (2026-10-25) | this page only |
+| cheatstate, cheatinfo | discovery helpers that read the world's real cheat flags and game members containing "heat" (code review: delete cheatinfo) | V (2026-10-25) | this page only |
+| killmobs | `op=killmobs[&radius=30][&boss=1][&tamed=1]`: hits every creature within the radius with 100000 normal damage (attacker = the local player); skips players, tamed animals and bosses unless asked; test helper, answer lists the kills per prefab | V (2026-10-25) | [src/Features/KillMobs](../../src/Features/KillMobs/) |
+| fxdump | `op=fxdump[&out=<folder>]` (default `BepInEx/config/homecheat/fxdump`): read-only inventory of every fx_/vfx_/sfx_ prefab (components, particles, clips, lifetime, used-by) into `fxdump.csv` and `fxdump-usedby.csv`; basis of the FX description files | V (2026-10-25) | [src/Features/FxDump](../../src/Features/FxDump/), [../FX/README.md](../FX/README.md) |
+| spells (spell bar) | `op=spells&enabled=1`; G opens the radial with spell groups, action bar with 10 cells | V: radial, bar, placeholder casts, reload (real casts through the bar not verified) | [../Spells/spellbar.md](../Spells/spellbar.md), [../Spells/spellbar-design.md](../Spells/spellbar-design.md) |
 | keybinds | `op=keybinds`: stats window F2 to F6, console to backquote, F9 saves the world | V | [../Keybinds/keybinds.md](../Keybinds/keybinds.md) |
 
-The status column is taken from the session transcripts of 2026-10-24: V means an answer line or a user confirmation exists, B means compiled but no run recorded. Ask Maksym for a run and update the page when a B command is tried.
+Statuses marked 2026-10-25 come from the test run after the restructure ([test log](../../../docs/homecheat-test-run-2026-10-25.md)); the others are taken from the session transcripts of 2026-10-24: V means an answer line or a user confirmation exists, B means compiled but no run recorded. Ask Maksym for a run and update the page when a B command is tried.
 
 ## Contents
 

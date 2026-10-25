@@ -342,6 +342,8 @@ Consequences to know:
 - A reload cancels the pending timers of the old build. Earthquake stones placed before the reload then never break on their own; `op=earthquake&clear=1` removes them (they are marked in their ZDO).
 - `transform` takes its components off the players on unload, so a new build starts from the human form.
 - `hidebody` switches itself off on unload and on quit.
+- Harmony patches on game UI methods are applied only once a world is loaded, never during plugin start: the spell bar's `RadialBase.Open` / `UseHotbarItem` patches at start froze the main-scene load (2026-10-25). `SpellPatches.EnsureApplied` applies them from `SpellBar.Update` when the local player exists, or right away on an `op=reload` inside a world.
+- A feature build that fails to compile leaves the previous build loaded: check that `op=reload` names the new file before testing it.
 
 ## Conventions
 

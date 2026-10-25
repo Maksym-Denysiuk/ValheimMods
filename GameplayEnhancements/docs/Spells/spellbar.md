@@ -33,6 +33,12 @@ Spell file, one spell per line: `slot.entry | label | command | flags`. A slot a
 
 Seen working in game: radial with groups and Hotbar, pins firing with toasts, Shift+click placing a spell into a cell, cells saved to `.pins` (confirmed by Maksym). Built but not yet confirmed in game: Shift+RMB emptying a cell and the empty look. Not verified: real (non-placeholder) casts through the bar, gamepad, the 10-section radial with other layouts.
 
+## Start-up fix (2026-10-25)
+
+With `spells.state` at `enabled=1`, the two Harmony patches (`RadialBase.Open`, `Player.UseHotbarItem`) used to be applied while the plugin loaded. That froze the main-scene load at "Unloading 3 Unused Serialized files" (verified: with `enabled=0` the same build reached the menu). The patches now wait until a world is loaded (`SpellPatches.EnsureApplied`, log line `spells: world loaded, patches applied`); before 2026-10-25 they were only ever applied by `op=reload` inside a world, which is why the hang never showed.
+
+Spell file changes the same day: 3.2 Stone circle is `op=earthquake&damage=1` with `shift=mode=strong`; 7.4 Place wall uses the real prefab name `woodwall` (`wood_wall` does not exist, so the entry never worked).
+
 ## Files and limits
 
 - Files: `BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v<time>.dll` (build line in the header of the source), config in `BepInEx/config/homecheat/` (`spells-ui-test.txt`, `spells.txt`, `spells.state`, `*.pins`).

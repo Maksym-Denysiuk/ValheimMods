@@ -6,13 +6,14 @@ The HomeCheat plugin and every gameplay change built on it, as a standalone pack
 
 | Group | Commands | Docs |
 |---|---|---|
-| Core plugin: file command channel, building and world helpers | `repair`, `refill`, `plant`, `field`, `cultivate`, `place`, `scale` (tree size, kept on reload), `give`, `spawn`, `list`, `groundlevel`, `path`, `inspect`, `status`, `ping`, `reload`, `commands` | `docs\HomeCheat-plugin\` |
+| Core plugin: file command channel, command registry, shared helpers | `ping`, `status`, `reload`, `commands`, `help`, `harmeffect` | `docs\HomeCheat-plugin\` |
+| World and Diag (feature DLLs): building and world helpers, discovery | `repair`, `refill`, `plant`, `field`, `cultivate`, `place`, `scale` (tree size, kept on reload), `give`, `spawn`, `list`, `groundlevel`, `path`, `inspect`; `cheatstate`, `cheatinfo` | `docs\HomeCheat-plugin\` |
 | Spells | `earthquake`, `slime`, `spellshot`, `heal` / `cleanse` / `bless`, `spells` (spell bar: G opens the radial, 10-cell bar) | `docs\Spells\` |
 | Transform | `transform` (raven, serpent, fish, human), `hidebody`, `killmobs` (test helper) | `docs\Transform\` |
 | Effects | `visualeffect` (fire any fx_/vfx_ prefab, weather), `fxdump` (prefab inventory) | `docs\FX\` |
 | Keys | `keybinds`: stats window F2 -> F6, F9 no longer cycles the gamepad layout; plus the game settings console key `~` and `bind F9 save` | `docs\Keybinds\` |
 
-`MANIFEST.md` lists the exact command DLL builds. Status per command (run in game or only built) is in `docs\HomeCheat-plugin\README.md`, column Status.
+`MANIFEST.md` lists the exact feature DLL builds. Status per command (run in game or only built) is in `docs\HomeCheat-plugin\README.md`, column Status.
 
 ## Requirements
 
@@ -53,9 +54,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File send-command.ps1 "op=spells&
 
 The spell bar starts in placeholder mode (casts only show a toast); `op=spells&placeholder=0` switches to the real spells in `spells.txt`.
 
-## Build a command from source
+## Build from source
 
-`src\` holds every `.cs` file and `build-cmd.sh`. With Git Bash, from `src\` with `HomeCheat.dll` copied next to it: `bash build-cmd.sh <name>` (set `VALHEIM_DIR=/c/...` when the game is not in `D:\Steam`), then `op=reload` in game. It needs only the .NET Framework 4 compiler that ships with Windows (C# 5).
+`src\` holds the core (`Core\`), one folder per feature DLL (`Features\<Feature>\`, extra game references in its `refs.txt`), the logic tests (`SelfTest\`) and `build.sh`. With Git Bash, from this folder: `bash src/build.sh <feature>` (then `op=reload` in game), `bash src/build.sh core` (game closed), `bash src/build.sh all`, `bash src/build.sh selftest`. Set `VALHEIM_DIR=/c/...` when the game is not in `D:\Steam`. It needs only the .NET Framework 4 compiler that ships with Windows (C# 5). Classes, lifecycle and how to add a command: `docs/homecheat-architecture.md` in the ValheimMods repository (not part of this package).
 
 ## Claude skill: spell effects
 
@@ -76,9 +77,9 @@ Moves `HomeCheat.dll`, the command DLLs and `config\homecheat\` to `<BackupRoot>
 | `install.ps1`, `check.ps1`, `uninstall.ps1`, `send-command.ps1`, `common.ps1` | the package scripts |
 | `payload\winhttp.dll`, `payload\doorstop_config.ini`, `payload\BepInEx\core\`, `payload\BepInEx\config\BepInEx.cfg` | BepInEx 5.4.2351 loader as installed on the PC it was tested on |
 | `payload\BepInEx\plugins\HomeCheat.dll` | the core plugin |
-| `payload\BepInEx\homecheat-commands\HomeCheat.Cmd.<name>.v<time>.dll` | the newest build of each command |
+| `payload\BepInEx\homecheat-commands\HomeCheat.Cmd.<feature>.v<yyyyMMddHHmmss>.dll` | the newest build of each feature |
 | `payload\BepInEx\config\homecheat\spells.txt`, `spells-ui-test.txt` | default spell files |
-| `src\` | sources of the plugin and every command, `build-cmd.sh` |
+| `src\` | the sources: `Core\`, `Features\<Feature>\`, `SelfTest\`, `build.sh` (edited in the ValheimMods repository) |
 | `skills\valheim-spell-fx\` | the spell-effects Claude skill (`SKILL.md`, `evals.md`, `scripts\find-fx.js`, security record) |
-| `docs\` | the documentation folders, same layout as in HomeOS so their links work (`.cs.txt` files there are the same sources) |
+| `docs\` | the documentation folders |
 | `MANIFEST.md` | every file with size and sha256 |

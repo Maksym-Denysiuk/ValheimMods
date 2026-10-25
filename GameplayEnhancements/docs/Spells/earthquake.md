@@ -83,6 +83,31 @@ Delete the `HomeCheat.Cmd.earthquake.*.dll` files from `BepInEx/homecheat-comman
 - `Terminal.m_cheat` and `PlayerProfile.m_usedCheats` are True in this session because cheats were switched on for the ghost command, not by this command.
 - Core `op=list` throws `TargetException` (`m_namedPrefabs` read without an instance); belongs to the core plugin.
 
+## Damage (2026-10-25)
+
+Chosen by Maksym in the test run of 2026-10-25 (world `ClaudeTest`, client `Claude2`).
+
+- `damage=0` (default) pushes only. `damage=<x>` gives every slam the damage of a hammer times `x`, instead of the slam prefab's own small damage (`sledge_aoe`: Blunt 15, Pierce 10).
+- The hammer: `weapon=SledgeStagbreaker` (the first hammer) for a normal cast, `SledgeDemolisher` with `mode=strong`; `weapon=<item>` picks any item, `weapon=auto` the strongest `Sledge*` item of the game (today `SledgeGold_FrostFire`, 300). `quality=max` (default) or `1..max`: damage = base + per level x (quality - 1), the game's own rule. Stagbreaker 4/4 = Blunt 38 + Pierce 5.
+- `mode=strong` also pushes harder: x8.4 the slam force (normal x2.1, the Demolisher value).
+- The player in the centre owns every slam: the game records them as the attacker (verified per hit: "by PLAYER Claude") and the slams never hit them.
+- `players=1` (default) also hits other players and tamed animals; `players=0` spares them. `props=1` also hits buildings, trees and rocks (default 0, so the base and the stone circle stay whole).
+
+| Test (2026-10-25) | Result |
+|---|---|
+| goblins (175 hp), `weapon=auto` | one hit each: 222 per hit after resistances, 665 on a goblin that had not noticed us (the game's sneak bonus, x3) |
+| goblins, Stagbreaker 4/4 | 33 per hit, 99 sneak; dead after 3 to 4 hits |
+| troll (600 hp), normal cast | 8 hits, 204 total, max 61; survives with 396 |
+| troll, `mode=strong` (Demolisher) | 6 hits, 502 total, max 125; left with 99 (the stronger push carries it out of the rings sooner) |
+| 3 `woodwall` (400), `props=1`, Stagbreaker | 400 -> 76, 157, 76 |
+| `props=0` | walls untouched |
+| caster | full health in every test |
+| `Claude2` 11 m away, `players=1` | killed (damage to a remote player is applied on their client, so the host's probe shows no hits) |
+
+The probe in the answer logs to `BepInEx/LogOutput.log`, per creature: hits, damage after resistances, the attacker the game recorded and every single hit. A hit "by (none)" right after a slam is the tick of a status effect (fire, frost), which has no attacker.
+
+Loot cheat mark: during the run, two items (`BlackMetalScrap`, `DeerMeat`) from kills by the quake were marked as cheated. The game sets the mark in `Character.ApplyDamage` when the attacking player has a cheated weapon equipped or is flying, in god mode or in ghost mode; all four read false, and every later kill gave clean loot. Cause not found. `op=cheatstate` now lists marked items on the ground and in the inventory.
+
 ## Players and NPCs
 
 By default (`players=1`) the slam pushes everything: enemies, tamed and friendly creatures and other players, never the caster. Needed flags on the slam Aoe: `m_hitFriendly`, `m_ignorePVP` and `m_hitSame` (without `m_hitSame` the slam skips targets of the owner's own kind, i.e. other players). `players=0` = enemies only. Tested on a second client: pushed 6 to 31 m at the simple strength, no damage from the slam itself.

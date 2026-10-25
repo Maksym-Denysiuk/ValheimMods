@@ -37,7 +37,7 @@ namespace HomeCheat.Features.WorldCommands
                     if (Vector3.Distance(s.transform.position, p.transform.position) <= radius) targets.Add(s);
             }
             StringBuilder sb = new StringBuilder();
-            int done = 0;
+            int done = 0, full = 0;
             foreach (Component c in targets)
             {
                 ZNetView nv = c.GetComponent<ZNetView>();
@@ -48,14 +48,15 @@ namespace HomeCheat.Features.WorldCommands
                 if (fp != null) { if (fp.m_infiniteFuel) continue; max = fp.m_maxFuel; }
                 else max = sm.m_maxFuel;
                 float set = amount > 0f ? Mathf.Min(amount, max) : max;
-                nv.ClaimOwnership();
                 float before = nv.GetZDO().GetFloat("fuel", 0f);
+                if (before >= set - 0.01f) { full++; continue; }
+                nv.ClaimOwnership();
                 nv.GetZDO().Set("fuel", set);
                 sb.Append(c.name.Replace("(Clone)", "")).Append(": ").Append(before.ToString("F0")).Append(" -> ").Append(set.ToString("F0"))
                   .Append(" / ").Append(max.ToString("F0")).Append('\n');
                 done++;
             }
-            return "refilled " + done + " of " + targets.Count + " objects (" + (aim ? "crosshair" : "radius " + radius.ToString("F0") + " m") + ")\n" + sb;
+            return "refilled " + done + " of " + targets.Count + " objects (" + full + " already full, " + (aim ? "crosshair" : "radius " + radius.ToString("F0") + " m") + ")\n" + sb;
         }
     }
 }

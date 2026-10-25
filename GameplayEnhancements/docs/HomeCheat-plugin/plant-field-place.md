@@ -35,6 +35,17 @@ Limits: plant and place refuse above 400 objects, field examines at most 40000 c
 - **plant:** the block logic is the same as `field` and compiled, but **no answer line of a sapling run was recorded in any session**. The three checks Maksym asked for (the 3rd birch of row 1 on the crosshair, one tree on the crosshair for `rows=1&perrow=1`, nothing placed inside buildings, trees or bushes) are not confirmed. Run once and record.
 - **cultivate** was run as part of the field tests; **place** has a design (`place-design.md` in the run folder `LocalOutputs/2026-10-24--00-48/`, not archived) and no recorded run.
 
+## cultivate and field since 2026-10-25
+
+Changed with Maksym in the test run of 2026-10-25 ([test log](../../../docs/homecheat-test-run-2026-10-25.md)); `plant` and `place` are unchanged (crosshair, `aimcol`).
+
+- **Where.** No crosshair any more: row 1 is the player's own cell (`dist=<m>` moves it forward), the block is centred on the look direction and the rows run away from the player that way (`Features/World/FieldAnchor.cs`).
+- **Which cells field plants.** Only the cultivated cells connected to the player's cell through cultivated cells; neighbours are all 8 cells around. A gap ends the planting there: cells 1-4-7 in a line with 4 not cultivated plants only 1. If the player's own cell is not cultivated, nothing is planted ("the soil under you is not cultivated"). The answer counts planted, cultivated but not connected, without soil, and blocked (existing crops block, so nothing is planted twice).
+- **Spacing.** Without `spacing=`, field uses the smallest legal crop distance from the game. The sapling of the crop (the prefab whose `Plant.m_grownPrefabs` holds it) needs no other plant within its `m_growRadius` (`Plant.HaveGrowSpace`), so the step is growRadius + the sapling's collider radius: carrot, turnip, onion, barley, flax, poteitr 0.5 + 0.18 = 0.68 m; magecap 0.98 m. Mixed crops take the largest of their minimums (`Features/World/CropSpacing.cs`). cultivate keeps 1.5 m; the soil is continuous, so the denser field grid fits.
+- **map=1.** `op=field&prefab=<crop>&rows=<r>&perrow=<n>&map=1` plants nothing and prints the grid: `@` the player's cell, `#` cultivated and connected, `o` cultivated but cut off, `.` no soil.
+
+Tested 2026-10-25: cultivate 1x1, 1x3, 3x3; field 3x3, 4x9, 9x2, 7x7, 9x9 (three times, one off the soil), 40x40 (twice), with carrots, Poteitr and turnips.
+
 ## Undo
 
 Planted and placed objects are ordinary world objects: remove them in game (Hoe/Cultivator for soil, an axe or the build tool for the rest) or restore a world backup (make a fresh one before big runs; see [backup-settings-lessons-learned.md](../backup-settings-lessons-learned.md)). There is no mod-side delete command. To remove the commands themselves see [README.md](README.md#undo-and-uninstall).
