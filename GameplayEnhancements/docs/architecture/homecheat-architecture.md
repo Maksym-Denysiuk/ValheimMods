@@ -36,7 +36,7 @@ HomeCheat.dll (core)                                      HomeCheat.Cmd.<feature
                       Fmt, Host, Coords, Constructions,    Features/KillMobs     killmobs
                       Caps                                 Features/VisualEffect visualeffect
  Builtins             ping status reload commands help     Features/FxDump       fxdump
-                      harmeffect, TreeScalePatch,          Features/Keybinds     keybinds + 2 patches
+                      harmeffect, TreeScalePatch,          Features/Keybinds     keybinds + 4 patches
                       WorldExitPatch                       Features/Ship         ship
                                                            Features/Dome         dome + DomeWards DomeLayout DomePatches
                                                            Features/Traps        trap + TrapKind TrapWeapon TrapPatches

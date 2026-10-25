@@ -51,7 +51,7 @@ The DLL patches on load (game start or `op=reload`): a transpiler changes F2 to 
 
 ## Verification
 
-- 2026-10-25, F11: build `v20261025171549` loaded with `op=reload`; `op=keybinds&status=1` answered `ON, patched ConnectPanel::Update KeyHints::Update GameCamera::LateUpdate FejdStartup::LateUpdate`, no WARNING in `LogOutput.log` (each check found exactly once). F11 presses are logged as `keybinds: F11 pressed, stats window visible = ...`.
+- 2026-10-25, F11: build `v20261025171549` loaded with `op=reload`; `op=keybinds&status=1` answered `ON, patched ConnectPanel::Update KeyHints::Update GameCamera::LateUpdate FejdStartup::LateUpdate`, no WARNING in `LogOutput.log` (each check found exactly once). Maksym confirmed in game: F11 opens and closes the stats window, F2 and F6 do not; `LogOutput.log` shows `keybinds: F11 pressed, stats window visible = True/False` on each press and no F2 or F6 presses after the reload.
 - 2026-10-24, F6: `LogOutput.log` `keybinds: F6 pressed, stats window visible = True/False` on each press; Maksym confirmed F2 does nothing (F2 presses are logged as `F2 pressed (ignored)` and the window did not change).
 - Console and save, confirmed by Maksym in game: `~` opens the console, F5 does not, F9 saves. `Player.log` 22:12:25: `World save (5/5) done`, save number 16, with an auto backup in the same second.
 - Registry after the change: `kbmBinding_Console_h3187837224 = <Keyboard>/backquote`, `ConsoleBindings_h3167151616 = F9 save`.
