@@ -5,7 +5,7 @@ description: HomeCheat command catalog (2026-10-25) - every command once, with i
 
 # HomeCheat command catalog
 
-One row per command (34: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
+One row per command (35: `override string Name` in `GameplayEnhancements/src/`). Syntax, status and pages: [command index](../HomeCheat-plugin/README.md). Classes and extension points: [homecheat-architecture.md](homecheat-architecture.md). Spell bar: `BepInEx/config/homecheat/spells.txt` (copy in `GameplayEnhancements/payload/`).
 
 `scripts/commands-check.js` of the `valheim-spells-craft` skill compares this table with the code, the index and the spell file; keep one row per command name.
 
@@ -56,6 +56,7 @@ One row per command (34: `override string Name` in `GameplayEnhancements/src/`).
 | visualeffect | visualeffect | `VisualEffectCommand` | visual/sound | none | crosshair, self, point, ring pattern | fx prefabs, catalog | temporary effects; `share=1` networked | count | `list=1`, `name=status`, `name=_probe`, `name=_envs` | 4.6 |
 | fxdump | fxdump | `FxDumpCommand` | info | none | none | prefab and component inventory | writes two CSV files | - | read-only | - |
 | keybinds | keybinds | `KeybindsCommand` | UI/input | self | none | Harmony patches (`ConnectPanel` key, F9 hints) | key behaviour while loaded | - | `status=1` | - |
+| ship | ship | `ShipCommand` | form/movement | the ship you are on (only while this PC owns it, host only) | none | `Ship.GetLocalShip`, instance fields `m_sailForceFactor` and `m_backwardForce` (x speed from the originals) | none saved; the ship sails faster for everyone on it; `OnUnload` restores | speed 10 (refused above) | `status=1` | 4.10, 4.11, 4.12 |
 
 ## Exists, extend or new
 

@@ -108,6 +108,9 @@ package "visualeffect" as ve {
 package "fxdump" as fd {
   class FxDumpCommand
 }
+package "ship" as sh {
+  class ShipCommand
+}
 
 CommandBase <|-- GiveCommand
 CommandBase <|-- SpawnCommand
@@ -137,6 +140,7 @@ CommandBase <|-- KeybindsCommand
 CommandBase <|-- KillMobsCommand
 CommandBase <|-- VisualEffectCommand
 CommandBase <|-- FxDumpCommand
+CommandBase <|-- ShipCommand
 
 FieldCommand ..> FieldAnchor
 CultivateCommand ..> FieldAnchor

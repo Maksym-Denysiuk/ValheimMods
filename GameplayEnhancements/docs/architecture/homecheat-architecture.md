@@ -37,7 +37,7 @@ HomeCheat.dll (core)                                      HomeCheat.Cmd.<feature
                       Caps                                 Features/VisualEffect visualeffect
  Builtins             ping status reload commands help     Features/FxDump       fxdump
                       harmeffect, TreeScalePatch,          Features/Keybinds     keybinds + 2 patches
-                      WorldExitPatch
+                      WorldExitPatch                       Features/Ship         ship
 ```
 
 Flow of one command: `BepInEx/config/homecheat/inbox/<name>.cmd` -> `FileInboxChannel` (poll 0.5 s, at most 20 files per poll, main thread) -> `CommandDispatcher` (form -> parameters, `op` lower-cased -> command) -> `CommandRegistry` lookup -> `CommandBase.Run` (sub-action or `Execute`) -> answer text -> `outbox/<name>.out` (written as `.tmp`, then moved).
@@ -56,7 +56,7 @@ Every command derives from `CommandBase`; the two effects aimed at a player deri
 
 ![HomeCheat commands by DLL](diagrams/homecheat-features.svg)
 
-Each command in the single-command boxes is its own DLL (`earthquake`, `slime`, `spellshot`, `spells`, `transform`, `hidebody`, `killmobs`, `visualeffect`, `fxdump`, `keybinds`), except `heal`, `cleanse` and `bless`, which share the `heal` DLL.
+Each command in the single-command boxes is its own DLL (`earthquake`, `slime`, `spellshot`, `spells`, `transform`, `hidebody`, `killmobs`, `visualeffect`, `fxdump`, `keybinds`, `ship`), except `heal`, `cleanse` and `bless`, which share the `heal` DLL.
 
 ### Composition: the spell bar (the largest feature)
 
