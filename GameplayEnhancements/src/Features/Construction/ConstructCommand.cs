@@ -55,6 +55,7 @@ namespace HomeCheat.Features.Construction
         const int MaxVertices = 6000;       // about 77 x 77 m
         const float LegacyWait = 1f;        // seconds after removing old hoe stamps: the terrain rebuilds without them
         const float LegacyMargin = 4f;      // old hoe stamps this far around the levelled box are removed too (their smoothing reaches in)
+        const float TerrainLimit = 8f;      // the game keeps terrain within this many metres of the world's own ground
         const float GroundMiss = 0.05f;     // a ground step with more vertices than this share off target stops the build
         const float ItemMargin = 2f;        // undo items=1: dropped items this far around the build's box
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
@@ -334,10 +335,11 @@ namespace HomeCheat.Features.Construction
             Host.RequireServer();
             Player p = Players.Local;
             BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
-            return Build(MakePlan(a, p, e), e, p, a.Flag("overlap", false));
+            return Build(MakePlan(a, p, e), e, p, a.Flag("overlap", false), false);
         }
 
-        string Build(Plan pl, BlueprintEntry e, Player p, bool overlap)
+        // restore: a build from step=start puts its plan and preview poles back when the ground gate stops it
+        string Build(Plan pl, BlueprintEntry e, Player p, bool overlap, bool restore)
         {
             int count = Caps.Check("pieces", e.PieceCount, MaxPieces);
             if (count == 0) throw new CommandException(e.Name + " has no pieces");
@@ -391,6 +393,7 @@ namespace HomeCheat.Features.Construction
                     if (miss > GroundMiss)
                     {
                         string msg = "construct: " + buildName + " not built, the ground is not ready (" + flat + "); see LogOutput.log for terrain errors";
+                        if (restore) { SavePlan(pl); PlacePillars(pl, e); msg += "; the plan and its preview poles are back"; }
                         HomeApi.LogError(msg);
                         Notify.Center(msg);
                         return;
@@ -622,7 +625,7 @@ namespace HomeCheat.Features.Construction
             // the poles go at the end of this frame: build a moment later so the pole check and the keep-away do not see them
             Later(PillarClear, delegate
             {
-                try { HomeApi.Log("construct: start " + Build(pl, e, p, overlap)); }
+                try { HomeApi.Log("construct: start " + Build(pl, e, p, overlap, true)); }
                 catch (CommandException ex)
                 {
                     SavePlan(pl);
@@ -781,18 +784,20 @@ namespace HomeCheat.Features.Construction
         {
             miss = 0f;
             if (g == null || g.Targets == null || g.Targets.Count == 0) return "no levelled ground in this session";
-            int ok = 0, high = 0, low = 0;
+            int ok = 0, high = 0, low = 0, beyond = 0;
             float worst = 0f;
             Vector3 at = Vector3.zero;
             foreach (Vector3 v in g.Targets)
             {
                 float d = Ground.Height(v) - v.y;
                 if (Mathf.Abs(d) <= 0.05f) ok++; else if (d > 0f) high++; else low++;
+                // the game keeps terrain within 8 m of the world's own ground (TerrainComp.LevelTerrain clamps the change at +-8)
+                if (Mathf.Abs(d) > 0.05f && WorldGenerator.instance != null && Mathf.Abs(v.y - WorldGenerator.instance.GetHeight(v.x, v.z)) > TerrainLimit - 0.1f) beyond++;
                 if (Mathf.Abs(d) > Mathf.Abs(worst)) { worst = d; at = v; }
             }
             miss = 1f - (float)ok / g.Targets.Count;
             return "ground: " + ok + " of " + g.Targets.Count + " vertices within 5 cm of their target (" + g.Raised + " raised above the base " + Fmt.F(g.BaseY, 2) + "), "
-                + high + " too high, " + low + " too low" + (Mathf.Abs(worst) > 0.05f ? ", worst " + Fmt.F(worst, 2) + " m at " + Fmt.F(at.x, 0) + "," + Fmt.F(at.z, 0) : "");
+                + high + " too high, " + low + " too low" + (beyond > 0 ? " (" + beyond + " of them more than " + Fmt.F(TerrainLimit, 0) + " m from the world's own ground, the game's limit)" : "") + (Mathf.Abs(worst) > 0.05f ? ", worst " + Fmt.F(worst, 2) + " m at " + Fmt.F(at.x, 0) + "," + Fmt.F(at.z, 0) : "");
         }
 
         // after the settle: every piece that was placed and is gone, by prefab and by reason. The reason is read where the piece
