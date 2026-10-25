@@ -6,6 +6,7 @@ Two triggers:
 |---|---|---|
 | **iteration** | Maksym is satisfied with an iteration: "ok, works", "good", "отлично", "работает", "меня устраивает", "давай зафиксируем", "комить". A mid-test "ok" (meaning "next test") is not one; unsure: ask "фиксируем?" | steps 1-3 |
 | **done** | Maksym says the command, spell or extension is created or done ("готово", "done", "it's finished") | steps 1-4 |
+| **built** | a no-game session finished its cards (build and selftest pass, `implement.md` 5b) | steps 1-3 with status B; step 4 only writes or extends the refresh brief (no session proposed: the plan schedules refresh sessions) |
 
 "Done" is not accepted, and not said back, until step 3 is complete. Anything that cannot be done blocks and is named with the reason.
 
@@ -22,7 +23,7 @@ Two triggers:
 
 ## 2. Package
 
-`node scripts/valheim/packages/build.js` (HomeOS): refreshes `payload/` (newest build of every feature, `spells.txt`), the skill copies, `docs/architecture/` and `MANIFEST.md`. A feature folder without a build stops it: build first. Outside HomeOS: skip with a note.
+`node scripts/valheim/packages/build.js` (HomeOS): refreshes `payload/` (newest build of every feature, `spells.txt`), the skill copies, `docs/architecture/` and `MANIFEST.md`. A feature folder without a build stops it: build first. Outside HomeOS: skip with a note. `build.js` also refreshes other features' builds in `payload/`: commit only your own feature's DLL and leave the rest unstaged.
 
 ## 3. Commit and push
 

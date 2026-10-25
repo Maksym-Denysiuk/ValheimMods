@@ -13,13 +13,14 @@ Nearest: <command(s)> (catalog row, page, source read: yes/no)
 Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 
 ## What it does
-- Trigger: op=<name>[&...]; spell bar <group.entry> "<label>" [pin=] [sticky] [shift=]
+- Trigger: op=<name>[&...]; spell bar <id> "<label>" [pin=] [sticky] [shift=] [ask=] (id: group.entry today; a dotted path of any depth such as 6.1.2 once spell file v4 is pushed, old ids keep their meaning)
 - Targets: self <on/off>, enemies <on/off>, tamed <on/off>, other players <on/off, opt-in parameter>, bosses <on/off>
 - Placement: self | crosshair | radius <m> | ring | grid | line | world
 - Magnitude: damage / push / heal / count / size / duration, with defaults
 - Persists in the world: <objects, terrain, ZDO values> or nothing
 - Who sees it: everyone (networked on the host) | only this PC
 - Visual reference: <prefab> | to choose with /valheim-spell-fx
+- Probes: <facts only the game can tell (prefab names, asset values, status-effect names), each with the read-only command that reads it> | none
 - Defaults: <parameter=value ...> (works with only <essential parameter>)
 - Caps: <limit, why, how reported>
 - Undo: <parameter or way back>
@@ -35,6 +36,7 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 
 ## Open questions
 1. <question> - recommended: <answer> (what happens if chosen)
+   ASSUMPTION: <answer> (why; taken in an unattended run, Maksym reviews)
 
 ## Test plan
 1. <command> -> expected <answer / measurement / what Maksym should see>

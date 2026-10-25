@@ -1,6 +1,6 @@
 # valheim-spells-craft evals
 
-Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (requirements, HomeOS `references/claude-code/valheim-spells-craft-requirements.md`), 20-23 from the work plan, 24-25 from the build plan. Run the first three, 4, 13, 20-23 on paper after every change to the skill.
+Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (requirements, HomeOS `references/claude-code/valheim-spells-craft-requirements.md`), 20-23 from the work plan, 24-25 from the build plan, 26-34 from phase 3 (backlog plan, unattended and without the game, 2026-10-25). Run the first three, 4, 13, 20-23 and 26-28 on paper after every change to the skill.
 
 | # | Scenario | Prompt | Expected | Failure looks like |
 |---|---|---|---|---|
@@ -29,3 +29,12 @@ Scenarios 1-19 come from the failures of the 2026-10-22..24 Valheim sessions (re
 | 23 | Refresh finds a new base class | refresh over a range that adds `abstract class ZoneEffect : CommandBase` | `homecheat-architecture.md` (Main classes, Inherit or compose, Extension points) gains it if missing, reported as a done-gate miss; an eval is added; `knowledge-sha` bumped; security review re-run | only the command list changes, or the class is described inside the skill |
 | 24 | Refresh never started | next run after a "done" whose card was not started | start-of-run check reports the commits since `knowledge-sha`; with a core or architecture change it stops and offers the refresh | plans on stale evals without a word |
 | 25 | Two dones in one wave | two implement sessions finish within the hour | the second extends the open brief's range; one refresh session | two refresh sessions edit the skill at once |
+| 26 | Unattended plan | plan mode, brief says `unattended`, an item with a blocking question (Flatten++ written as "+5" twice) | recommended answer taken, `ASSUMPTION:` on the card and in the Assumptions table, planning goes on | stops to ask, or decides silently without a mark |
+| 27 | Unattended, gate still holds | unattended implement, the card would need slime's `hurtself` default changed | item marked blocked with the reason, default untouched | changes the default because the run is unattended |
+| 28 | No-game implement | implement session, brief says `no game` | builds, selftest, test list in the card, status B, done gate *built*, pushed; nothing sent to the game | waits for the game, or marks V without a run |
+| 29 | Same folder | plan with five World items | one World session, or World sessions in sequence; never two World sessions at once | parallel sessions both editing `src/Features/World/` |
+| 30 | Menu work is not core | plan where several items need radial sub-sections | a 0-shared Spells session beside 0-core | radial work given to the core owner, or waiting for a restart |
+| 31 | Shared spell file | two parallel sessions each need new spell lines | the spell-bar owner wrote all lines once (unbuilt commands as `@dummy` with the real form in a comment, so commands-check stays clean); sessions change only their own lines after a fresh read | two sessions overwrite each other's `spells.txt` |
+| 32 | Probes | card needs a prefab name not readable offline (harpoon) | Probes field with the read-only command; first in the test list | a guessed prefab name built in |
+| 33 | Refresh between waves | plan whose wave 0 changes `src/Core/` | a refresh session listed between wave 0 and wave 1 | wave 1 sessions stop at their start-of-run check |
+| 34 | Skill file integrity | after any edit to the skill (2026-10-25: `implement.md` held a second copy of itself from a `$` expanded while writing) | every `instructions/*.md` has one top heading and no repeated section; files are written with the Edit/Write tools, never through an unquoted shell heredoc | duplicated or cut text in an instruction file |
