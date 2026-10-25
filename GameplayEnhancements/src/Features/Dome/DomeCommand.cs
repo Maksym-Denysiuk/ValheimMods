@@ -41,7 +41,7 @@ namespace HomeCheat.Features.Dome
                 + " | step=list (every dome: centre, radius, wards, on/off, permitted)"
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
                 + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
-                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] (the menu's Apply as a command)",
+                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=0 (New: 1 = leave gaps at blocked spots)] (the menu's Apply as a command)",
                 delegate (Args a) { return Step(a); });
         }
 
@@ -368,7 +368,7 @@ namespace HomeCheat.Features.Dome
         // the menu's Apply (and step=apply): group 0 = New (a zone from the coord points), else Group-N of the caller.
         // status: active, deactivated or deleted (all wards removed, no materials back). The caller is the wards' creator and
         // always has access, so the permitted list holds only the others.
-        internal string Apply(int no, List<KeyValuePair<long, string>> allowed, string status)
+        internal string Apply(int no, List<KeyValuePair<long, string>> allowed, string status, bool partial)
         {
             Host.RequireServer();
             long me = Players.Local.GetPlayerID();
@@ -381,7 +381,7 @@ namespace HomeCheat.Features.Dome
             if (no == 0)
             {
                 if (status == "deleted") throw new CommandException("New cannot be Deleted: pick Active or Deactivated");
-                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), false, false, false, st);
+                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), false, partial, false, st);
             }
             Rescan();
             string id = null;
@@ -402,7 +402,7 @@ namespace HomeCheat.Features.Dome
             return "Group-" + no + ": " + wards.Count + " ward(s) " + status + ", allowed: you" + (names.Count > 0 ? ", " + string.Join(", ", names.ToArray()) : "");
         }
 
-        // step=apply group=new|<n>|Group-<n> [allow=<name>,<name>] [status=active|deactivated|deleted]: the menu's Apply typed
+        // step=apply group=new|<n>|Group-<n> [allow=<name>,<name>] [status=active|deactivated|deleted] [partial=0]: the menu's Apply typed
         // as a command (tests, scripts). Without allow= a group keeps its list (New: only you); without status= it keeps its state
         // (New: active).
         string ApplyStep(Args a)
@@ -429,7 +429,7 @@ namespace HomeCheat.Features.Dome
             }
             else if (cur != null) allowed.AddRange(cur.State.Permitted);
             string status = a.Str("status", cur == null ? "active" : (cur.State.Enabled ? "active" : "deactivated"));
-            return Apply(no, allowed, status);
+            return Apply(no, allowed, status, a.Flag("partial", false));
         }
 
         static string KnownNames()

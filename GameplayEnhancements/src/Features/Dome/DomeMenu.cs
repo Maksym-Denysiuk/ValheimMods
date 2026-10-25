@@ -17,19 +17,20 @@ namespace HomeCheat.Features.Dome
         internal DomeCommand Cmd;
 
         static readonly string[] StatusNames = { "Active", "Deactivated", "Deleted" };
-        const float W = 900f, H = 560f, Gap = 6f;
+        const float W = 900f, H = 660f, Gap = 6f;
 
         List<DomeCommand.GroupView> groups = new List<DomeCommand.GroupView>();
         List<KeyValuePair<long, string>> players = new List<KeyValuePair<long, string>>();
         int sel;                                  // 0 = New, else the group number
         readonly HashSet<long> allowed = new HashSet<long>();
         int status;                               // index into StatusNames
+        bool gaps;                                // New: place the wards that fit and leave gaps at blocked spots (partial=1)
         string newInfo = "", error = "";
         bool newReady;
         long me;
         string myName = "";
         Vector2 scroll;
-        GUIStyle sTitle, sLabel, sBtn, sBtnOn, sHint, sErr;
+        GUIStyle sTitle, sLabel, sBtn, sBtnOn, sHint, sErr, sErrWrap;
 
         internal void Open()
         {
@@ -58,7 +59,7 @@ namespace HomeCheat.Features.Dome
             DomeCommand.GroupView g = Group(no);
             sel = g == null ? 0 : no;
             allowed.Clear();
-            if (g == null) { status = 0; return; }
+            if (g == null) { status = 0; gaps = false; return; }
             status = g.State.Enabled ? 0 : 1;
             foreach (KeyValuePair<long, string> kv in g.State.Permitted)
             {
@@ -82,7 +83,7 @@ namespace HomeCheat.Features.Dome
             List<KeyValuePair<long, string>> list = new List<KeyValuePair<long, string>>();
             foreach (KeyValuePair<long, string> kv in players) if (allowed.Contains(kv.Key)) list.Add(kv);
             string answer;
-            try { answer = Cmd.Apply(sel, list, StatusNames[status]); }
+            try { answer = Cmd.Apply(sel, list, StatusNames[status], sel == 0 && gaps); }
             catch (CommandException e) { error = e.Message; return; }
             catch (Exception e) { error = e.Message; HomeApi.LogError("dome menu: " + e); return; }
             HomeApi.Log("dome menu: " + answer);
@@ -176,16 +177,24 @@ namespace HomeCheat.Features.Dome
                 bx += 120f + Gap;
             }
             y += 40f;
+            if (sel == 0)
+            {
+                // what happens when a ward spot is on water, a building, a slope or another player's ward
+                GUI.Label(new Rect(x, y, 140f, 26f), "Blocked spots", sLabel);
+                if (GUI.Button(new Rect(x + 140f, y, 200f, 28f), (gaps ? "" : "> ") + "Refuse (place nothing)", gaps ? sBtn : sBtnOn)) gaps = false;
+                if (GUI.Button(new Rect(x + 140f + 200f + Gap, y, 200f, 28f), (gaps ? "> " : "") + "Leave gaps", gaps ? sBtnOn : sBtn)) gaps = true;
+                y += 40f;
+            }
             if (sel != 0 && status == 2) GUI.Label(new Rect(x + 140f, y, inner - 140f, 22f), "Apply removes all " + (cur == null ? 0 : cur.Wards) + " ward(s) of this group (no materials back)", sErr);
 
             float bottom = win.yMax - 56f;
-            if (error.Length > 0) GUI.Label(new Rect(x, bottom - 30f, inner, 24f), error, sErr);
+            if (error.Length > 0) GUI.Label(new Rect(x, bottom - 92f, inner, 96f), error, sErrWrap);
             GUI.enabled = Ready;
             string apply = sel == 0 ? "Place" : (status == 2 ? "Delete" : "Apply");
             if (GUI.Button(new Rect(win.xMax - 260f, bottom + 8f, 120f, 36f), apply, sBtnOn) && Ready) { GUI.enabled = true; GUI.matrix = old; DoApply(); return; }
             GUI.enabled = true;
             if (GUI.Button(new Rect(win.xMax - 130f, bottom + 8f, 110f, 36f), "Cancel", sBtn)) { GUI.matrix = old; Close(); return; }
-            GUI.Label(new Rect(x, bottom + 16f, inner - 300f, 24f), (sel == 0 ? "New" : "Group-" + sel) + "   allowed: " + (allowed.Count + 1) + "   " + StatusNames[status], sHint);
+            GUI.Label(new Rect(x, bottom + 16f, inner - 300f, 24f), (sel == 0 ? "New" : "Group-" + sel) + "   allowed: " + (allowed.Count + 1) + "   " + StatusNames[status] + (sel == 0 && gaps ? "   leave gaps" : ""), sHint);
             GUI.matrix = old;
         }
 
@@ -196,6 +205,7 @@ namespace HomeCheat.Features.Dome
             sLabel = new GUIStyle(GUI.skin.label); sLabel.fontSize = 15; sLabel.fontStyle = FontStyle.Bold; sLabel.normal.textColor = Color.white;
             sHint = new GUIStyle(GUI.skin.label); sHint.fontSize = 13; sHint.normal.textColor = new Color(0.8f, 0.8f, 0.8f);
             sErr = new GUIStyle(sHint); sErr.normal.textColor = new Color(1f, 0.45f, 0.35f);
+            sErrWrap = new GUIStyle(sErr); sErrWrap.wordWrap = true; sErrWrap.alignment = TextAnchor.LowerLeft;
             sBtn = new GUIStyle(GUI.skin.button); sBtn.fontSize = 14; sBtn.alignment = TextAnchor.MiddleLeft; sBtn.padding.left = 10;
             sBtnOn = new GUIStyle(sBtn); sBtnOn.normal.textColor = new Color(1f, 0.85f, 0.45f); sBtnOn.fontStyle = FontStyle.Bold;
         }

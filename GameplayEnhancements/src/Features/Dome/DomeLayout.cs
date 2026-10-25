@@ -34,13 +34,29 @@ namespace HomeCheat.Features.Dome
         public static float Nudge(float wardRadius) { return (1f - Fill) * wardRadius; }
 
         // ward centres covering the disc (cx, cz, zoneRadius); one ward at the centre while the zone fits inside one ward.
-        // The centre is always the first point; the rest are in rings outwards.
+        // One ward: the centre. 3 or 4 wards: a ring (no ward at the centre). More: the centre first, then the lattice in rings outwards.
         public static List<DomePoint> Wards(float cx, float cz, float zoneRadius, float wardRadius)
         {
             List<DomePoint> pts = new List<DomePoint>();
             if (wardRadius <= 0f) return pts;
+            if (zoneRadius <= wardRadius) { pts.Add(new DomePoint(cx, cz)); return pts; }
+
+            // a zone a little wider than one ward: the fewest wards that cover a disc (Maksym 2026-10-25: overlaps minimal).
+            // 3 wards at R/2 from the centre, 120 degrees apart, cover R up to 2r/sqrt(3); 4 at R/sqrt(2), 90 degrees apart, up
+            // to r*sqrt(2). Checked at Fill * r, so each may still move by Nudge(r) without a gap, as in the lattice.
+            float rf = Fill * wardRadius;
+            int few = zoneRadius <= rf * 2f / (float)Math.Sqrt(3.0) ? 3 : zoneRadius <= rf * (float)Math.Sqrt(2.0) ? 4 : 0;
+            if (few > 0)
+            {
+                float off = few == 3 ? zoneRadius / 2f : zoneRadius / (float)Math.Sqrt(2.0);
+                for (int i = 0; i < few; i++)
+                {
+                    double ang = i * 2.0 * Math.PI / few;
+                    pts.Add(new DomePoint(cx + off * (float)Math.Cos(ang), cz + off * (float)Math.Sin(ang)));
+                }
+                return pts;
+            }
             pts.Add(new DomePoint(cx, cz));
-            if (zoneRadius <= wardRadius) return pts;
 
             float cell = Fill * wardRadius;                     // hexagon circumradius
             float d = (float)Math.Sqrt(3.0) * cell;             // lattice spacing
