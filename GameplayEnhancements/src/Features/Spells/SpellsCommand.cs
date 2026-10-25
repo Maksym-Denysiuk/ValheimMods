@@ -2,7 +2,7 @@
 //   G                 opens the game's own radial menu, filled with our sections (slot 1 = our Hotbar); Shift+G = vanilla radial, T = emotes.
 //                     Spell file v4: dotted ids of any depth (sub-sections), any number of entries per level (the game's spiral),
 //                     sticky titles, answer chains (ask= flags: one radial level per question, {key} takes the answer)
-//   action bar        always-visible bar of 24 cells in two rows: F1-F12 on top, 1..= (fire on Shift+1..Shift+=) below; radial Hotbar = Panel 1-5 and Panel 6-=; each cell shows the spell icon with its name under it.
+//   action bar        always-visible bar of 20 cells in two rows: F1-F10 on top, 1..0 (fire on Shift+1..Shift+0) below; radial Hotbar = Panel 1-5 and Panel 6-0; each cell shows the spell icon with its name under it.
 //                     Shift+click on a spell in the radial = place it: the radial closes, the cursor is freed, click a cell (right click empties it, Esc cancels).
 //                     Placements are saved next to the spell file (<file>.pins); without that file the cells come from the pin=... flags of the spell file
 // The radial is the game's own RadialBase; we only implement its extension point IRadialConfig and swap the config that RadialBase.Open
@@ -46,7 +46,7 @@ namespace HomeCheat.Features.Spells
             {
                 return "spells [enabled=1|0] [status=1 (also the radial's MaxElementsRange)] [placeholder=1|0 (default 1: fake spells from spells-ui-test.txt, a cast only shows a toast; 0: real spells from spells.txt)] - "
                     + "G = radial with our sections and sub-sections (Shift+G vanilla, T emotes; long levels continue as a spiral; ask= spells ask one level per question, right click = previous question); "
-                    + "always-on bar of 24 cells in two rows: F1-F12, and 1..= on Shift+1..Shift+= (radial Hotbar: Panel 1-5 = Shift+1..5 and F1-F5, Panel 6-= = Shift+6..Shift+= and F6-F12); Shift+click a spell in the radial, then click a cell to place it; files BepInEx/config/homecheat/spells-ui-test.txt and spells.txt (format v4, + .pins)";
+                    + "always-on bar of 20 cells in two rows: F1-F10, and 1..0 on Shift+1..Shift+0 (radial Hotbar: Panel 1-5 = Shift+1..5 and F1-F5, Panel 6-0 = Shift+6..Shift+0 and F6-F10); Shift+click a spell in the radial, then click a cell to place it; files BepInEx/config/homecheat/spells-ui-test.txt and spells.txt (format v4, + .pins)";
             }
         }
 

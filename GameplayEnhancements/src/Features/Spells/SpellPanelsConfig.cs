@@ -5,7 +5,7 @@ using Valheim.UI;
 
 namespace HomeCheat.Features.Spells
 {
-    // Hotbar (radial slot 1): the two panels, Panel 1-5 and Panel 6-= (Maksym 2026-10-25); each opens its cells (SpellHotbarConfig).
+    // Hotbar (radial slot 1): the two panels, Panel 1-5 and Panel 6-0 (Maksym 2026-10-25); each opens its cells (SpellHotbarConfig).
     sealed class SpellPanelsConfig : IRadialConfig
     {
         readonly SpellBar bar;

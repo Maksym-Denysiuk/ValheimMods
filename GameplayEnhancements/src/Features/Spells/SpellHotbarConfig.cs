@@ -5,8 +5,8 @@ using Valheim.UI;
 
 namespace HomeCheat.Features.Spells
 {
-    // One Hotbar panel (Maksym 2026-10-25): Panel 1-5 = Shift+1..5 and F1..F5, Panel 6-= = Shift+6..Shift+= and F6..F12, as radial
-    // sections (more than the game's ring size continue as its spiral). Click = cast, Shift+RMB = empty the cell, and while a spell
+    // One Hotbar panel (Maksym 2026-10-25): Panel 1-5 = Shift+1..5 and F1..F5, Panel 6-0 = Shift+6..Shift+0 and F6..F10, as radial
+    // sections of 10 cells, one regular ring each (Maksym 2026-10-25: was 14 in Panel 6-=, which spilled into the game's spiral). Click = cast, Shift+RMB = empty the cell, and while a spell
     // waits to be placed (Shift+click on it in a group) a click puts it into the clicked cell.
     sealed class SpellHotbarConfig : IRadialConfig
     {

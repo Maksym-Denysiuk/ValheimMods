@@ -24,7 +24,7 @@ namespace HomeCheat.Features.Traps
         const int MaxField = 5000;        // mines of one minefield (field=1, a 10..100 m ring field is ~4950); more is refused with the count
         const int PlaceBatch = 250;       // mines laid per batch, one batch every PlaceGap s (thousands in one frame would stall the game)
         const float PlaceGap = 0.1f;
-        const float RingGap = 0.5f;       // m between the trigger squares of neighbours on a ring and between rings (Maksym 2026-10-25)
+        const float RingGap = 1f;         // m between the trigger squares of neighbours on a ring or row and between rings or rows (Maksym 2026-10-25: 0.5, then 1)
         const float FrontDist = 5f;        // at=front: m from you to the first row (a 3 m blast stays clear of you)
         const float MaxFieldRadius = 100f;
         const float MaxLife = 3600f;
@@ -86,9 +86,9 @@ namespace HomeCheat.Features.Traps
         {
             get
             {
-                return "trap [type=mine (default; also explosive)|tar|random (a kind of the mine pool per trap: mine, tar)] [perrow=1] [rows=1] (1..9 each, the matrix is centred on the point; rows run along your look direction) [spacing=2] [scatter=0 (1 = spacing 2 x the trigger radius + 0.5 m, every second row shifted by half a step: no straight lane)] [at=aim|self|front] [dist=3 (with at=self: metres ahead; with at=front, default 5: the first row that far ahead, the rows run away from you)] "
+                return "trap [type=mine (default; also explosive)|tar|random (a kind of the mine pool per trap: mine, tar)] [perrow=1] [rows=1] (1..9 each, the matrix is centred on the point; rows run along your look direction) [spacing=2] [scatter=0 (1 = spacing 2 x the trigger radius + 1 m, every second row shifted by half a step, a chess board: no straight lane)] [at=aim|self|front] [dist=3 (with at=self: metres ahead; with at=front, default 5: the first row that far ahead, the rows run away from you)] "
                     + "[life=300 (s, cap 3600, then it vanishes)] [arm=3 (s before it can go off)] [trigger=<m, cap 5; default the square of the plate, its footprint + 0.3 m; a number = a circle of that radius>] [blast=3 (m, cap 10)] [weapon=BowAshlands] [quality=max] [mult=2 (x the weapon damage, cap 10)] "
-                    + "[prefab=<visual with a vanilla Trap; default piece_trap_troll, else fuling_trap>] [fxplace=, fxend= (comma lists of fx prefabs, none = no effect)] [fxboom=random (a blast set at random per mine: " + TrapFxSet.Names + "; or one set name, or a comma list of prefabs)] [push=<force> (default one hit of SledgeStagbreaker, 150; 0 = none)] [field=0 (1 = a minefield around you: no mines within safe=<m> (default 10), mines out to radius=<m> (default 30, cap " + MaxFieldRadius + ", above safe), on rings 2 x the trigger radius + " + Fmt.F(RingGap, 1) + " m apart, each ring circumference / that step mines, each ring at a random start angle, facing the centre, cap " + MaxField + ", none on water; perrow, rows, at, dist ignored)] [pvp=0 (1 = the AttackCommand PvP rule, taken when the mine is laid: your PvP on = other players are hit whatever their own setting, off = they are spared; you, creatures and tamed animals are hit either way)]; "
+                    + "[prefab=<visual with a vanilla Trap; default piece_trap_troll, else fuling_trap>] [fxplace=, fxend= (comma lists of fx prefabs, none = no effect)] [fxboom=random (a blast set at random per mine: " + TrapFxSet.Names + "; or one set name, or a comma list of prefabs)] [push=<force> (default one hit of SledgeStagbreaker, 150; 0 = none)] [field=0 (1 = a minefield around you: no mines within safe=<m> (default 10), mines out to radius=<m> (default 30, cap " + MaxFieldRadius + ", above safe), on rings 2 x the trigger radius + " + Fmt.F(RingGap, 1) + " m apart, each ring circumference / that step mines, every second ring shifted by half a step (a chess board), facing the centre, cap " + MaxField + ", none on water; perrow, rows, at, dist ignored)] [pvp=0 (1 = the AttackCommand PvP rule, taken when the mine is laid: your PvP on = other players are hit whatever their own setting, off = they are spared; you, creatures and tamed animals are hit either way)]; "
                     + "mine = goes off once when any player or creature (you, other players, tamed, bosses) comes within trigger, hits everyone within blast with no player attacker (like a monster's hit, no PvP needed), then is gone; "
                     + "host only; cap 50 live traps in the loaded area; only the host's loaded area is watched. type=probe&filter=trap lists prefabs with a Trap (read-only).";
             }
@@ -148,7 +148,7 @@ namespace HomeCheat.Features.Traps
                 outer = Caps.Check("radius", a.Float("radius", 30f), MaxFieldRadius);
                 if (outer <= safe) throw new CommandException("the minefield radius (" + Fmt.F(outer, 0) + " m) must be larger than the safe radius (" + Fmt.F(safe, 0) + " m)");
                 centre = p.transform.position;
-                // Maksym's rule: on every ring, count = circumference / (2 x activation radius + 0.5 m); the rings are that step apart
+                // Maksym's rule: on every ring, count = circumference / (2 x activation radius + RingGap); the rings are that step apart
                 float act = square ? Mathf.Max(half.x, half.y) : trigger;
                 spacing = 2f * act + RingGap;
                 spots = Ring(centre, safe, outer, act, spacing);
@@ -160,19 +160,24 @@ namespace HomeCheat.Features.Traps
                 centre = at == "self" ? p.transform.position + fwd * Mathf.Max(0f, a.Float("dist", 3f))
                     : front ? p.transform.position + fwd * Mathf.Max(0f, a.Float("dist", FrontDist))
                     : Aim.Point(p, out aimed);
-                // scatter=1 (Maksym 2026-10-25, the mine field form's Rows): the ring rule, step = 2 x activation radius + 0.5 m along
-                // a row and between rows, every second row shifted by half a step, so there is no straight lane through the rows
+                // scatter=1 (Maksym 2026-10-25, the mine field form's Rows): the ring rule, step = 2 x activation radius + RingGap along
+                // a row and between rows; a shift flag flips with every new row and a shifted row starts half a step in (a chess board),
+                // so there is no straight lane through the rows
                 bool scatter = a.Flag("scatter", false);
                 if (scatter) spacing = 2f * (square ? Mathf.Max(half.x, half.y) : trigger) + RingGap;
+                bool shift = true;
                 for (int i = 0; i < rows; i++)
+                {
+                    shift = !shift;   // row 0 unshifted, row 1 shifted, ...
                     for (int j = 0; j < perrow; j++)
                     {
                         float col = j - (perrow - 1) / 2f, row = front ? i : i - (rows - 1) / 2f;
-                        if (scatter && i % 2 == 1) col += 0.5f;
+                        if (scatter && shift) col += 0.5f;
                         Vector3 pos = centre + right * (col * spacing) + fwd * (row * spacing);
                         pos.y = GroundAt(pos);
                         spots.Add(pos);
                     }
+                }
             }
 
             Rescan();
@@ -267,7 +272,8 @@ namespace HomeCheat.Features.Traps
         // ---- placement helpers ----------------------------------------------------------------------
 
         // the spots of a minefield (Maksym 2026-10-25): rings from safe + act out to outer - act, 'step' apart; on a ring of radius
-        // r, floor(2 pi r / step) mines evenly spaced, starting at a random angle per ring (no straight lane through the rings);
+        // r, floor(2 pi r / step) mines evenly spaced from one random start angle for the field; a shift flag flips with every new
+        // ring and a shifted ring starts half a step further round (a chess board, no straight lane through the rings);
         // on the ground, never on water. Over MaxField is refused with the count.
         static List<Vector3> Ring(Vector3 c, float safe, float outer, float act, float step)
         {
@@ -277,10 +283,13 @@ namespace HomeCheat.Features.Traps
             for (float rr = safe + act; rr <= outer - act + 0.01f; rr += step) need += Mathf.FloorToInt(2f * Mathf.PI * rr / step);
             if (need > MaxField)
                 throw new CommandException("the minefield " + Fmt.F(safe, 0) + ".." + Fmt.F(outer, 0) + " m needs " + need + " mines (" + Fmt.F(step, 1) + " m apart), over the cap " + MaxField + ": a smaller radius or a larger safe radius");
+            float start = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+            bool shift = true;
             for (float rr = safe + act; rr <= outer - act + 0.01f; rr += step)
             {
                 int n = Mathf.FloorToInt(2f * Mathf.PI * rr / step);
-                float a0 = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+                shift = !shift;   // ring 0 unshifted, ring 1 shifted, ...
+                float a0 = start + (shift ? 0.5f * 2f * Mathf.PI / n : 0f);
                 for (int k = 0; k < n; k++)
                 {
                     float ang = a0 + k * 2f * Mathf.PI / n;

@@ -390,14 +390,14 @@ namespace HomeCheat.Features.Spells
         static KeyCode FKey(string k)
         {
             int n = SpellParse.CellNumber(k);
-            return n >= 1 && n <= 12 ? (KeyCode)((int)KeyCode.F1 + n - 1) : KeyCode.None;
+            return n >= 1 && n <= SpellParse.CellsPerRow ? (KeyCode)((int)KeyCode.F1 + n - 1) : KeyCode.None;
         }
 
-        // Shift cells 1-8 use the game's Hotbar1..8 buttons (rebindable); 9, 0, - and = have no game button: their keys
+        // Shift cells 1-8 use the game's Hotbar1..8 buttons (rebindable); 9 and 0 have no game button: their keys
         static bool ShiftCellDown(int n)
         {
             if (n >= 1 && n <= 8) return ZInput.GetButtonDown("Hotbar" + n);
-            KeyCode kc = n == 9 ? KeyCode.Alpha9 : n == 10 ? KeyCode.Alpha0 : n == 11 ? KeyCode.Minus : n == 12 ? KeyCode.Equals : KeyCode.None;
+            KeyCode kc = n == 9 ? KeyCode.Alpha9 : n == 10 ? KeyCode.Alpha0 : KeyCode.None;
             return kc != KeyCode.None && ZInput.GetKeyDown(kc, false);
         }
 
@@ -518,7 +518,7 @@ namespace HomeCheat.Features.Spells
             return sb.ToString();
         }
 
-        // ---- drawing: the always-on action bar (IMGUI), two rows: F1-F12, Shift+1..Shift+= --------------------------------------------------------
+        // ---- drawing: the always-on action bar (IMGUI), two rows: F1-F10, Shift+1..Shift+0 --------------------------------------------------------
 
         const float PanelScale = 0.70f;     // whole bar, banner and toast (was 1.0, then 0.85)
         const float CellW = 72f, CellH = 88f, CellGap = 6f, GroupGap = 20f;
@@ -543,10 +543,11 @@ namespace HomeCheat.Features.Spells
             Fill(new Rect(r.x, r.y, t, r.height), c); Fill(new Rect(r.xMax - t, r.y, t, r.height), c);
         }
 
-        // two rows (Maksym 2026-10-25): row 0 = F1-F12 on top, row 1 = Shift+1..Shift+= below; cell i of 12, a wider gap after the 5th
+        // two rows (Maksym 2026-10-25): row 0 = F1-F10 on top, row 1 = Shift+1..Shift+0 below; cell i of 10, a wider gap after the 5th
         static Rect CellRect(int i, int row, float W, float H)
         {
-            float total = 12 * CellW + 10 * CellGap + GroupGap;
+            int n = SpellParse.CellsPerRow;
+            float total = n * CellW + (n - 2) * CellGap + GroupGap;
             float x = (W - total) / 2f + i * (CellW + CellGap) + (i >= 5 ? GroupGap - CellGap : 0f);
             float y = H - 36f - CellH - (row == 0 ? CellH + CellGap + ShiftStrip : 0f);
             return new Rect(x, y, CellW, CellH);
