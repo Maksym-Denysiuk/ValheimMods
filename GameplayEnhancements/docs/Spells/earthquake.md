@@ -129,3 +129,10 @@ Other sets tried (all five were shown to Maksym one by one, see the list of pref
 `op=earthquake&demo=1` places five stones in a row 6 m ahead and breaks them one by one with the break effects of five sets (first after 5 s, then every 15 s; `demostart`, `demogap`, `demodist`).
 
 Effect prefabs are removed again after a few seconds by the command (looping ones after `lingerdur`). Not tested with a second player watching; most of these prefabs are networked and should show for everyone when spawned on the host.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. Result: **V**.
+- Push-only spells removed (Quake, Push away, Strong push): only Stone circle stays. 2.5.1 Stone circle and 2.5.2 Stone circle (trolls) in Attack, `damage=1&pvp=1`; 3.2 Stone circle was removed from Protect at Maksym's request.
+- `players=1` hurt and pushed Claude2; the spell lines now pass `pvp=1` (`EarthquakeEffect : HarmEffect : AttackCommand`), which decides instead of `players=`. V ("all works", before the rule moved into the core).
+- Not run: T-core 2-3 (logout while the stones stand).

@@ -102,3 +102,11 @@ Found while building them: `fx_frozenking_spikesmash` is a copy of `fx_fader_met
 ## Files and source
 
 The command source is [src/Features/VisualEffect](../../src/Features/VisualEffect/) (HomeCheat command DLL, built with `bash build.sh visualeffect`; the read-only prefab inventory behind the description files is [src/Features/FxDump](../../src/Features/FxDump/), `op=fxdump`); the full test log with the order they were fired is in the working folder `LocalOutputs/2026-10-24--00-48/` (not kept long-term). Screenshots are 900 px JPEGs taken in game by Maksym.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- The probe got `speed=` (x the particles' `simulationSpeed`, (0, 10]) and its `scale=` now switches particles to hierarchy scaling and shrinks lights (`name=_probe&prefab=&scale=&speed=`).
+- Ice sets v2 replayed at scale 0.5, speed 2: "good". In a set the sound comes first: all prefabs of a mine spawn in the same frame, so the preview order (one probe at a time) is not the play order. The mine blast sets built from these previews: [traps.md](../Spells/traps.md#in-game-test-2026-10-25).
+- Detonation looks: 10 combinations previewed at the crosshair; Maksym picked 3 + 10 together (`fx_JotunWitch_LightningBolt_Explosion`, `vfx_spawn_small`, `sfx_staffthunderblood_cast`, `sfx_FireAddFuel`) at size 2.

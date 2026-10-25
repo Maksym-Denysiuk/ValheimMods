@@ -1,5 +1,5 @@
 ---
-description: spell bar of the HomeCheat Valheim plugin (2026-10-24, spell file v4 2026-10-25) - G opens the game's own radial menu with our sections and sub-sections at any depth (long levels as the game's spiral, questions as answer chains), slot 1 is a Hotbar of 10 cells (Shift+1..5, F1..F5) shown as an on-screen bar, Shift+click places a spell, Shift+RMB empties a cell; spell file v4 format, placeholder mode, patches, tests, limits and undo
+description: spell bar of the HomeCheat Valheim plugin (2026-10-24, spell file v4 and in-game test 2026-10-25) - G opens the game's own radial with sections and sub-sections, slot 1 Hotbar = Panel 1-5 and Panel 6-0 (20 cells, a two-row bar F1-F10 and Shift+1..0), Shift versions on Shift+F, one form screen for a spell with questions, failures-only messages; spell file v4 format and form flags, patches, tests, limits and undo
 ---
 # spell bar (HomeCheat command `spells`)
 
@@ -81,3 +81,18 @@ Spell file changes the same day: 3.2 Stone circle is `op=earthquake&damage=1` wi
 - Files: `BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v<time>.dll` (build line in the header of the source), config in `BepInEx/config/homecheat/` (`spells-ui-test.txt`, `spells.txt`, `spells.state`, `*.pins`).
 - The core fixes of the plugin review are not applied (core is owned by another session).
 - Undo: `op=spells&enabled=0` removes the patches and hides the bar; delete the DLL from `homecheat-commands/` and `op=reload` (or restart) to remove the command.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. Real casts (placeholder mode off) through the whole tree. Result: **V** for the casts, Panel 6-0, and the form screens of Spawn..., Plant food..., Plant trees..., Flatten..., Place mine field.
+
+What changed (Maksym's requests, built and loaded the same day):
+- **Hotbar = two panels.** Radial slot 1 opens Panel 1-5 (Shift+1..5, F1..F5) and Panel 6-0 (Shift+6..9, Shift+0, F6..F10): 20 cells, 10 per panel, so each panel fits one ring (the game's ring holds 8-12 entries, `MaxElementsRange` [8,12]; the first 14-cell panel spiralled). The on-screen bar has two rows of 10: F1-F10 above, Shift+1..0 below. Pins `pin=F1..F10|S1..S10`. Minus, Equals, F11 and F12 are free again (F11 is the stats window of `keybinds`). **V** ("panel works").
+- **Sections regrouped** into sub-groups instead of long spirals: 2 Attack (2.1 Arrows ... 2.7 Mines), 3 Protect (3.4 Slime moat, 3.5 Shield; Push away, Strong push and Stone circle removed), 4 Fun (Transform, Trees, Ship, Reset sky), 5 Heal (Heal, Cleanse, Blessings, Remove all effects), 6 Build (6.1 Flatten..., 6.2 Coordinates, 6.3 Paths, 6.5 Repair and refill, 6.6 Shield, 6.7 Construct (empty), 6.8 Despawn), 7 Field (7.1 Cultivate..., 7.2 Plant food..., 7.3 Harvest patch, 7.4 Plant trees...), 8 Spawn... (the old Construct section's place; Construct moved under Build). Every attack line passes `pvp=1`.
+- **Shift versions.** `shift=@<id>` (Shift casts that spell) and `shiftlabel=<name>`: Shift+F on an F cell casts the Shift version; the cell keeps a small box under it (no text, Maksym); `list=1` and the radial subtitle name it.
+- **One form screen per spell with questions** (`SpellForm`, like the hammer's build menu; the radial answer chain `SpellAskConfig` is gone): fixed answers as buttons (the first, or the one marked `*`, picked), `@players` as names, `@crops` / `@trees` / `@prefabs` as an icon grid (`@prefabs` with a search line and categories, including "Constructions: <category>" from every tool's piece table), Cast or Enter, Cancel or Esc. Flags: `ask=key/Label_text`, `ask=key>other` (only answers above the other answer; the rest greyed), `ask=key?other=value` (only while that answer is chosen, else greyed and left out of the command), value `@off` (a greyed answer, "(soon)"), `button=<text>`. An area answer (`coords`, `patch`) greys `count`, `rows`, `perrow`, `radius`. While the form is open the game sees a text input: free cursor, the player stands still.
+- **Messages: failures only.** The bar's own toast is gone; a failure (an unanswered question, a changed cheat flag, a command `ERROR`) shows in the screen centre in the game's style (`Kit.Notify`: 50 characters a line, 70 % size); success, pin hints and placeholders go only to `LogOutput.log`. Built 17:32: B.
+
+Spell file header: the game copy and `SpellFile.DefaultText` do not describe the form flags yet (Known defects of the architecture doc); this page is the reference until the spell-file owner's pass.
+
+Still untested (B): the failures-only messages; Shift strips; `spells-ui-test.txt` against the new tree; a world exit and back with the bar (T-core 4).

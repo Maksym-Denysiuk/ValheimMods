@@ -1,10 +1,10 @@
 ---
-description: trap command of the HomeCheat Valheim plugin (2026-10-25) - traps laid as a matrix on the ground at the crosshair, one kind per type= (mine now, electric fence planned); a mine lives 5 minutes, goes off once when any player or creature steps close, hits everyone in 3 m with 2 x the Ashlands bow's damage and no player attacker, then vanishes; host only, cap 50; design assumed, review; card, assumptions, how it works, test list for Maksym, limits, undo; built without the game, not yet run
+description: trap command of the HomeCheat Valheim plugin (2026-10-25, reworked in game the same day) - mines on a floor-tile look laid at the crosshair, in front of you as a scattered matrix, or as a minefield of rings around you; kinds explosive and tar (random per mine), a random blast look per mine, hammer-like push, detonate all, the shared PvP rule taken when laid; host only, cap 6 000; card, first design, how it works, the in-game test (passed: "Mines are good") with what is still untested, limits, undo
 ---
 # trap (mines, feature Traps)
 
-> **Design assumed, review.** Maksym's backlog said "tbd" for mines. This design was drafted in the W3-mines session and
-> approved by Maksym on 2026-10-25 (assumptions T1-T8 below), but nobody has played it yet. Review it after the first test.
+> **Played and reworked in game (2026-10-25).** The first design below (assumptions T1-T8, B1-B7) was drafted in the W3-mines session; Maksym tested and
+> reworked it the same day ("Mines are good"). The current behaviour is in [In-game test 2026-10-25](#in-game-test-2026-10-25), which overrides the sections above where they differ.
 
 Built 2026-10-25 in phase 4, wave 3 (session W3-mines) on Valheim 1.0.20, BepInEx 5.4.2351, unattended and without the game: compiled and staged, **not run in game yet**. Own game and own world only. Source: [src/Features/Traps/](../../src/Features/Traps/) (`TrapCommand.cs`, `TrapKind.cs`, `TrapWeapon.cs`, `TrapPatches.cs`), DLL `HomeCheat.Cmd.traps.v<stamp>.dll`. The design and the plan card are kept privately in HomeOS.
 
@@ -132,3 +132,30 @@ Record each first answer line and what was seen in the table below, then set the
 ## Undo
 
 `op=trap&remove=1&radius=50` around the mines, or wait until they vanish (default 5 min). To remove the command, delete `HomeCheat.Cmd.traps.*.dll` from `BepInEx/homecheat-commands/` and restart the game ([../HomeCheat-plugin/README.md](../HomeCheat-plugin/README.md#undo-and-uninstall)); traps left in the world then stay as inert troll traps that can be deconstructed with the hammer.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. The design was reworked in game with Maksym; this section is the current behaviour, and it overrides the Use table, the assumptions B3, B4, B7, T5, T6 and the cap above where they differ.
+
+Result: **V**, "Mines are good" (place, random blast look, minefield in both layouts, detonate, expiry with a breaking sound, remove at the crosshair).
+
+| Changed | Now | Why (Maksym) |
+|---|---|---|
+| kind | no `type=` = `mine` (`explosive` is the same kind); new kind `tar` (the tar slow `Tared` on everyone in the blast, no damage, no push, own look); `type=random` = a kind of `TrapKind.RandomPool` (mine, tar) per trap | "many mine kinds in the future"; Place mine = random, Shift = tar |
+| look (B3) | `wood_floor_1x1` (a floor square), else `piece_trap_troll`, `fuling_trap`; any networked piece or plant as `prefab=` (a sapling's `Plant` is removed on the host so it never grows); the vanilla trap model is shown open (armed) while its ZDO state stays 0 | "floor square"; only plates laid by `trap` are mines (the `hc_trap` mark), never every floor tile |
+| trigger (T5) | the square of the plate's footprint + 0.3 m, x1.25 (2.0 x 2.0 m on the floor tile); `trigger=<m>` still gives a circle | "extend activation radius by 25 %" |
+| blast look (B4) | `fxboom=random` (default): each mine draws one of 10 sets when laid (dynamite, grenade, lava, siege, fireball, glacier, wrath, blue, shock, gas; `TrapFxSets`, stored in the ZDO); `fxboom=<set>` fixes one; a prefab list still works | 10 sets picked with `/valheim-spell-fx`; ice sets at scale 0.5, speed 2 |
+| push (B7) | one hit of `SledgeStagbreaker` (attack force 150, read live); `push=` overrides, 0 = none | "small knockback like after one hammer" |
+| expiry | `vfx_odin_despawn` + `sfx_wood_destroyed` (the floor tile breaking), also on remove | "must expire and disappear with a breaking sound" |
+| PvP | `TrapCommand : AttackCommand`; `pvp=1` is taken when the mine is laid (ZDO `hc_trap_pvp`): with your PvP on other players are hit, off = they neither set it off nor take the blast; you, creatures and tamed are hit either way (T1-T3) | "all attacking spells inherit this logic" |
+| minefield (new) | `field=1&safe=10&radius=30`: rings from `safe` to `radius` (cap 100), step 2 x the trigger half-width + 1 m, circumference / step mines per ring, every second ring shifted half a step, one random start angle, each mine facing the centre, none on water | passable, but no straight lane |
+| rows (new) | `scatter=1`: the matrix with the same step, every second row shifted half a step; `at=front`: the first row 5 m ahead, rows run away from you | "in front of the user, not around him" |
+| detonate (new) | `detonate=1[&radius=100]`: every live mine within the radius goes off as if stepped on (same hits, PvP rule), nearest first, waves of 25 every 0.1 s; look `fx_JotunWitch_LightningBolt_Explosion` + `vfx_spawn_small` + `sfx_staffthunderblood_cast` + `sfx_FireAddFuel`, `fxscale=2`; `fx=own` = each mine's own blast | picked from 10 previews ("3 + 10 together") |
+| caps | 6 000 live, 5 000 per minefield (refused with the count), laid in batches of 250 every 0.1 s | "raise the cap" |
+| remove | spell 2.7.2 Remove mine = the mine at the crosshair (`remove=1`), Shift = within 50 m | "Remove mine = the mine where you aim" |
+
+Damage measured: 218 = 2 x `BowAshlands` at quality 4 (Pierce), push 25 x 2 before the hammer push.
+
+Spell bar (2 Attack > 2.7 Mines): 2.7.1 Place mine (`type=random&pvp=1`, Shift tar), 2.7.2 Remove mine, 2.7.3 Place mine field (form: Layout Radius/Rows, Mine type with Fence greyed, Safe radius, Minefield radius above safe, Rows, Items in row, Mine effect, Mine texture; button Set mines), 2.7.4 Detonate mines.
+
+Still untested (B): the tar mine's slow on a creature and on Claude2; `pvp=1` at placement with Claude2 (their PvP off, yours on and off); a mine across `op=reload` and across logout (time left kept); frame rate while laying and with thousands of live mines, and Claude2's load; flying creatures. Known: `op=help&cmd=trap` still says "cap 50 live traps" (the cap is 6 000).

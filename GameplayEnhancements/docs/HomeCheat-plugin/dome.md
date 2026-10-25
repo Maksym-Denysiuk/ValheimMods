@@ -174,7 +174,9 @@ Offline: the lattice at `Fill` 0.95 covers every zone radius 5-150 m for ward ra
 
 ## In-game test 2026-10-25
 
-Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. - Shield placed from the spell bar (Build or Protect > Shield: start, end, Place shield): dome `d35e76e7b`, centre -7.0,-3.5, radius 15.5 m, 1 ward, on, permitted 0. V.
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- Shield placed from the spell bar (Build or Protect > Shield: start, end, Place shield): dome `d35e76e7b`, centre -7.0,-3.5, radius 15.5 m, 1 ward, on, permitted 0. V.
 - A Greyling spawned inside the shield stayed inside and attacked: as built. Only the vanilla ward rules apply; keeping monsters out is build step 4, which was not part of steps 2-3. Maksym had expected mobs to leave, which the page and `DomeCommand.cs` already said was not built.
 - Step 4 (keep monsters out) was researched and parked; the Shield entries were redesigned as the ward menu: section Ward menu, test log In-game test 2026-10-25: ward menu.
 

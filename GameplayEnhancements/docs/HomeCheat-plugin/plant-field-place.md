@@ -1,5 +1,5 @@
 ---
-description: plant, field, cultivate, harvest and place commands of the HomeCheat Valheim plugin (2026-10-24, areas and harvest 2026-10-25, trees in an area 2026-10-25) - saplings or crops or any prefab in a rows x per-row block anchored at the crosshair; parameters and defaults, spacing and clearance rules, scale, limits, undo; built in CheatResearch, field verified with carrots, plant and place not yet recorded as run
+description: plant, field, cultivate, harvest and place commands of the HomeCheat Valheim plugin (2026-10-24, areas, harvest, grow rules and batches 2026-10-25) - saplings, crops or any prefab in a grid from you, the crosshair, the start-end rectangle or the patch you stand on; harvest into the inventory; parameters, spacing and grow rules, caps per cast, limits, undo; in-game test 2026-10-25
 ---
 # plant, field, cultivate, place (HomeCheat core ops)
 
@@ -134,3 +134,16 @@ Undo: saplings and grown trees are ordinary world objects (an axe, or a world ba
 ## Undo
 
 Planted and placed objects are ordinary world objects: remove them in game (Hoe/Cultivator for soil, an axe or the build tool for the rest) or restore a world backup (make a fresh one before big runs; see [backup-settings-lessons-learned.md](../backup-settings-lessons-learned.md)). There is no mod-side delete command. To remove the commands themselves see [README.md](README.md#undo-and-uninstall).
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- **harvest** `collect=1` (new): the harvest goes into your inventory, amounts as the game's own `Pickable.RPC_Pick` (`Game.ScaleDrops`, extra drops), the crop marked picked through `RPC_SetPicked`, overflow at your feet one stack per item. Spell 7.3 Harvest patch. V ("all works").
+- **Caps raised after real fields** (Maksym: "did not plant the whole field", "limit on Start-end"): `field` 10 000 per cast in batches of 500 (a 4 139 m2 patch had stopped at 2 500), `harvest` 10 000 in batches of 500, `plant` 2 000 saplings per cast in batches of 100 (`area=coords` refused only over 20 000 cells; 400 refused the whole rectangle before). A cut says "cast again to plant the rest". The runs that hit the old caps are V; the new caps are B.
+- **Grow rules** (new, Maksym: "never plant what the game would not let grow"): `field` and `plant` skip cells where the plant would not grow (`GrowRules` from `Plant.UpdateHealth`: the biome must be in `Plant.m_biome`, cultivated ground where `m_needCultivatedGround`) and report "N not planted: the game would not let them grow there (<crop>: wrong biome (X; grows in Y))". B.
+- **From me** (new): `plant area=self` = row 1 one spacing ahead of you, rows running towards the crosshair, columns centred; `cultivate area=self` and `field area=aim` name the old from-your-cell grid so a form can send them. B.
+- Forms: 7.1 Cultivate... (Area, Rows, Items in row; greyed for Start-end), 7.2 Plant food... (Area Start-end / This patch / From me, crop, Rows, Items in row), 7.4 Plant trees... (Area, tree, Item Size 1-20, Rows, Items in row; `avoid=1`). Run in game (the cap reports above came from them).
+- Spell bar: Oak grove, Carrots 3x5, Place (wall, campfire) and the Crops / Trees sub-groups were removed; `place` has no spell line now (constructions come from `spawn`).
+
+Still untested (B): `plant avoid=1` next to a wall, the scale cap, `cultivate area=coords` cap, `field map=1` default, the grow-rule refusal on a wrong biome.

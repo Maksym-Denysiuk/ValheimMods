@@ -1,5 +1,5 @@
 ---
-description: coord, groundlevel, path and spawn commands of the HomeCheat Valheim plugin (2026-10-25, wave 1 W1-world-build) - two stored points per world (start, end) for other commands, flatten that keeps away from player-built pieces, paths from start to end routed around trees, rocks and pieces, spawn at a chosen player with rotation and a count cap; parameters, defaults, caps, how they work, assumptions, Maksym's test list, undo; built and selftested, not run in game
+description: coord, groundlevel, path and spawn commands of the HomeCheat Valheim plugin (2026-10-25) - stored points per world, flatten a circle or the start-end rectangle and keep away from buildings, paths from start to end around obstacles, spawn ahead, at the crosshair or into an inventory, at full quality, tamed, and constructions built as by the hammer; in-game test 2026-10-25 with what is still untested
 ---
 # Build and terrain: coord, groundlevel, path, spawn
 
@@ -121,3 +121,22 @@ The game's own pieces do the terrain work (hoe pieces `raise`, `path`, `paved_ro
 - Terrain (flatten, paths) is saved with the world like any hoe work: level again by hand or with `op=groundlevel`, or restore a world backup (the admin package takes one every 3 minutes).
 - Spawned creatures: `op=killmobs`; items: pick them up.
 - The whole feature: delete `HomeCheat.Cmd.world.*.dll` from `BepInEx/homecheat-commands/` and restart; the plugin: [README.md](README.md#undo-and-uninstall).
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. **coord**: set start and end, show, get after `op=reload`, clear: V. `path` refuses without points: V.
+
+**spawn** gained (Maksym's requests):
+- `tamed=1`: creatures spawn tamed (a test aid for tamed-animal hits). V.
+- `where=ahead|crosshair|inventory` (default ahead, unchanged): crosshair = your camera's aim point + 0.5 m (no hit within 60 m: 8 m ahead, said in the answer); inventory = items only, into your own inventory, overflow at your feet; with `player=<another>` the items are dropped at their feet (their inventory lives on their PC; auto-pickup takes them); an unknown name answers "player 'x' is not online". The Spawn... form asks Where: Crosshair (default) or Inventory. V (Wood x5 inventory, Wood x3 crosshair, "items spawn works"); `player=<another>` with Inventory B.
+- `quality=1|<n>|max`: an item's level, clamped to the item's maximum, with full durability (as `give`); the form passes `quality=max`. V (SwordIron max = quality 4, AxeBronze at the crosshair).
+- **Constructions**: a prefab with a `Piece` (workbench, portal, furnace, ships) is built as the hammer builds it (`Player.PlacePiece` steps, as `dome`): on the ground, facing you (`yaw=` turns it, `pitch` ignored), a count side by side to the right, you as creator (the hammer can remove it), `WearNTear.OnPlaced`, the place effect; a ship on the water surface when the ground is under water; `tag=` sets a portal's pairing tag; host only. The Spawn... form lists "Constructions: <category>" groups from every tool's piece table (terrain and plant pieces left out). Persistence unchanged: spawn always left its objects in the world. V: a workbench at the crosshair.
+- **Constructions never into an inventory**: `where=inventory` with a `Piece` is refused ("is a construction: it is built in the world only (Where = Crosshair)"). V for a workbench and a Karve. The form still offers Inventory; the cast answers with the error in the screen centre (Known defects).
+
+Still untested (B): a ship on water, a portal pair with `tag=`, the form's "Constructions:" groups, `player=` / `yaw=` / `pitch=` / the count cap (T-build 13-15).
+
+**groundlevel** gained `area=coords` (the Flatten... form, Start-end): the rectangle of the stored start and end, levelled to your ground height + `delta` with 3 m stamps every 4 m (cap 1 600, batches of 50 every 0.1 s); `area=self` = the circle as before. Spell 6.1 Flatten... (form: Area From me / Start-end, Flatten level -10..10, Radius greyed for Start-end) always sends `avoid=1`. Run in game: V.
+
+**Known behaviour (Flatten next to buildings).** With `avoid=1` and `area=coords`, each 3 m stamp whose smoothing reaches within about 4 m of any piece is skipped, so a strip next to buildings stays unlevelled. Maksym saw part of the area left unlevelled next to buildings. Open, not built: a form question "Buildings: keep away / level all" (keep away first) and an area `shrink`.
+
+Still untested (B): `avoid=1` / `shrink=1` of the circle next to a wall, the ±8 m clamp, path `from=coords` with `avoid=1` around a tree, the stone path (T-build 5-12). The 5 m paths 6.3.3-6.3.4 were removed from the spell bar.

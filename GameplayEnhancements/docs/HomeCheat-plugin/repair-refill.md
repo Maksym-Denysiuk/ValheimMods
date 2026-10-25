@@ -1,5 +1,5 @@
 ---
-description: repair and refill commands of the HomeCheat Valheim plugin (2026-10-24, refill fuel filter 2026-10-25) - restore building pieces to full health and top up fuel in fireplaces and smelters, at the crosshair or in a radius; parameters and defaults, what they write, limits, undo; built in CheatResearch, not yet run in game
+description: repair and refill commands of the HomeCheat Valheim plugin (2026-10-24) - restore building pieces to full health and top up fuel in fireplaces and smelters, at the crosshair or in a radius, fuel by type; spell bar 6.5.1 Repair and 6.5.2 Refill within 50 m (2026-10-25); parameters, what they write, limits, undo
 ---
 # repair and refill (HomeCheat core ops)
 
@@ -61,3 +61,11 @@ Built and compiled without errors (DLL about 27.6 KB at the time). **Not yet run
 ## Undo
 
 There is no undo for restored health or fuel (both are normal in-game values; damage or burning changes them again). To remove the command altogether, remove the plugin: see [README.md](README.md#undo-and-uninstall). The cheat does not use the console, god mode or any cheat flag.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- Repair works from the spell bar: V.
+- Menu (Maksym: "just 2 commands, repair and refill, by crosshair and 50 m around the player"): 6.5 Repair and refill (sticky) = 6.5.1 Repair `op=repair&aim=0&radius=50` and 6.5.2 Refill `op=refill&aim=0&radius=50`; the seven older entries (aim, r10, r50, the chained Repair+refill) were removed. One call covers both: the crosshair reach of repair and refill is 30 m (`Aim.SolidHit`), always inside 50 m. No code change.
+- `fuel=` is still B (T-refill not run).

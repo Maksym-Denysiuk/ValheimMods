@@ -1,5 +1,5 @@
 ---
-description: transform command for the HomeCheat plugin - crow, serpent and fish forms on our own player (model, flight, deep swimming, fist damage, sounds), parameters, how it works, verification on 2026-10-24 in world ClaudeTest, limits and undo
+description: transform command for the HomeCheat plugin - crow, serpent and fish forms on our own player (model, flight, deep swimming, fist damage, sounds), parameters, how it works, verification on 2026-10-24 in world ClaudeTest, the forms refactor and in-game test of 2026-10-25 (other players see every form, share and hide on by default), limits and undo
 ---
 # transform
 
@@ -55,3 +55,15 @@ bash src/build.sh transform
 ```
 
 `src/build.sh` (extra references in `src/Features/Transform/refs.txt`) stages `HomeCheat.Cmd.transform.v<time>.dll` in `BepInEx/homecheat-commands/`; `op=reload` loads it without a restart. Undo: `op=transform&type=human`, then delete the `HomeCheat.Cmd.transform.*.dll` files and restart the game.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- Raven and serpent with `share=1&hide=1`: Claude2 sees the creature, not the human. V ("changes worked").
+- Forms without a timer: a form lasts until Human (4.1.4); the 300 s Shift versions were removed.
+- Fish: no swim stamina drain while a fish (restored after).
+- **Forms refactor** (Maksym: the fish was seen as a human, "same mistake"; what other players see must be inherited): `TransformForm` (abstract: prefabs, flies or swims, stand-in preparation, begin, step, pose) with `RavenForm`, `SerpentForm`, `FishForm`, a new instance per cast. `TransformState` keeps what every form shares: the hidden human, a networked stand-in for every form (was raven and serpent only), hiding the body, stamina, movement modes, revert. `share` and `hide` default on (`share=0`, `hide=0` opt out). Fish stand-in: a networked `Fish1` with `Fish`, `ItemDrop`, `Destructible` stripped on the host; the fish jumps out of the water on block and flops on land.
+- Spells: 4.1.1 Raven, 4.1.2 Serpent, 4.1.3 Fish, 4.1.4 Human.
+
+Still untested (B): Claude2 sees the fish; jump and splash; the flop on land; raven and serpent after the refactor.

@@ -1,5 +1,5 @@
 ---
-description: scale command of the HomeCheat Valheim plugin (2026-10-24, aim and cap 2026-10-25) - change the size of trees near the player or the tree under the crosshair (oak, beech, birch tested) with matching hit points and drops, saved with the world and re-applied on load by a Harmony patch; parameters, how it works, tests, limits, undo
+description: scale command of the HomeCheat Valheim plugin (2026-10-24, rebuilt trees 2026-10-25) - change the size of trees near the player or under the crosshair with matching hit points and drops; the tree is made again so every player sees the size at once; probe=1; parameters, how it works, tests, limits, undo
 ---
 # scale (tree resize, HomeCheat core op)
 
@@ -76,3 +76,13 @@ Not tested: reloading the world after scaling (the Harmony re-apply on load), ho
 ## Undo
 
 Run the same filter and radius with `factor=1`: size, hit points and drops go back to the prefab values and the saved scale becomes 1 (the load patch ignores a scale of 1). Trees outside the radius or not loaded at that moment keep their size until you do it again near them. Restoring a world backup also works. To remove the command and the load patch, see [README.md](README.md#undo-and-uninstall) (per the code comment vanilla ignores a saved tree scale on load, so without the plugin scaled trees should load at normal size; not tested).
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player.
+
+- Maksym: "other players see bigger trees we set before"; the earlier assumption that only HomeCheat players see the size (A7) was wrong. Probe (new, read-only `op=scale&probe=1`): `Birch1` has `m_syncInitialScale` = true, so the game applies the saved ZDO scale when the tree loads.
+- **Fix**: a resized tree is made again (`ZNetScene.Destroy` + `Instantiate` of the same prefab, the scale written to the ZDO before it reaches other players), so every player sees the new size at once; damage resets. The "(only you see)" labels were dropped.
+- Spells 4.2.1 Tree normal size (`factor=1`), 4.2.2-4.2.4 x3 / x5 / x10 (Shift x20), all `aim=1`. V ("tree changes work": Claude2, without the mod, sees the scaled trees at once).
+
+Still untested (B): `filter=*`, the factor cap 20, `op=scale&filter=Oak&factor=2&radius=30` after the change.

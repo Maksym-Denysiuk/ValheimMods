@@ -8,6 +8,7 @@ left to right direction
 
 abstract class CommandBase <<core>>
 class PatchSet <<core>>
+class "Kit.Notify" as Notify <<core, static>>
 class HomeApi <<core, static>> {
   +Exec(form) : string
 }
@@ -116,7 +117,11 @@ class SpellRootConfig <<internal sealed>>
 class SpellHotbarConfig <<internal sealed>>
 class SpellGroupConfig <<internal sealed>>
 class SpellLeafConfig <<internal sealed>>
-class SpellAskConfig <<internal sealed>>
+class SpellPanelsConfig <<internal sealed>>
+class SpellForm <<internal sealed>> {
+  +{static} Current : SpellForm
+  one screen for every ask= question
+}
 
 CommandBase <|-- SpellsCommand
 SpellsCommand *-- SpellsSettings : new in OnLoad
@@ -130,8 +135,8 @@ SpellNode o-- "0..*" SpellNode : Children
 SpellNode o-- "0..1" Spell
 Spell *-- "0..*" SpellAsk : ask= flags
 SpellAsk *-- "0..*" SpellAskOption
-SpellAskConfig ..> SpellAskSources : dynamic answers
-SpellAskConfig --> SpellAskChain : answers so far
+SpellForm ..> SpellAskSources : dynamic answers, icons
+SpellForm --> SpellAskChain : answers on Cast
 SpellAskChain --> Spell
 SpellBar ..> SpellAskChain : CastChain -> CastSpell
 SpellBar ..> SpellParse : Substitute({key})
@@ -144,12 +149,13 @@ IRadialConfig <|.. SpellRootConfig
 IRadialConfig <|.. SpellHotbarConfig
 IRadialConfig <|.. SpellGroupConfig
 IRadialConfig <|.. SpellLeafConfig
-IRadialConfig <|.. SpellAskConfig
+IRadialConfig <|.. SpellPanelsConfig
 SpellBar ..> SpellRootConfig : Root()
-SpellRootConfig ..> SpellHotbarConfig
+SpellRootConfig ..> SpellPanelsConfig : Hotbar
+SpellPanelsConfig ..> SpellHotbarConfig : Panel 1-5, Panel 6-0
 SpellRootConfig ..> SpellGroupConfig
 SpellBar ..> SpellLeafConfig
-SpellBar ..> SpellAskConfig : a spell with ask=
+SpellBar ..> SpellForm : a spell with ask=
+SpellBar ..> Notify : failures only
 SpellGroupConfig ..> SpellGroupConfig : sub-section
-SpellAskConfig ..> SpellAskConfig : next question
 @enduml

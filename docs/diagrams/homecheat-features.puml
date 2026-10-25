@@ -1,6 +1,6 @@
 @startuml homecheat-features
 ' HomeCheat feature DLLs: one package = one Features/<Feature> folder = one HomeCheat.Cmd.<feature>.v<stamp>.dll.
-' 28 feature commands + 6 built-ins = 34. Checked against src/Features on 2026-10-25.
+' 35 feature commands + 6 built-ins = 41. Checked against src/Features on 2026-10-25 (after the in-game test pass).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -9,9 +9,11 @@ hide empty members
 left to right direction
 
 abstract class CommandBase <<core>>
+abstract class AttackCommand <<core>>
 abstract class HarmEffect <<core>>
 class "Kit.Anchor" as KitAnchor <<core>>
-CommandBase <|-- HarmEffect
+CommandBase <|-- AttackCommand
+AttackCommand <|-- HarmEffect
 
 package "core built-ins  (HomeCheat.dll, HomeCheat.Builtins, internal sealed)" as core {
   class PingCommand
@@ -45,6 +47,7 @@ package "world  (HomeCheat.Features.WorldCommands)" as world {
   class ScaleCommand
   class CoordCommand
   class HarvestCommand
+  class GrowRules <<internal static>>
   class FieldAnchor <<internal static>> {
     +AheadOfPlayer(p, a, spacing) : Anchor
   }
@@ -86,6 +89,10 @@ package "spells  (see homecheat-spells)" as sp {
 }
 package "transform  (HomeCheat.Features.TransformCommands)" as tr {
   class TransformCommand
+  abstract class TransformForm
+  class RavenForm
+  class SerpentForm
+  class FishForm
   class TransformState <<MonoBehaviour>>
   class TransformRemote <<MonoBehaviour>>
   class TransformLanding <<MonoBehaviour>>
@@ -127,9 +134,14 @@ package "dome" as dm {
 package "despawn" as ds {
   class DespawnCommand
 }
+package "construction  (being built)" as cn {
+  class ConstructCommand
+  class BlueprintLibrary
+}
 package "traps" as tr {
   class TrapCommand
   class TrapKind
+  class TrapFxSets
   class TrapWeapon
   class TrapPatches
 }
@@ -156,7 +168,7 @@ CommandBase <|-- CleanseCommand
 CommandBase <|-- BlessCommand
 HarmEffect <|-- EarthquakeEffect
 HarmEffect <|-- SlimeEffect
-CommandBase <|-- SpellShotCommand
+AttackCommand <|-- SpellShotCommand
 CommandBase <|-- SpellsCommand
 CommandBase <|-- TransformCommand
 CommandBase <|-- HideBodyCommand
@@ -170,7 +182,10 @@ DomeCommand ..> DomeWards : ward ZDOs
 DomeCommand ..> DomeLayout : zone, lattice
 DomePatches ..> DomeCommand : OnSpawned starts sync
 CommandBase <|-- DespawnCommand
-CommandBase <|-- TrapCommand
+AttackCommand <|-- TrapCommand
+CommandBase <|-- ConstructCommand
+ConstructCommand ..> BlueprintLibrary : blueprints
+TrapCommand ..> TrapFxSets : blast looks
 TrapCommand ..> TrapKind : kind table
 TrapCommand ..> TrapWeapon : blast damage
 TrapPatches ..> TrapCommand : OnSpawned starts watcher
@@ -183,6 +198,12 @@ HarvestCommand ..> FieldPatch : Sample
 FieldAnchor ..> KitAnchor : builds
 PlantCommand ..> KitAnchor : AtAim
 TransformCommand ..> TransformState : AddComponent (local player)
+TransformForm <|-- RavenForm
+TransformForm <|-- SerpentForm
+TransformForm <|-- FishForm
+TransformState --> TransformForm : the form of this cast
+FieldCommand ..> GrowRules
+PlantCommand ..> GrowRules
 TransformCommand ..> TransformRemote : AddComponent (other players)
 TransformState ..> TransformLanding : AddComponent
 HideBodyCommand ..> HideBodySendZdosPatch : Patches.Apply

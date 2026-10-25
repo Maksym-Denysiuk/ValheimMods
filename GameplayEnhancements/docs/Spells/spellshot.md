@@ -113,3 +113,13 @@ Test log: none yet (not run in game).
 ## Undo
 
 Delete the `HomeCheat.Cmd.spellshot.*.dll` files from `BepInEx/homecheat-commands/` and restart the game (a reload only adds commands). Leftover lightning visuals: `op=spellshot&type=clear`. Nothing in the game files is changed.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. Result: **V** for arrow, Arrow 3x3, balista, thunderbolt, harpoon and the Harpoon 3x3 fan.
+
+- **Thunderbolt pushed the caster** (fixed): `lightningAOE` has a second `Aoe`, `AOE_ROD` (a 100 m box collider, attack force 100); only the biggest `Aoe` got an owner, so the rod hit everyone. Now every `Aoe` of a strike gets `Setup` (owner) and the rod's damage is 0.
+- **PvP.** `SpellShotCommand : AttackCommand`: `pvp=1` hits other players while your PvP is on, whatever their own, spares them while it is off, never you. Projectiles lose `m_ignorePVP` inside the game's `Projectile`, so shots are marked (`PvpHits.MarkProjectile`) and the core `PvpProjectilePatch` puts the flag back on their hits. Area spells V ("all works"); Arrow 3x3 on Claude2 failed before the patch and was fixed; the projectile check after the rule moved into the core is still B.
+- **Fan** (new): `spread=<deg>` (default 0 = parallel, cap 45) turns each shot of the grid by its offset from the centre, like a numpad (centre straight, 8 up, 2 down, 4 left, 6 right). Spell 2.6.2 Harpoon 3x3 fan = `perrow=3&rows=3&spread=15` (Maksym tried 45, 25, 5, then 15); Shift on 2.1.2 and 2.2.2 = the fan at 10. V ("Harpoon logic works now").
+- Harpoon (T-harpoon): `projectile_chitinharpoon`, `SpearChitin` with `se=Harpooned` (probe), pull works. V.
+- Spell bar: 2.1 Arrows, 2.2 Balista (2.2.2 Balista 3x3 new), 2.3 Thunderbolt (2.3.2 wall 5x2), 2.6 Harpoon; all `pvp=1`.

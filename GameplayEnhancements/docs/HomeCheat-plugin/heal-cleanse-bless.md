@@ -45,3 +45,7 @@ Compiled and staged. **Not yet run in game: the spells-design session recorded t
 ## Undo
 
 Healed values and cleansed effects are ordinary game state. A blessing ends with its time; `op=cleanse&all=1` removes it earlier. To remove the commands, delete the `HomeCheat.Cmd.heal.*.dll` files from `BepInEx/homecheat-commands/` and restart the game (a reload only adds commands). Nothing in the game files is changed.
+
+## In-game test 2026-10-25
+
+Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC, Claude2 (no mod) as the second player. Heal and Cleanse from the spell bar: V. Spell ids since the regrouping: 5.1 Heal, 5.2 Cleanse (Shift = 5.4 Remove all effects), 5.3.1-5.3.7 Blessings (Shift = 15 min), 5.4 Remove all effects. `GP_Fader` is in `op=bless&list=1` (probe).

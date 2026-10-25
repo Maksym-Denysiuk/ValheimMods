@@ -1,5 +1,5 @@
 @startuml homecheat-core
-' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25 (wave 0 core pass: Host, Coords, Constructions, Caps, GridRoute, world exit).
+' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25 (wave 0 core pass: Host, Coords, Constructions, Caps, GridRoute, world exit; test pass: AttackCommand, PvpHits, Notify, PvpProjectilePatch).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -49,6 +49,12 @@ package "HomeCheat (Contracts)" {
     #Own(go : GameObject) : GameObject
     #OwnInWorld(go : GameObject) : GameObject
     +Later(seconds : float, act : Action)
+  }
+  abstract class AttackCommand {
+    #{static} PvpUsage : string
+    #{static} PvpAsked(a) : bool
+    #{static} HitsPlayers(a) : bool
+    #{static} PvpNote(a) : string
   }
   abstract class HarmEffect {
     #{static} Target(a : Args) : Player
@@ -152,6 +158,16 @@ package "HomeCheat.Services" {
 }
 
 package "HomeCheat.Kit (static helpers)" {
+  class Notify <<static>> {
+    +Center(text)
+    +Error(text)
+  }
+  class PvpHits <<static>> {
+    +HitsPlayers(asked) : bool
+    +ArmAoe(aoe, hitPlayers)
+    +ArmHit(hit, hitPlayers)
+    +MarkProjectile(pr)
+  }
   class Players <<static>>
   class Aim <<static>>
   class Ground <<static>>
@@ -195,6 +211,7 @@ package "HomeCheat.Kit (static helpers)" {
 }
 
 package "HomeCheat.Builtins" {
+  class PvpProjectilePatch <<HarmonyPatch Projectile.OnHit, Character.Damage>>
   class TreeScalePatch <<HarmonyPatch ZNetView.Awake>>
   class WorldExitPatch <<HarmonyPatch ZNetScene.OnDestroy>> {
     ~OnExit : Action
@@ -220,7 +237,11 @@ HomeApi --> Scheduler
 
 IHomeCommand <|.. CommandBase
 ICommandLifecycle <|.. CommandBase
-CommandBase <|-- HarmEffect
+CommandBase <|-- AttackCommand
+AttackCommand <|-- HarmEffect
+AttackCommand ..> PvpHits : the rule
+PvpProjectilePatch ..> PvpHits : marked shots
+CommandBase ..> Notify : ERROR answers on screen
 CommandBase *-- "0..1" PatchSet : lazy, com.homeos.homecheat.<name>
 CommandBase ..> Args : builds per Run
 CommandBase ..> Scheduler : timers owned by this
