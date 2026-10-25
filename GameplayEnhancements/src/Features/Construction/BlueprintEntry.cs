@@ -1,5 +1,5 @@
-// One construction of the blueprint folder: a single .blueprint file, or a subfolder whose files are its parts,
-// all placed around the same origin (card assumption A2). Unity-free.
+// One construction of the blueprint folder: a single .blueprint file, or a subfolder whose files are its versions (one is
+// built: BlueprintLibrary.Resolve). Unity-free.
 using System.Collections.Generic;
 
 namespace HomeCheat.Features.Construction

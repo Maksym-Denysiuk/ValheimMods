@@ -1,2 +1,4 @@
 # PlatformUserID (Piece.SetCreator takes the creator's platform user id, as Player.PlacePiece passes it)
 Splatform.dll
+# GetStableHashCode (the level operation's prefab hash in ZNetScene)
+assembly_utils.dll

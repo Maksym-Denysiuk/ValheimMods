@@ -33,8 +33,6 @@ namespace HomeCheat.Features.Construction
         const float LowestBand = 1f;        // pieces with a pivot this close to the lowest one are measured for the bottom
         const float BaseBand = 0.3f;        // a piece whose bottom is this close to the base rests on the ground
         const float FlattenMargin = 1f;     // metres levelled around the footprint
-        const float AreaStamp = 3f, AreaStep = 4f;   // groundlevel area=coords: 3 m stamps every 4 m cover a rectangle
-        const int MaxStamps = 1600;
         const int StampBatch = 50;
         const float Settle = 1f;            // seconds after the last stamp before pieces go down (terrain rebuild)
         const float GapTolerance = 0.15f;   // a bottom piece this far above the surface below it gets a pole column
@@ -42,7 +40,6 @@ namespace HomeCheat.Features.Construction
         const int MaxPoles = 600;
         const int MaxPolesPerColumn = 10;
         const string Pole = "wood_pole_log_4";
-        const string FlattenTool = "raise";
         public const string KeyBuild = "hc_construct";          // ZDO mark: the build id <name>-<yyyyMMddHHmmss>
         public const string KeyOrigin = "hc_construct_o";       // the copy's origin (Vector3), for continue=1
         public const string KeyYaw = "hc_construct_yaw";
@@ -53,11 +50,15 @@ namespace HomeCheat.Features.Construction
         const float FloorBin = 0.25f;       // metres: pivot levels for the ground floor
         const float FloorShare = 0.05f;     // the ground floor holds at least this share of the pieces
         const int FloorMin = 10;            // and at least this many
-        const float FitMin = 0.3f, FitMax = 3f;   // ground=fit: columns hanging this far above the base get terrain under them
-        const float FitStamp = 0.8f;        // level radius of a fit stamp (one 1 m column)
-        const int MaxFitStamps = 2500;
+        const float FitMin = 0.3f, FitMax = 4f;   // ground=fit: columns hanging this far above the base get terrain under them
+        const int VertexBatch = 150;        // level operations per step
+        const int MaxVertices = 6000;       // about 77 x 77 m
+        const float LegacyWait = 1f;        // seconds after removing old hoe stamps: the terrain rebuilds without them
+        const float LegacyMargin = 4f;      // old hoe stamps this far around the levelled box are removed too (their smoothing reaches in)
         const float SettleCheck = 30f;     // seconds after the last step: the support report once the game has computed it
 
+        GroundJob lastGround;
+        string lastBroken = "";
         string lastId = "", lastName = "";
         int lastPlaced;
 
@@ -68,6 +69,8 @@ namespace HomeCheat.Features.Construction
             public Vector3 Pos;
             public Quaternion Rot;
             public Vector3 Origin;          // of its copy
+            public ZNetView Placed;         // set by PlaceOne; null again once the game breaks the piece
+            public bool Tried;
         }
 
         sealed class Tally
@@ -87,11 +90,12 @@ namespace HomeCheat.Features.Construction
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
+                    + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only)"
                     + " | step=place&name=<construction> (direct, no preview; same keys)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
-                    + " | step=support [id=<default the last>] (read-only) | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
+                    + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=status | step=undo [id=<build id, default the last>] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
-                    + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, " + MaxStamps + " flatten stamps, " + MaxPoles + " poles, list " + MaxList;
+                    + " host only; caps " + MaxPieces + " pieces, footprint " + (int)MaxSide + " m a side, " + MaxVertices + " levelled vertices, " + MaxPoles + " poles, list " + MaxList;
             }
         }
 
@@ -112,6 +116,9 @@ namespace HomeCheat.Features.Construction
             if (step == "remove") return RemovePlan();
             if (step == "place") return a.Flag("continue", false) ? Continue(a) : Place(a);
             if (step == "support") return Support(a);
+            if (step == "ground") return GroundReport(a);
+            if (step == "level") return Level(a);
+            if (step == "flatness") return Flatness(lastGround);
             if (step == "status") return Status();
             if (step == "undo") return Undo(a);
             throw new CommandException("step= list, preview, rotate, start, remove, place, support, status or undo (op=help&cmd=construct)");
@@ -131,7 +138,7 @@ namespace HomeCheat.Features.Construction
                 float x0, x1, y0, y1, z0, z1;
                 e.Bounds(out x0, out x1, out y0, out y1, out z0, out z1);
                 sb.Append("\n").Append(e.Name).Append(" [").Append(e.Source).Append("]: ")
-                  .Append(e.Parts.Count).Append(e.Parts.Count == 1 ? " part, " : " parts, ").Append(e.PieceCount).Append(" pieces, ")
+                  .Append(e.Parts.Count == 1 ? e.PieceCount + " pieces, " : e.Parts.Count + " versions (" + BlueprintLibrary.Versions(e) + "; the largest is built unless name=" + e.Name + "/<version>), ")
                   .Append(Fmt.F(x1 - x0, 1)).Append(" x ").Append(Fmt.F(z1 - z0, 1)).Append(" x ").Append(Fmt.F(y1 - y0, 1)).Append(" m");
                 if (e.Parts.Count == 1 && !string.IsNullOrEmpty(e.Parts[0].Creator)) sb.Append(", by ").Append(e.Parts[0].Creator);
                 float dx, dy, dz;
@@ -162,8 +169,9 @@ namespace HomeCheat.Features.Construction
         static BlueprintEntry Require(string name)
         {
             List<BlueprintEntry> all = BlueprintLibrary.Scan(Dir);
-            BlueprintEntry e = BlueprintLibrary.Find(all, name);
-            if (e != null) return e;
+            string note;
+            BlueprintEntry e = BlueprintLibrary.Resolve(all, name, out note);
+            if (e != null) { if (note.Length > 0) HomeApi.Log("construct: " + name + ": " + note); return e; }
             List<string> names = new List<string>();
             foreach (BlueprintEntry x in all) names.Add(x.Name);
             throw new CommandException("no construction '" + name + "' (have: " + (names.Count == 0 ? "none" : string.Join(", ", names.ToArray())) + ")");
@@ -356,50 +364,10 @@ namespace HomeCheat.Features.Construction
                         + ": aim elsewhere, stack with continue=1, or add overlap=1");
             }
 
-            // flatten: the box of every piece pivot + margin levelled to the base, before anything is placed
+            // the ground first (flatten: flat at the base; fit: also raised under hanging pieces), then the pieces
             float delay = 0f;
-            int stamps = 0, fitStamps = 0;
-            if (ground == "flatten" || ground == "fit")
-            {
-                float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
-                foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
-                ax -= FlattenMargin; az -= FlattenMargin; bx += FlattenMargin; bz += FlattenMargin;
-                int cols, rows;
-                GridMath.RectSize(ax, az, bx, bz, AreaStep, out cols, out rows);
-                Caps.Check("stamps", cols * rows, MaxStamps);
-                GameObject tool = Prefabs.Require(FlattenTool, "(the hoe's raise piece)");
-                TerrainModifier tm = tool.GetComponent<TerrainModifier>();
-                if (tm == null) throw new CommandException(FlattenTool + " has no TerrainModifier");
-                float off = Refl.GetFloat(tm, "m_levelOffset", 0f);
-                List<Vector3> todo = new List<Vector3>();
-                foreach (GridPoint pt in GridMath.RectCells(ax, az, bx, bz, AreaStep, MaxStamps)) todo.Add(new Vector3(pt.X, baseY - off, pt.Z));
-                stamps = todo.Count;
-                int nb = (todo.Count + StampBatch - 1) / StampBatch;
-                for (int b = 0; b < nb; b++)
-                {
-                    int from = b * StampBatch, to = Mathf.Min(todo.Count, from + StampBatch);
-                    Action stamp = delegate { for (int i = from; i < to; i++) TerrainStamp.At(tool, todo[i], AreaStamp, 0f); };
-                    if (b == 0) stamp(); else Later(b * BatchGap, stamp);
-                }
-                delay = (nb - 1) * BatchGap + Settle;
-
-                // fit (Maksym 2026-10-25, "build based on these rules"): the lowest piece of every 1 m column marks where the
-                // original ground was; a column whose lowest piece hangs FitMin..FitMax above the base gets the terrain raised
-                // up to it (garden stones, bushes, fences, a deck on a slope). Higher columns are roof overhangs: left alone.
-                if (ground == "fit")
-                {
-                    List<Vector3> fit = FitStamps(jobs, baseY, off);
-                    fitStamps = fit.Count;
-                    int nf = (fit.Count + StampBatch - 1) / StampBatch;
-                    float start = delay;
-                    for (int b = 0; b < nf; b++)
-                    {
-                        int from = b * StampBatch, to = Mathf.Min(fit.Count, from + StampBatch);
-                        Later(start + b * BatchGap, delegate { for (int i = from; i < to; i++) TerrainStamp.At(tool, fit[i], FitStamp, 0f); });
-                    }
-                    if (nf > 0) delay = start + (nf - 1) * BatchGap + Settle;
-                }
-            }
+            GroundJob g = null;
+            if (ground == "flatten" || ground == "fit") { g = PrepareGround(jobs, baseY, ground == "fit"); delay = g.Ready; }
 
             string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             long me = p.GetPlayerID();
@@ -419,11 +387,44 @@ namespace HomeCheat.Features.Construction
                 + (skipped > 0 ? ", " + skipped + " skipped: unknown prefabs " + string.Join(" ", missing.ToArray()) : "") + ")"
                 + " at " + Fmt.Vec(origin) + " on the " + baseText + " (base " + Fmt.F(baseY, 2) + ", terrain " + Fmt.F(Ground.Height(anchor), 2) + ")"
                 + ", " + floorText
-                + ", ground " + ground + (stamps > 0 ? " (" + stamps + " level stamps" + (ground == "fit" ? ", " + fitStamps + " columns raised to their lowest piece" : "")
-                    + ", pieces after " + Fmt.F(delay, 1) + " s)" : "")
+                + ", ground " + ground + (g != null ? " (" + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "") + g.Targets.Count + " vertices levelled, " + g.Raised + " raised, pieces after " + Fmt.F(delay, 1) + " s)" : "")
                 + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
                 + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
+        }
+
+        // step=level (Maksym 2026-10-25, "task 0 - make a flat ground first"): only the ground of a construction, no pieces; the
+        // plan is kept with ground=none, so step=start builds on this ground without levelling again
+        string Level(Args a)
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
+            Plan pl = MakePlan(a, p, e);
+            if (!a.Has("ground")) pl.Ground = "flatten";
+            if (pl.Ground != "flatten" && pl.Ground != "fit") throw new CommandException("step=level takes ground=flatten or ground=fit");
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
+            if (jobs.Count == 0) throw new CommandException("none of the pieces is a prefab this game knows");
+            GroundJob g = PrepareGround(jobs, pl.BaseY, pl.Ground == "fit");
+            string mode = pl.Ground;
+            Later(g.Ready + Settle, delegate
+            {
+                string msg = "construct: level " + mode + " done; " + Flatness(g);
+                HomeApi.Log(msg);
+                Notify.Center(msg);
+            });
+            Plan old = LoadPlan(pl.World);
+            if (old != null) RemovePillars(old.PillarId);
+            pl.Ground = "none";
+            pl.PillarId = "";
+            SavePlan(pl);
+            return "levelling for " + e.Name + " (" + mode + "): base " + Fmt.F(pl.BaseY, 2) + " on the " + pl.BaseText + ", " + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "")
+                + g.Targets.Count + " vertices, " + g.Raised + " raised; done in " + Fmt.F(g.Ready, 1) + " s, flatness report " + Fmt.F(Settle, 0) + " s later (or step=flatness)."
+                + " The plan is kept with ground=none: step=start&confirm=1 builds on this ground";
         }
 
         // ---- preview -> start | remove (the agreed flow, Maksym 2026-10-25): the area is shown first, built only on confirm ----
@@ -687,23 +688,115 @@ namespace HomeCheat.Features.Construction
 
         // one raise stamp per 1 m column whose lowest piece (collider bottom; pivot for bushes, stones and other non-pieces)
         // hangs FitMin..FitMax above the base, levelled to that bottom; lower columns first, so a higher stamp's smoothing wins
-        // the fit surface (FitField): every piece's collider box over the 1 m cells it covers (bushes, stones and other non-pieces
-        // as a 0.5 m square at their pivot), then one raise stamp per raised cell, lowest first
-        static List<Vector3> FitStamps(List<Job> jobs, float baseY, float levelOffset)
+        // the target height of every terrain vertex under the build (FitField): every piece's collider box over the 1 m cells it
+        // covers (bushes, stones and other non-pieces as a 0.5 m square at their pivot); fit=false = flat at the base
+        static List<Vector3> GroundTargets(List<Job> jobs, float baseY, bool fit, float ax, float az, float bx, float bz, out int raised)
         {
             List<FitField.Box> boxes = new List<FitField.Box>();
             foreach (Job j in jobs)
             {
                 if (j.Piece == null) continue;
                 Vector3 lo, hi;
+                bool needs = NeedsGround(j.Prefab);
                 if (PieceGhost.Box(j.Prefab, j.Rot, out lo, out hi))
-                    boxes.Add(new FitField.Box(j.Pos.x + lo.x, j.Pos.x + hi.x, j.Pos.z + lo.z, j.Pos.z + hi.z, j.Pos.y + lo.y));
+                    boxes.Add(new FitField.Box(j.Pos.x + lo.x, j.Pos.x + hi.x, j.Pos.z + lo.z, j.Pos.z + hi.z, j.Pos.y + lo.y, needs));
                 else
-                    boxes.Add(new FitField.Box(j.Pos.x - 0.25f, j.Pos.x + 0.25f, j.Pos.z - 0.25f, j.Pos.z + 0.25f, j.Pos.y));
+                    boxes.Add(new FitField.Box(j.Pos.x - 0.25f, j.Pos.x + 0.25f, j.Pos.z - 0.25f, j.Pos.z + 0.25f, j.Pos.y, needs));
             }
-            List<Vector3> stamps = new List<Vector3>();
-            foreach (float[] c in FitField.Build(boxes, baseY, FitMin, FitMax, MaxFitStamps)) stamps.Add(new Vector3(c[0], c[1] - levelOffset, c[2]));
-            return stamps;
+            List<Vector3> verts = new List<Vector3>();
+            foreach (float[] v in FitField.Vertices(boxes, baseY, FitMin, FitMax, fit, ax, az, bx, bz, MaxVertices, out raised)) verts.Add(new Vector3(v[0], v[1], v[2]));
+            return verts;
+        }
+
+        // a piece that must rest on the ground: no WearNTear (bushes, pickable stones), or a material other than wood (stone,
+        // marble, iron ...): on flat ground only these broke, wood stood on its posts (gumdrop endgame, 2026-10-25)
+        static bool NeedsGround(GameObject prefab)
+        {
+            WearNTear w = prefab.GetComponent<WearNTear>();
+            if (w == null) return true;
+            string m = w.m_materialType.ToString();
+            return m != "Wood" && m != "HardWood";
+        }
+
+        // the ground step of a build: the old hoe stamps in the box removed, a moment for the terrain to rebuild, then one level
+        // operation per vertex (TerrainLevel.Vertex). Ready = seconds until the ground is done
+        sealed class GroundJob
+        {
+            public int Legacy, Raised;
+            public float Ready, BaseY;
+            public List<Vector3> Targets;
+        }
+
+        GroundJob PrepareGround(List<Job> jobs, float baseY, bool fit)
+        {
+            float ax = float.MaxValue, az = float.MaxValue, bx = float.MinValue, bz = float.MinValue;
+            foreach (Job j in jobs) { ax = Mathf.Min(ax, j.Pos.x); az = Mathf.Min(az, j.Pos.z); bx = Mathf.Max(bx, j.Pos.x); bz = Mathf.Max(bz, j.Pos.z); }
+            ax -= FlattenMargin; az -= FlattenMargin; bx += FlattenMargin; bz += FlattenMargin;
+            Caps.Check("levelled side", Mathf.Max(bx - ax, bz - az), MaxSide + 2f * FlattenMargin);
+            GroundJob g = new GroundJob();
+            g.BaseY = baseY;
+            g.Legacy = TerrainLevel.RemoveLegacy(ax - LegacyMargin, az - LegacyMargin, bx + LegacyMargin, bz + LegacyMargin);
+            g.Targets = GroundTargets(jobs, baseY, fit, ax, az, bx, bz, out g.Raised);
+            List<Vector3> todo = g.Targets;
+            int nb = (todo.Count + VertexBatch - 1) / VertexBatch;
+            float first = g.Legacy > 0 ? LegacyWait : PillarClear;
+            for (int b = 0; b < nb; b++)
+            {
+                int from = b * VertexBatch, to = Mathf.Min(todo.Count, from + VertexBatch);
+                Later(first + b * BatchGap, delegate { for (int i = from; i < to; i++) TerrainLevel.Vertex(todo[i].x, todo[i].z, todo[i].y); });
+            }
+            g.Ready = first + Mathf.Max(0, nb - 1) * BatchGap + Settle;
+            lastGround = g;
+            return g;
+        }
+
+        // how close the terrain came to the targets: within 5 cm, the largest miss, and where
+        static string Flatness(GroundJob g)
+        {
+            if (g == null || g.Targets == null || g.Targets.Count == 0) return "no levelled ground in this session";
+            int ok = 0, high = 0, low = 0;
+            float worst = 0f;
+            Vector3 at = Vector3.zero;
+            foreach (Vector3 v in g.Targets)
+            {
+                float d = Ground.Height(v) - v.y;
+                if (Mathf.Abs(d) <= 0.05f) ok++; else if (d > 0f) high++; else low++;
+                if (Mathf.Abs(d) > Mathf.Abs(worst)) { worst = d; at = v; }
+            }
+            return "ground: " + ok + " of " + g.Targets.Count + " vertices within 5 cm of their target (" + g.Raised + " raised above the base " + Fmt.F(g.BaseY, 2) + "), "
+                + high + " too high, " + low + " too low" + (Mathf.Abs(worst) > 0.05f ? ", worst " + Fmt.F(worst, 2) + " m at " + Fmt.F(at.x, 0) + "," + Fmt.F(at.z, 0) : "");
+        }
+
+        // after the settle: every piece that was placed and is gone, by prefab and by reason. The reason is read where the piece
+        // stood: a solid object right under its bottom (it rested on other pieces), else the gap to the terrain
+        static string Broken(List<Job> jobs)
+        {
+            Dictionary<string, int> byPrefab = new Dictionary<string, int>();
+            int onPieces = 0, noGround = 0, onGround = 0, total = 0;
+            float worstGap = 0f;
+            string worstAt = "";
+            foreach (Job j in jobs)
+            {
+                if (!j.Tried || !(j.Placed == null)) continue;
+                total++;
+                string pn = j.Prefab.name;
+                int c;
+                byPrefab.TryGetValue(pn, out c);
+                byPrefab[pn] = c + 1;
+                float bottom = Bottom(j);
+                float gap = bottom - Ground.Height(j.Pos);
+                RaycastHit h;
+                if (Physics.Raycast(new Vector3(j.Pos.x, bottom + 0.05f, j.Pos.z), Vector3.down, out h, 0.4f, Masks.Solid, QueryTriggerInteraction.Ignore)) onPieces++;
+                else if (gap > FitMin) { noGround++; if (gap > worstGap) { worstGap = gap; worstAt = pn + " at " + Fmt.Vec(j.Pos); } }
+                else onGround++;
+            }
+            if (total == 0) return "nothing broke";
+            List<KeyValuePair<string, int>> list = new List<KeyValuePair<string, int>>(byPrefab);
+            list.Sort(delegate (KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return r.Value.CompareTo(l.Value); });
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.Count && i < 10; i++) sb.Append(i == 0 ? "" : ", ").Append(list[i].Key).Append(" ").Append(list[i].Value);
+            return total + " broke: " + noGround + " with no ground under them (gap over " + Fmt.F(FitMin, 1) + " m" + (worstGap > 0f ? ", worst " + Fmt.F(worstGap, 2) + " m, " + worstAt : "") + "), "
+                + onPieces + " resting on other pieces (those gave way), " + onGround + " on the ground; by prefab: " + sb;
         }
 
         static float Top(List<Job> jobs)
@@ -780,18 +873,21 @@ namespace HomeCheat.Features.Construction
             });
             Later(last + SettleCheck, delegate
             {
+                lastBroken = Broken(jobs);
                 string msg = "construct: " + name + " settled: " + SupportLine(id, t.Placed);
-                HomeApi.Log(msg + " (id " + id + ")");
-                Notify.Center(msg);
+                HomeApi.Log(msg + "; " + lastBroken + " (id " + id + ")");
+                Notify.Center(msg + "; " + lastBroken);
             });
         }
 
         // one piece the way Player.PlacePiece makes it: creator, OnPlaced; no place effect per piece
         static void PlaceOne(Job j, string id, float yaw, string name, long me, Tally t)
         {
+            j.Tried = true;
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(j.Prefab, j.Pos, j.Rot);
             ZNetView nv = go.GetComponent<ZNetView>();
             if (nv == null || !nv.IsValid()) { UnityEngine.Object.Destroy(go); t.Invalid++; return; }
+            j.Placed = nv;
             ZDO z = nv.GetZDO();
             z.Set(KeyBuild, id);
             z.Set(KeyOrigin, j.Origin);
@@ -869,8 +965,67 @@ namespace HomeCheat.Features.Construction
             byCount.Sort(delegate (KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return r.Value.CompareTo(l.Value); });
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < byCount.Count && i < 12; i++) sb.Append(i == 0 ? "" : ", ").Append(byCount[i].Key).Append(" ").Append(byCount[i].Value);
-            return "build " + id + ": " + line + (sb.Length > 0 ? "; weak and critical by prefab: " + sb : "")
+            return "build " + id + ": " + line + (sb.Length > 0 ? "; weak and critical by prefab: " + sb : "") + (id == lastId && lastBroken.Length > 0 ? "; " + lastBroken : "")
                 + " (loaded pieces; grounded = rests on the ground or a rock, then full / good / weak / critical as the hammer colours them)";
+        }
+
+        // step=ground (read-only): the terrain under a build against the lowest piece over every 1 m cell, from the pieces
+        // as they stand (their colliders): buried (the ground above a piece bottom), right, hanging 0.3-3 m, or higher
+        string GroundReport(Args a)
+        {
+            Host.RequireWorld();
+            string id = a.Str("id", lastId);
+            if (id.Length == 0) throw new CommandException("no build in this session: add id= (op=construct&step=status lists the loaded ones)");
+            List<ZNetView> pieces = Loaded(id);
+            if (pieces.Count == 0) throw new CommandException("no loaded pieces of build " + id);
+            Dictionary<long, float> own = new Dictionary<long, float>();
+            Dictionary<long, string> who = new Dictionary<long, string>();
+            foreach (ZNetView nv in pieces)
+            {
+                Bounds bb = new Bounds();
+                bool any = false;
+                foreach (Collider c in nv.GetComponentsInChildren<Collider>())
+                {
+                    if (c == null || c.isTrigger || !c.enabled) continue;
+                    if (!any) { bb = c.bounds; any = true; } else bb.Encapsulate(c.bounds);
+                }
+                Vector3 pos = nv.transform.position;
+                float x0 = any ? bb.min.x : pos.x, x1 = any ? bb.max.x : pos.x, z0 = any ? bb.min.z : pos.z, z1 = any ? bb.max.z : pos.z, bottom = any ? bb.min.y : pos.y;
+                if (x1 - x0 > 8f || z1 - z0 > 8f) continue;   // a long roof or wall: not a ground marker
+                for (int ix = Mathf.FloorToInt(x0); ix <= Mathf.FloorToInt(x1); ix++)
+                    for (int iz = Mathf.FloorToInt(z0); iz <= Mathf.FloorToInt(z1); iz++)
+                    {
+                        long k = ((long)ix << 32) | (uint)iz;
+                        float cur;
+                        if (!own.TryGetValue(k, out cur) || bottom < cur) { own[k] = bottom; who[k] = Prefabs.BaseName(nv.gameObject); }
+                    }
+            }
+            int buried = 0, deep = 0, right = 0, hanging = 0, high = 0;
+            float worstHang = 0f;
+            List<KeyValuePair<float, string>> hangs = new List<KeyValuePair<float, string>>();
+            foreach (KeyValuePair<long, float> kv in own)
+            {
+                float x = (int)(kv.Key >> 32) + 0.5f, z = (int)(kv.Key & 0xffffffffL) + 0.5f;
+                float t = Ground.Height(new Vector3(x, 0f, z));
+                float d = kv.Value - t;
+                if (d < -0.5f) deep++;
+                else if (d < -0.1f) buried++;
+                else if (d < FitMin) right++;
+                else if (d <= FitMax)
+                {
+                    hanging++;
+                    if (d > worstHang) worstHang = d;
+                    hangs.Add(new KeyValuePair<float, string>(d, who[kv.Key] + " " + Fmt.F(d, 2) + " m up at " + Fmt.F(x, 1) + "," + Fmt.F(z, 1)));
+                }
+                else high++;
+            }
+            hangs.Sort(delegate (KeyValuePair<float, string> l, KeyValuePair<float, string> r) { return r.Key.CompareTo(l.Key); });
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < hangs.Count && i < 6; i++) sb.Append(i == 0 ? "" : "; ").Append(hangs[i].Value);
+            return "ground under " + id + ": " + own.Count + " cells of 1 m; " + right + " right (bottom 0-" + Fmt.F(FitMin, 1) + " m above the ground), "
+                + hanging + " hanging " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0) + " m" + (hanging > 0 ? " (worst " + Fmt.F(worstHang, 2) + " m)" : "") + ", "
+                + buried + " slightly buried (0.1-0.5 m), " + deep + " deep in the ground (foundations), " + high + " higher than " + Fmt.F(FitMax, 0) + " m (overhangs)"
+                + (sb.Length > 0 ? "; worst hanging: " + sb : "");
         }
 
         // loaded objects with the build mark: of one build, or of every build when id is empty
