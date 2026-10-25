@@ -3,7 +3,7 @@ description: coord, groundlevel, path and spawn commands of the HomeCheat Valhei
 ---
 # Build and terrain: coord, groundlevel, path, spawn
 
-Built 2026-10-25 on Valheim 1.0.20, BepInEx 5.4.2351, in the unattended no-game session W1-world-build of the HomeCheat work plan (cards coord, flatten-current, path-coords, spawn-menu). Source: [src/Features/World](../../src/Features/World/) (`CoordCommand`, `GroundLevelCommand`, `PathCommand`, `SpawnCommand`, `TerrainStamp`). Uses the wave 0 core helpers `Kit.Host`, `Kit.Coords`, `Kit.Constructions`, `Kit.Caps` and `GridRoute`. Own game and the worlds this PC hosts only.
+Built 2026-10-25 on Valheim 1.0.20, BepInEx 5.4.2351, in the unattended no-game session W1-world-build of the HomeCheat work plan (cards coord, flatten-current, path-coords, spawn-menu). Source: [src/Features/World](../../src/Features/World/) (`CoordCommand`, `GroundLevelCommand`, `PathCommand`, `SpawnCommand`, `TerrainOps`). Uses the wave 0 core helpers `Kit.Host`, `Kit.Coords`, `Kit.Constructions`, `Kit.Caps` and `GridRoute`. Own game and the worlds this PC hosts only.
 
 **Status B: built 2026-10-25, not run in game.** The test list for Maksym is at the end of this page.
 
@@ -34,7 +34,7 @@ New opt-in parameters (absent = the behaviour before):
 | `avoid` | 0 | 1 = look for player-built pieces (`Piece.IsPlacedByPlayer`) within the area the stamp changes and refuse when there is one: `ERROR: piece wood_wall at 3.2 m inside the radius (2 piece(s) within 5.0 m): move away, lower radius= or add shrink=1` |
 | `shrink` | 0 | with `avoid=1`: level a smaller circle instead, ending 1.1 m before the nearest piece; refused below 1 m |
 
-- The area checked is the larger of the prefab's smooth radius and `radius + 1` m, because `TerrainStamp` smooths that far and a piece's distance is to its pivot (a long wall can cross the circle with its pivot outside).
+- The area checked is the larger of the tool's smooth radius (when it smooths) and `radius + 1` m: the level changes the slopes 1 m beyond the circle, and a piece's distance is to its pivot (a long wall can cross the circle with its pivot outside).
 - The game keeps terrain within ±8 m of the original ground (`TerrainComp`). With `|delta| > 8` the answer says so. A stack of several passes over 8 m is not detected (the original height is not read).
 - Answers now print numbers with a point on every PC (`Fmt`), and `shrink` adds `, radius shrunk 4.0 -> 2.3 m (wood_wall at 3.4 m)`.
 - Presets 6.1.1-6.1.5 (here, +5, +8, -3, -5) all use `avoid=1` and are sticky (the Flatten level stays open).
@@ -73,7 +73,7 @@ New opt-in parameters:
 
 ## Method
 
-The game's own pieces do the terrain work (hoe pieces `raise`, `path`, `paved_road` through `TerrainStamp`), the game's own `Piece.GetAllPiecesInRadius` finds buildings, physics overlap spheres find trees and rocks. Route search and the point store are Unity-free core code with selftests (straight, wall with a gap, no route, cap; point store format and limits).
+The game's own terrain operations do the terrain work (saved `TerrainOp`s through `TerrainOps`, with the settings of the hoe pieces `raise`, `path`, `paved_road`; until 2026-10-25 the hoe pieces themselves through `TerrainStamp`, see below), the game's own `Piece.GetAllPiecesInRadius` finds buildings, physics overlap spheres find trees and rocks. Route search and the point store are Unity-free core code with selftests (straight, wall with a gap, no route, cap; point store format and limits).
 
 ## Assumptions (Maksym reviews)
 
@@ -118,7 +118,7 @@ The game's own pieces do the terrain work (hoe pieces `raise`, `path`, `paved_ro
 ## Undo
 
 - Points: `op=coord&clear=1`, or delete `BepInEx/config/homecheat/coords.state`.
-- Terrain (flatten, paths) is saved with the world like any hoe work: level again by hand or with `op=groundlevel`, or restore a world backup (the admin package takes one every 3 minutes).
+- Terrain (flatten, paths) is saved with the world like any hoe work: level again by hand or with `op=groundlevel`, or restore a world backup (the admin package takes one every 3 minutes). Old hoe stamps that `groundlevel` removed (the answer counts them) come back only from a backup.
 - Spawned creatures: `op=killmobs`; items: pick them up.
 - The whole feature: delete `HomeCheat.Cmd.world.*.dll` from `BepInEx/homecheat-commands/` and restart; the plugin: [README.md](README.md#undo-and-uninstall).
 
@@ -140,3 +140,25 @@ Still untested (B): a ship on water, a portal pair with `tag=`, the form's "Cons
 **Known behaviour (Flatten next to buildings).** With `avoid=1` and `area=coords`, each 3 m stamp whose smoothing reaches within about 4 m of any piece is skipped, so a strip next to buildings stays unlevelled. Maksym saw part of the area left unlevelled next to buildings. Open, not built: a form question "Buildings: keep away / level all" (keep away first) and an area `shrink`.
 
 Still untested (B): `avoid=1` / `shrink=1` of the circle next to a wall, the ±8 m clamp, path `from=coords` with `avoid=1` around a tree, the stone path (T-build 5-12). The 5 m paths 6.3.3-6.3.4 were removed from the spell bar.
+
+## Saved terrain operations (since 2026-10-25)
+
+**Problem.** `groundlevel` and `path` placed the Hoe's own pieces (`raise`, `path`, `paved_road`) with a changed radius (`TerrainStamp`). Those pieces carry the old `TerrainModifier`: it stays in the world and is re-applied from the prefab after the area reloads, with the prefab's radius (1.5 m level for `raise`, 2 m paint for `path`, 2.2 m for `paved_road`). A Start-end rectangle of 3 m stamps every 4 m then fell apart into 1.5 m circles, and a 2 m path grew to about 4 m. Found by `construct` (IL 1.0.20, lessons in HomeOS `references/ValheimModWork/construct-lessons-learned.md`).
+
+**Now.** Both commands write saved `TerrainOp`s through `TerrainOps` (feature World, the approach of Construction's `TerrainLevel`). Parameters, defaults and caps are unchanged.
+
+| Command | What it writes |
+|---|---|
+| `groundlevel` (circle and `area=coords`) | one single-vertex level operation (a 0.3 m circle) per terrain vertex (whole world metres) at your ground height + `delta`; the rectangle is rounded out to whole metres, so a strip thinner than 1 m still gets levelled. The tool's paint (`raise`: dirt) goes on at the old stamp points. With `avoid=1` the rectangle keeps the old rule for which parts stay (a 3 m part every 4 m is left out when a piece's pivot is within 4 m), and only vertices inside a kept part are levelled |
+| `path` | one paint operation per stamp with the tool's paint type and smoothing (`path` dirt, `paved_road` paved and smoothed), radius `width/2 + 0.5 m` (the paint mask is a 1 m grid: `width/2` alone painted a visibly thinner strip). A tool that levels (`tool=raise`) also gets single-vertex level operations at each stamp's height + its level offset |
+
+- Before the level, old hoe stamps whose level or smoothing reaches the area are removed (they would override the saved heights after a reload); the answer counts them. With `avoid=1` a stamp that reaches within 1 m of a building's pivot stays and is counted as kept. The operations start 1 s after a removal, so the terrain has rebuilt without the old stamps.
+- 150 level operations every 0.1 s. The first answer line names the vertices and says when the flatness line reaches the log: `groundlevel: <area>: <n> of <m> vertices within 5 cm of the target ...`.
+- `op=groundlevel&report=1` (read-only): the last levelled area of this session against its target; `area=coords` or `area=self [&radius=]` measures the start-end rectangle or the circle around you against the median height, at any time (after a restart too). Vertices more than 8 m from the world's own ground are named (the game's limit).
+- `op=path&report=1` (read-only): the last path of this session, sampled on its axis and at 0.6 of the half width on each side (inside), and 0.8 m outside each edge (outside), read in the paint type's own channel of the paint mask (dirt red, cultivated green, paved blue; paint over paint mixes them). Outside points on the edge cells of the 1 m mask read as painted too; the number to watch is whether it changes after a reload.
+
+**What failed first.** A 0.4 m wide Start-end strip held no whole-metre vertex and levelled nothing (the box is now rounded out). The first path check counted any paint, so the dirt of the levelled rectangle made the outside look painted (now the type's own channel). Paint radius `width/2` gave a strip Maksym saw as thin (now + 0.5 m).
+
+**Verification (in game 2026-10-25, ClaudeTest, Maksym).** A 16 x 16 m Start-end rectangle (heights 31.95..37.84, 8 of 324 vertices level before): `groundlevel&area=coords` 324 of 324 within 5 cm of 32.32; a stone path start-end 22.7 x 2 m: 72 of 72 inside points paved, 24 of 48 outside points paved (edge cells), Maksym: "now 2m". Exit to the menu and back into the world: 324 of 324 at 32.32, the path 72 of 72 and 24 of 48 again. A 4 m circle with `delta=1` on open ground: 8 of 49 level before, 50 of 50 at 35.80 after. No `Failed to deserialize TerrainOp` errors in `LogOutput.log`.
+
+**Not covered yet (B).** `avoid=1` with old hoe stamps next to a building (kept stamps), a dirt path, a path with `tool=raise`, Claude2 seeing the result (terrain is saved in the zone's `TerrainComp` and synced like any hoe work).

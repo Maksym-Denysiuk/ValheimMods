@@ -59,8 +59,14 @@ package "world  (HomeCheat.Features.WorldCommands)" as world {
     +{static} Sample(at) : FieldPatch
     +Contains(pos) : bool
   }
-  class TerrainStamp <<internal static>> {
-    +At(prefab, pos, rLevel, rPaint)
+  class TerrainOps <<internal static>> {
+    +Prepare()
+    +Vertex(x, z, y)
+    +PaintTemplate(prefab, r, smooth) : string
+    +Paint(template, pos)
+    +RemoveLegacy(ax, az, bx, bz, avoid, keep, out kept) : int
+    +Flatness(verts, target) : string
+    +PaintedLike(pos, tool) : bool
   }
 }
 
@@ -202,6 +208,8 @@ AttackCommand <|-- TrapCommand
 CommandBase <|-- ConstructCommand
 ConstructCommand ..> BlueprintLibrary : blueprints (a folder = versions)
 ConstructCommand ..> TerrainLevel : one TerrainOp per vertex
+GroundLevelCommand ..> TerrainOps : one TerrainOp per vertex, report=1
+PathCommand ..> TerrainOps : paint TerrainOp per stamp, report=1
 ConstructCommand ..> FitField : ground under stone
 ConstructCommand ..> PieceGhost : real piece size
 ConstructCommand ..> MaterialSwap : families
