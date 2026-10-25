@@ -33,7 +33,7 @@ One row per command (34: `override string Name` in `GameplayEnhancements/src/`).
 | place | world | `PlaceCommand` | place object | ground | grid at crosshair or `dist=` | any prefab, `Anchor` | objects in the world | 400 | - | 7.4, 7.5 |
 | plant | world | `PlantCommand` | plant/grow | ground | grid at crosshair or `dist=` | sapling `Plant`, `Anchor`, `Trees.SetScale` | saplings, scale saved in ZDO | 400 | - | 7.3 |
 | field | world | `FieldCommand` | plant/grow | ground (cultivated) | grid from your cell | `Pickable` crops, `FieldAnchor`, `CropSpacing` | crops in the world | 40 000 cells, 2 500 crops | `map=1` | 7.2 |
-| cultivate | world | `CultivateCommand` | terrain | ground | grid from your cell | hoe piece `cultivate` via `TerrainStamp` | terrain change saved | 2 500 | - | 7.1 |
+| cultivate | world | `CultivateCommand` | terrain | ground | grid from your cell | hoe piece `cultivate` (`Prefabs.Get`, one `Instantiate` per cell; not `TerrainStamp`) | terrain change saved | 2 500 | - | 7.1 |
 | repair | world | `RepairCommand` | modify object | building pieces | crosshair or radius | `WearNTear` health | piece health | radius | `report=1` | 8.1, 8.2, 8.5 |
 | refill | world | `RefillCommand` | modify object | fireplaces, smelters | crosshair or radius | `Fireplace`/`Smelter` fuel | fuel levels | radius | - | 8.3, 8.4, 8.5 |
 | groundlevel | world | `GroundLevelCommand` | terrain | ground | radius around you | hoe piece `raise` via `TerrainStamp` | terrain change saved | radius 12 | - | 6.1, 6.2, 6.3 |

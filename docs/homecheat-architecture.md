@@ -215,7 +215,7 @@ Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead 
 3. Patches: one `[HarmonyPatch]` class per file, applied with `Patches.Apply(typeof(...))` in `OnLoad` (or when the command switches the feature on, as `hidebody` does), state through `Current`. A patch whose target must be found by reflection, or that may only go in once a world is loaded, uses `Patches.Patch(method, prefix, postfix)` (see `SpellPatches`).
 4. Extra game assemblies (Animator, AudioSource, ZInput, IMGUI ...): one `valheim_Data/Managed` file name per line in the folder's `refs.txt` (`# comment` lines and blank lines are skipped); csc names the missing one.
 5. `bash src/build.sh <feature>` (needs the core installed: `bash src/build.sh core` once), then `op=reload` in game, then `op=help&cmd=<name>`.
-6. Document it: a page under `GameplayEnhancements/docs/<topic>/` and a row in the [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md).
+6. Document it: a page under `GameplayEnhancements/docs/<topic>/`, a row in the [command index](../GameplayEnhancements/docs/HomeCheat-plugin/README.md) and a row in the [command catalog](homecheat-commands.md#catalog) (feature, class, fingerprint, side effects, caps, test aids, spell-bar entries). `commands-check.js` of the `valheim-spells-craft` skill fails until all three exist.
 
 ## Build
 
@@ -258,7 +258,8 @@ What protects the game today, and what is still planned. Planned items go into t
 | no console cheat path (`Terminal`, `Console`, god/ghost/fly, no-cost, profile cheat fields are never written) | in place | plugin header; `Features/Diag` only reads them | never write these members |
 | no network port: commands only from the local inbox | in place | `FileInboxChannel` | - |
 | main thread only | in place | `CommandDispatcher` | - |
-| other players only when this game hosts the world | per feature | `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111`, `SpellBar.cs:405` | check `ZNet.instance.IsServer()` before touching another player or shared world data |
+| other players only when this game hosts the world | per feature | `SlimeEffect.cs:65`, `EarthquakeEffect.cs:56`, `TransformCommand.cs:111` | check `ZNet.instance.IsServer()` before touching another player or shared world data |
+| spell bar only in single player or a world this PC hosts | in place | `SpellBar.cs:405` (`Exec`: every cast stops with an error when `ZNet.instance` is missing or not the server) | a command cast from the spell bar inherits it; a command sent through the inbox does not, so it still needs the check above |
 | world loaded | partly | `Players.Local`, `Prefabs.Require` throw a clear error; nothing checks `ZNetScene`/`ObjectDB`/`ZoneSystem` in general | get the player through `Players.Local` first; check `ObjectDB.instance` when items or status effects are used (`BlessCommand`) |
 | caps on counts and sizes | per feature | `cultivate` 2 500, `field` 40 000 examined / 2 500 planted, `place` 400, `plant` 400, `path` 400 stamps, `spellshot` 81 shots and 300 strike points per volley, `groundlevel` radius 12, `list` 200 | a `const` cap, stated in `Usage`, reported in the answer when it applied |
 | timers and objects of a replaced build | in place | `CommandBase` (`ICommandLifecycle.Unload`): timers cancelled, patches removed, owned objects destroyed | use `Later`, `Own`, `Patches` only |
