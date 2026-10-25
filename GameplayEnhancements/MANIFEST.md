@@ -1,8 +1,8 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-25 11:16 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-25 11:26 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
-Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025110156.dll.
+Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025112607.dll, HomeCheat.Cmd.earthquake.v20261025005536.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025002247.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025003356.dll, HomeCheat.Cmd.spells.v20261025104610.dll, HomeCheat.Cmd.spellshot.v20261025110055.dll, HomeCheat.Cmd.transform.v20261024235900.dll, HomeCheat.Cmd.visualeffect.v20261024235600.dll, HomeCheat.Cmd.world.v20261025111906.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
@@ -21,10 +21,11 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 12239 | c8eb73414cd9bcba |
+| docs/HomeCheat-plugin/README.md | 14034 | a294141fccef124c |
 | docs/HomeCheat-plugin/build-terrain.md | 11611 | ffb576b2e8db9c6c |
+| docs/HomeCheat-plugin/dome.md | 16867 | b3dcf7fe22ff2ed4 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3505 | 2468f7a3fe9d73c3 |
-| docs/HomeCheat-plugin/plant-field-place.md | 7069 | ee49c3e03bbd8157 |
+| docs/HomeCheat-plugin/plant-field-place.md | 13044 | 60447270959063c8 |
 | docs/HomeCheat-plugin/repair-refill.md | 3652 | 6c89fc5acd5c0024 |
 | docs/HomeCheat-plugin/ship.md | 9042 | 7e0cabfd3b2a5354 |
 | docs/HomeCheat-plugin/tree-scale.md | 3850 | 452b28c55b54adc1 |
@@ -41,16 +42,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | docs/Transform/hidebody.md | 3129 | 611470fc69a21ccf |
 | docs/Transform/transform.md | 7841 | 7f10dfffedaf1591 |
 | docs/architecture/diagrams/homecheat-core.svg | 120777 | 9186f4649f606f1d |
-| docs/architecture/diagrams/homecheat-features.svg | 134088 | 87fd98fbbac82274 |
+| docs/architecture/diagrams/homecheat-features.svg | 152374 | 938d2d76cf759582 |
 | docs/architecture/diagrams/homecheat-spells.svg | 79425 | 96480cdff73d86da |
-| docs/architecture/homecheat-architecture.md | 42363 | 7ce028d3bc29c5e0 |
-| docs/architecture/homecheat-commands.md | 15263 | 60e4ea020f7c59bd |
+| docs/architecture/homecheat-architecture.md | 45514 | 0d0e705388419c1d |
+| docs/architecture/homecheat-commands.md | 17407 | 5ab90a9f109ad3ad |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
 | install.ps1 | 5375 | 6d37772ecf22af6b |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
 | payload/BepInEx/config/homecheat/spells-ui-test.txt | 3193 | e8d424c76af30e2f |
-| payload/BepInEx/config/homecheat/spells.txt | 6843 | 437c5bcbb050acbc |
+| payload/BepInEx/config/homecheat/spells.txt | 6236 | 6b06a19f2437a8f7 |
 | payload/BepInEx/core/0Harmony.dll | 204800 | 1a21cc03424fc82c |
 | payload/BepInEx/core/0Harmony.xml | 267107 | d1f02fc3ada3a13d |
 | payload/BepInEx/core/0Harmony20.dll | 112640 | 5708451a91eaecee |
@@ -70,6 +71,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/BepInEx/core/MonoMod.Utils.dll | 187904 | 9d1495f147ac93c4 |
 | payload/BepInEx/core/MonoMod.Utils.xml | 78973 | 0577b362023a3432 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.diag.v20261025004825.dll | 10752 | c6993cb9c15c9885 |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.dome.v20261025112607.dll | 29696 | 81d256893da37642 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.earthquake.v20261025005536.dll | 36864 | 5f6d2fad1d4b375e |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.fxdump.v20261024235633.dll | 15872 | 0f0bda0ee6693934 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.heal.v20261024235500.dll | 11264 | 0dd7442d0086b0c5 |
@@ -82,7 +84,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261025110055.dll | 23552 | c215d0567f1e171c |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.transform.v20261024235900.dll | 38400 | 7ae22ad809b436e7 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.visualeffect.v20261024235600.dll | 19456 | e166bd7870012878 |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.world.v20261025110156.dll | 41472 | 4a6126d9204fd142 |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.world.v20261025111906.dll | 51200 | a52c73263904b57a |
 | payload/BepInEx/plugins/HomeCheat.dll | 52224 | 3bef27078d0bdd43 |
 | payload/doorstop_config.ini | 1460 | 4d5c6dfa0f771c6a |
 | payload/winhttp.dll | 26112 | 93406d0a02e7c164 |
@@ -146,6 +148,11 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Core/Services/Scheduler.cs | 2421 | ea28720042f0f96e |
 | src/Features/Diag/CheatInfoCommand.cs | 1489 | bfc3336345417073 |
 | src/Features/Diag/CheatStateCommand.cs | 7508 | c1cba61782242d31 |
+| src/Features/Dome/DomeCommand.cs | 25453 | fdb1deb1712f7ed0 |
+| src/Features/Dome/DomeLayout.cs | 4726 | 5dab0cb8d215a6e5 |
+| src/Features/Dome/DomePatches.cs | 1119 | 6dc3e5f4d5ce3fbb |
+| src/Features/Dome/DomeWards.cs | 6457 | 385cd3740dfc06aa |
+| src/Features/Dome/refs.txt | 119 | 2893c56fe5a224da |
 | src/Features/Earthquake/EarthquakeEffect.cs | 37060 | 85084356aeaffce8 |
 | src/Features/FxDump/FxDumpCommand.cs | 16068 | da4c1fca1d3079c7 |
 | src/Features/FxDump/refs.txt | 131 | badb6b74ed5720a8 |
@@ -191,11 +198,13 @@ Feature DLLs (newest build each): HomeCheat.Cmd.diag.v20261025004825.dll, HomeCh
 | src/Features/VisualEffect/VisualEffectCommand.cs | 19207 | 5ef412026c28acbf |
 | src/Features/World/CoordCommand.cs | 4723 | 7471ff2839182867 |
 | src/Features/World/CropSpacing.cs | 2055 | 8f53973d6810c52c |
-| src/Features/World/CultivateCommand.cs | 1663 | 00ef1708961c9bc6 |
+| src/Features/World/CultivateCommand.cs | 3865 | f69dc96daf9d1025 |
 | src/Features/World/FieldAnchor.cs | 971 | d7e2cc2c5d65bfe7 |
-| src/Features/World/FieldCommand.cs | 8277 | ec182c402aeda59f |
+| src/Features/World/FieldCommand.cs | 12445 | 1bb424e122d20248 |
+| src/Features/World/FieldPatch.cs | 5396 | b66079f5e50b6bda |
 | src/Features/World/GiveCommand.cs | 1603 | 35fffa90a5cc90b5 |
 | src/Features/World/GroundLevelCommand.cs | 4217 | a59574f9f54c6dee |
+| src/Features/World/HarvestCommand.cs | 2827 | 7ab52bb371673a5a |
 | src/Features/World/InspectCommand.cs | 1451 | 714ea42949cf40d5 |
 | src/Features/World/ListCommand.cs | 528 | 8b59302d1ff09acc |
 | src/Features/World/PathCommand.cs | 10569 | 6874fd137daac4b6 |
