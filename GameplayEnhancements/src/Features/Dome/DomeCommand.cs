@@ -18,7 +18,7 @@ namespace HomeCheat.Features.Dome
         const float MaxRadius = 150f;      // zone radius cap (m)
         const int MaxWards = 50;           // wards per dome cap
         const float BaseRadius = 0.6f;     // half the ward's base: where its edges are probed for slope and buildings
-        const float MaxBaseDrop = 0.5f;    // largest height difference under the base edges before the spot is refused
+        const float MaxBaseDrop = 1.0f;    // largest height difference under the base edges before the spot is refused (0.5 until 2026-10-25: a gentle slope refused a one-ward zone)
         const float Sink = 0.05f;          // how far the ward sits below its lowest base edge, so no part floats
         const float BuildingMargin = 1.5f; // pieces are measured to their pivot (Kit.Constructions): this much extra
         const float SyncSeconds = 2f;      // how often the host copies a changed ward's state to its group
@@ -44,7 +44,7 @@ namespace HomeCheat.Features.Dome
                 + " | step=list (every dome: centre, radius, wards, on/off, permitted)"
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
                 + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
-                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=0 (New: 1 = leave gaps at blocked spots)] (the menu's Apply as a command)"
+                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=1 (New, as the menu: blocked wards slide inland, else are left out; 0 = place nothing when one is blocked)] (the menu's Apply as a command)"
                 + " | step=show [alpha=0.1] [on=1] (TEST AID, this PC only: a see-through half-sphere of the ward radius over every active dome ward, a colour per ward, centred on it with its own radius, redrawn on changes; on=0 removes)",
                 delegate (Args a) { return Step(a); });
         }
@@ -438,7 +438,7 @@ namespace HomeCheat.Features.Dome
             }
             else if (cur != null) allowed.AddRange(cur.State.Permitted);
             string status = a.Str("status", cur == null ? "active" : (cur.State.Enabled ? "active" : "deactivated"));
-            return Apply(no, allowed, status, a.Flag("partial", false));
+            return Apply(no, allowed, status, a.Flag("partial", true));
         }
 
         static string KnownNames()
@@ -505,7 +505,8 @@ namespace HomeCheat.Features.Dome
             return area;
         }
 
-        // the lattice point itself, then up to 'slack' metres around it in 8 directions
+        // the lattice point itself, then up to 'slack' metres around it (every metre, 16 directions); when nothing fits, Why says
+        // what blocked the spots searched ("searched 129 spots within 7.5 m: on a building 90, slope too steep 39")
         Spot FindSpot(DomePoint lp, float slack, long me, float wr, List<ZDO> allWards)
         {
             Spot sp = new Spot();
@@ -514,20 +515,35 @@ namespace HomeCheat.Features.Dome
             string why;
             if (CheckSpot(lp.X, lp.Z, me, wr, allWards, out pos, out why)) { sp.Ok = true; sp.Pos = pos; return sp; }
             sp.Why = why;
-            float[] rings = { slack * 0.5f, slack };
+            Dictionary<string, int> blocked = new Dictionary<string, int>();
+            int searched = 0;
+            // rings every metre out to the slack (at least the slack itself), 16 directions each
+            List<float> rings = new List<float>();
+            for (float rr = 1f; rr < slack; rr += 1f) rings.Add(rr);
+            rings.Add(slack);
             foreach (float ring in rings)
             {
                 if (ring < 0.25f) continue;
-                for (int i = 0; i < 8; i++)
+                for (int i = 0; i < 16; i++)
                 {
-                    float ang = i * Mathf.PI * 0.25f;
+                    float ang = i * Mathf.PI / 8f;
                     string other;
+                    searched++;
                     if (CheckSpot(lp.X + Mathf.Cos(ang) * ring, lp.Z + Mathf.Sin(ang) * ring, me, wr, allWards, out pos, out other))
                     {
                         sp.Ok = true; sp.Pos = pos; sp.Why = null;
                         return sp;
                     }
+                    string kind = other.Split(new char[] { ':', '(' }, 2)[0].Trim();
+                    int k;
+                    blocked[kind] = blocked.TryGetValue(kind, out k) ? k + 1 : 1;
                 }
+            }
+            if (searched > 0)
+            {
+                List<string> parts = new List<string>();
+                foreach (KeyValuePair<string, int> kv in blocked) parts.Add(kv.Key + " " + kv.Value);
+                sp.Why += "; searched " + searched + " spots within " + Fmt.F(slack, 1) + " m: " + string.Join(", ", parts.ToArray());
             }
             return sp;
         }

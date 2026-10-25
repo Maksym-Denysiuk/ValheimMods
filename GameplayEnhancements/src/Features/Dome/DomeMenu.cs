@@ -25,7 +25,6 @@ namespace HomeCheat.Features.Dome
         int sel;                                  // 0 = New, else the group number
         readonly HashSet<long> allowed = new HashSet<long>();
         int status;                               // index into StatusNames
-        bool gaps;                                // New: place the wards that fit and leave gaps at blocked spots (partial=1)
         string newInfo = "", error = "";
         bool newReady;
         long me;
@@ -60,7 +59,7 @@ namespace HomeCheat.Features.Dome
             DomeCommand.GroupView g = Group(no);
             sel = g == null ? 0 : no;
             allowed.Clear();
-            if (g == null) { status = 0; gaps = false; return; }
+            if (g == null) { status = 0; return; }
             status = g.State.Enabled ? 0 : 1;
             foreach (KeyValuePair<long, string> kv in g.State.Permitted)
             {
@@ -84,7 +83,9 @@ namespace HomeCheat.Features.Dome
             List<KeyValuePair<long, string>> list = new List<KeyValuePair<long, string>>();
             foreach (KeyValuePair<long, string> kv in players) if (allowed.Contains(kv.Key)) list.Add(kv);
             string answer;
-            try { answer = Cmd.Apply(sel, list, StatusNames[status], sel == 0 && gaps); }
+            // New always places what fits (Maksym 2026-10-25: "make decisions on your end"): a blocked ward is searched for nearby,
+            // then slid toward the centre, and only then left out; the answer names it
+            try { answer = Cmd.Apply(sel, list, StatusNames[status], true); }
             catch (CommandException e) { error = e.Message; return; }
             catch (Exception e) { error = e.Message; HomeApi.LogError("dome menu: " + e); return; }
             HomeApi.Log("dome menu: " + answer);
@@ -187,14 +188,6 @@ namespace HomeCheat.Features.Dome
                 bx += 120f + Gap;
             }
             y += 40f;
-            if (sel == 0)
-            {
-                // what happens when a ward spot is on water, a building, a slope or another player's ward
-                GUI.Label(new Rect(x, y, 140f, 26f), "Blocked spots", sLabel);
-                if (GUI.Button(new Rect(x + 140f, y, 200f, 28f), (gaps ? "" : "> ") + "Refuse (place nothing)", gaps ? sBtn : sBtnOn)) gaps = false;
-                if (GUI.Button(new Rect(x + 140f + 200f + Gap, y, 200f, 28f), (gaps ? "> " : "") + "Leave gaps", gaps ? sBtnOn : sBtn)) gaps = true;
-                y += 40f;
-            }
             // a view of this PC only, applied at once (no Apply): the test-aid domes of DomeShow
             GUI.Label(new Rect(x, y, 140f, 26f), "Show domes", sLabel);
             bool showing = DomeShow.On;
@@ -211,7 +204,7 @@ namespace HomeCheat.Features.Dome
             if (GUI.Button(new Rect(win.xMax - 260f, bottom + 8f, 120f, 36f), apply, sBtnOn) && Ready) { GUI.enabled = true; GUI.matrix = old; DoApply(); return; }
             GUI.enabled = true;
             if (GUI.Button(new Rect(win.xMax - 130f, bottom + 8f, 110f, 36f), "Cancel", sBtn)) { GUI.matrix = old; Close(); return; }
-            GUI.Label(new Rect(x, bottom + 16f, inner - 300f, 24f), (sel == 0 ? "New" : "Group-" + sel) + "   allowed: " + (allowed.Count + 1) + "   " + StatusNames[status] + (sel == 0 && gaps ? "   leave gaps" : ""), sHint);
+            GUI.Label(new Rect(x, bottom + 16f, inner - 300f, 24f), (sel == 0 ? "New" : "Group-" + sel) + "   allowed: " + (allowed.Count + 1) + "   " + StatusNames[status], sHint);
             GUI.matrix = old;
         }
 
