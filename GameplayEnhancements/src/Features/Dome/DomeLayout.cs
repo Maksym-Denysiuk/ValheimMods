@@ -34,25 +34,27 @@ namespace HomeCheat.Features.Dome
         public static float Nudge(float wardRadius) { return (1f - Fill) * wardRadius; }
 
         // ward centres covering the disc (cx, cz, zoneRadius); one ward at the centre while the zone fits inside one ward.
-        // One ward: the centre. 3 or 4 wards: a ring (no ward at the centre). More: the centre first, then the lattice in rings outwards.
+        // One ward: the centre. 3 to 6 wards: a ring (no ward at the centre). More: the centre first, then the lattice in rings outwards.
         public static List<DomePoint> Wards(float cx, float cz, float zoneRadius, float wardRadius)
         {
             List<DomePoint> pts = new List<DomePoint>();
             if (wardRadius <= 0f) return pts;
             if (zoneRadius <= wardRadius) { pts.Add(new DomePoint(cx, cz)); return pts; }
 
-            // a zone a little wider than one ward: the fewest wards that cover a disc (Maksym 2026-10-25: overlaps minimal).
-            // 3 wards at R/2 from the centre, 120 degrees apart, cover R up to 2r/sqrt(3); 4 at R/sqrt(2), 90 degrees apart, up
-            // to r*sqrt(2). Checked at Fill * r, so each may still move by Nudge(r) without a gap, as in the lattice.
+            // a zone a little wider than one ward: the fewest wards that cover a disc (Maksym 2026-10-25: overlaps minimal), n = 3..6
+            // on a ring at distance d = min(R cos(pi/n), r), no ward at the centre. The disc is covered when the edge point midway
+            // between two ring wards is within reach: R^2 + d^2 - 2 R d cos(pi/n) <= r^2 (n = 3: d = R/2, up to 2r/sqrt(3);
+            // n = 4: up to r sqrt(2); 5: about 1.62 r; 6: about 1.73 r). Checked at Fill * r, so each ward may still move by
+            // Nudge(r) without a gap, as in the lattice (checked offline with random nudges).
             float rf = Fill * wardRadius;
-            int few = zoneRadius <= rf * 2f / (float)Math.Sqrt(3.0) ? 3 : zoneRadius <= rf * (float)Math.Sqrt(2.0) ? 4 : 0;
-            if (few > 0)
+            for (int n = 3; n <= 6; n++)
             {
-                float off = few == 3 ? zoneRadius / 2f : zoneRadius / (float)Math.Sqrt(2.0);
-                for (int i = 0; i < few; i++)
+                double c = Math.Cos(Math.PI / n), dr = Math.Min(zoneRadius * c, rf);
+                if (zoneRadius * zoneRadius + dr * dr - 2.0 * zoneRadius * dr * c > rf * rf + 1e-6) continue;
+                for (int i = 0; i < n; i++)
                 {
-                    double ang = i * 2.0 * Math.PI / few;
-                    pts.Add(new DomePoint(cx + off * (float)Math.Cos(ang), cz + off * (float)Math.Sin(ang)));
+                    double ang = i * 2.0 * Math.PI / n;
+                    pts.Add(new DomePoint(cx + (float)(dr * Math.Cos(ang)), cz + (float)(dr * Math.Sin(ang))));
                 }
                 return pts;
             }
