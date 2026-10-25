@@ -2,3 +2,7 @@
 Splatform.dll
 # GetStableHashCode (the level operation's prefab hash in ZNetScene)
 assembly_utils.dll
+# GUI, GUIStyle (IMGUI, the construct panel)
+UnityEngine.IMGUIModule.dll
+# FontStyle
+UnityEngine.TextRenderingModule.dll

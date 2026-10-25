@@ -95,10 +95,10 @@ namespace HomeCheat.Features.Construction
                     + " [ground=auto|fit|flatten|pillars|none (auto: on terrain = fit; on a piece or rock = none. fit = flatten the footprint + " + (int)FlattenMargin
                     + " m to the base, then raise the terrain under every 1 m column whose lowest piece hangs " + Fmt.F(FitMin, 1) + "-" + Fmt.F(FitMax, 0)
                     + " m up (pieces that need ground: stone, other non-wood, loose objects); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
-                    + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)]"
+                    + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)] [material=blueprint|<family> (step=materials lists them)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre; the plan is kept per world in construct.state)"
                     + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
-                    + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only)"
+                    + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only) | step=materials&name= (read-only)"
                     + " | step=place&name=<construction> (direct, no preview; same keys)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
                     + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=status | step=undo [id=<build id, default the last>] [items=0 (1 = also the items dropped inside the build's box + 2 m)] [confirm=1]"
@@ -107,10 +107,45 @@ namespace HomeCheat.Features.Construction
             }
         }
 
-        static string Dir { get { return Path.Combine(Path.Combine(Paths.ConfigPath, "homecheat"), "blueprints"); } }
+        internal static string Dir { get { return Path.Combine(Path.Combine(Paths.ConfigPath, "homecheat"), "blueprints"); } }
+
+        public ConstructCommand()
+        {
+            SubFlag("panel", "panel=1 (opens the construct panel: constructions, versions, material, ground, state, one button per step)", delegate (Args a) { return OpenPanel(); });
+        }
+
+        bool panelPatched;
+
+        // the panel (card A1): an object for this world, the cursor patch applied the first time, inside a world
+        string OpenPanel()
+        {
+            Host.RequireServer();
+            Player p = Players.Local;
+            if (!panelPatched)
+            {
+                System.Reflection.MethodInfo m = typeof(TextInput).GetMethod("IsVisible", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                if (m == null) throw new CommandException("TextInput.IsVisible not found: the panel cannot free the cursor");
+                Patches.Patch(m, null, typeof(ConstructPatches).GetMethod("TextInputPostfix"));
+                panelPatched = true;
+            }
+            if (ConstructPanel.Current == null)
+            {
+                GameObject go = new GameObject("hc_construct_panel");
+                OwnInWorld(go);
+                ConstructPanel.Current = go.AddComponent<ConstructPanel>();
+            }
+            ConstructPanel.Current.Open();
+            return "construct panel open (Esc or Close hides it)";
+        }
+
+        protected override void OnUnload()
+        {
+            ConstructPanel.Current = null;
+        }
 
         protected override void OnWorldExit()
         {
+            ConstructPanel.Current = null;
             lastId = ""; lastName = ""; lastPlaced = 0;
         }
 
@@ -127,6 +162,7 @@ namespace HomeCheat.Features.Construction
             if (step == "ground") return GroundReport(a);
             if (step == "level") return Level(a);
             if (step == "flatness") return Flatness(lastGround);
+            if (step == "materials") return Materials(a);
             if (step == "status") return Status();
             if (step == "undo") return Undo(a);
             throw new CommandException("step= list, preview, rotate, start, remove, place, support, status or undo (op=help&cmd=construct)");
@@ -193,15 +229,19 @@ namespace HomeCheat.Features.Construction
         }
 
         // the pieces of one copy: world position = origin + turn * (blueprint position - centre)
-        static int AddJobs(List<Job> jobs, BlueprintEntry e, Vector3 origin, Quaternion turn, HashSet<BlueprintPiece> skip, List<string> missing)
+        static int lastSwapped;   // pieces the last AddJobs call built in another material
+
+        static int AddJobs(List<Job> jobs, BlueprintEntry e, Vector3 origin, Quaternion turn, HashSet<BlueprintPiece> skip, List<string> missing, string material)
         {
             Vector3 centre = Centre(e);
-            int skipped = 0;
+            int skipped = 0, swapped = 0;
             foreach (Blueprint b in e.Parts)
                 foreach (BlueprintPiece pc in b.Pieces)
                 {
                     if (skip != null && skip.Contains(pc)) continue;
-                    GameObject prefab = Prefabs.Get(pc.Prefab);
+                    string name = MaterialSwap.Map(pc.Prefab, material);
+                    if (name != pc.Prefab) swapped++;
+                    GameObject prefab = Prefabs.Get(name);
                     if (prefab == null) { skipped++; if (!missing.Contains(pc.Prefab)) missing.Add(pc.Prefab); continue; }
                     Job j = new Job();
                     j.Prefab = prefab;
@@ -211,6 +251,7 @@ namespace HomeCheat.Features.Construction
                     j.Origin = origin;
                     jobs.Add(j);
                 }
+            lastSwapped = swapped;
             return skipped;
         }
 
@@ -236,7 +277,7 @@ namespace HomeCheat.Features.Construction
         // where and how a construction goes: from the crosshair at preview (or a direct place), kept until start or remove
         sealed class Plan
         {
-            public string World, Name, Ground, BaseRule, BaseText, PillarId;
+            public string World, Name, Ground, BaseRule, BaseText, PillarId, Material;
             public Vector3 Anchor;
             public float BaseY, Yaw;
         }
@@ -276,6 +317,8 @@ namespace HomeCheat.Features.Construction
                 : (at == "self" ? "terrain at your feet" : "terrain 8 m ahead (no crosshair hit)");
             pl.Ground = ground == "auto" ? (onTerrain ? "fit" : "none") : ground;
             pl.BaseRule = baseRule;
+            pl.Material = a.Str("material", MaterialSwap.Blueprint).ToLowerInvariant();
+            if (!MaterialSwap.Known(pl.Material)) throw new CommandException("material must be blueprint or a family of this game's pieces (op=construct&step=materials&name=" + e.Name + " lists them)");
             float yaw;
             if (a.Has("yaw")) yaw = a.Float("yaw", 0f);
             else
@@ -296,7 +339,8 @@ namespace HomeCheat.Features.Construction
         {
             Quaternion turn = Quaternion.Euler(0f, pl.Yaw, 0f);
             List<Job> jobs = new List<Job>();
-            skipped = AddJobs(jobs, e, new Vector3(pl.Anchor.x, pl.BaseY, pl.Anchor.z), turn, null, missing);
+            skipped = AddJobs(jobs, e, new Vector3(pl.Anchor.x, pl.BaseY, pl.Anchor.z), turn, null, missing, pl.Material);
+            int swapped = lastSwapped;
             origin = new Vector3(pl.Anchor.x, pl.BaseY, pl.Anchor.z);
             floorText = "";
             if (jobs.Count == 0) return jobs;
@@ -332,6 +376,7 @@ namespace HomeCheat.Features.Construction
             floorText = floorCount > 0
                 ? "ground floor " + Fmt.F(floorFrom - lowPivot, 2) + " m above the lowest piece (" + floorCount + " pieces) on the base, " + sunk + " foundation piece(s) below it sunk into the ground"
                 : "lowest piece on the base";
+            if (pl.Material != MaterialSwap.Blueprint) floorText += ", material " + pl.Material + ": " + swapped + " of " + jobs.Count + " pieces swapped (the rest have no " + pl.Material + " shape)";
             return jobs;
         }
 
@@ -425,6 +470,17 @@ namespace HomeCheat.Features.Construction
                 + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
         }
 
+        // step=materials (read-only): the families a construction can be built in, with how many pieces each one swaps
+        string Materials(Args a)
+        {
+            Host.RequireWorld();
+            BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
+            List<KeyValuePair<string, int>> opts = MaterialSwap.Options(e);
+            StringBuilder sb = new StringBuilder();
+            foreach (KeyValuePair<string, int> kv in opts) sb.Append(sb.Length == 0 ? "" : ", ").Append(kv.Key).Append(" ").Append(kv.Value);
+            return e.Name + " (" + e.PieceCount + " pieces): material=blueprint (default, as captured)" + (opts.Count > 0 ? "; or a family with the pieces it swaps: " + sb : "; no other family has its shapes");
+        }
+
         // step=level (Maksym 2026-10-25, "task 0 - make a flat ground first"): only the ground of a construction, no pieces; the
         // plan is kept with ground=none, so step=start builds on this ground without levelling again
         string Level(Args a)
@@ -490,7 +546,7 @@ namespace HomeCheat.Features.Construction
         {
             Dictionary<string, string[]> all = ReadState();
             all[pl.World] = new string[] { pl.World, pl.Name, Fmt.F(pl.Anchor.x, 3), Fmt.F(pl.Anchor.y, 3), Fmt.F(pl.Anchor.z, 3), Fmt.F(pl.BaseY, 3),
-                Fmt.F(pl.Yaw, 1), pl.Ground, pl.BaseRule, pl.PillarId, pl.BaseText.Replace("\t", " ") };
+                Fmt.F(pl.Yaw, 1), pl.Ground, pl.BaseRule, pl.PillarId, pl.BaseText.Replace("\t", " "), pl.Material };
             WriteState(all);
         }
 
@@ -510,6 +566,7 @@ namespace HomeCheat.Features.Construction
             pl.Anchor = new Vector3(float.Parse(f[2], inv), float.Parse(f[3], inv), float.Parse(f[4], inv));
             pl.BaseY = float.Parse(f[5], inv); pl.Yaw = float.Parse(f[6], inv);
             pl.Ground = f[7]; pl.BaseRule = f[8]; pl.PillarId = f[9]; pl.BaseText = f[10];
+            pl.Material = f.Length > 11 ? f[11] : MaterialSwap.Blueprint;
             return pl;
         }
 
@@ -700,7 +757,9 @@ namespace HomeCheat.Features.Construction
             List<Job> jobs = new List<Job>();
             List<string> missing = new List<string>();
             int skipped = 0;
-            for (int c = 1; c <= copies; c++) skipped += AddJobs(jobs, e, o0 + shift * c, turn, shared, missing);
+            string material = a.Str("material", MaterialSwap.Blueprint).ToLowerInvariant();
+            if (!MaterialSwap.Known(material)) throw new CommandException("material must be blueprint or a family of this game's pieces (step=materials)");
+            for (int c = 1; c <= copies; c++) skipped += AddJobs(jobs, e, o0 + shift * c, turn, shared, missing, material);
 
             // the copy above must be free: a construct piece of the same prefab already there means this is not the top
             Dictionary<string, List<Vector3>> existing = new Dictionary<string, List<Vector3>>();
