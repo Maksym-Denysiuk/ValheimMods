@@ -6,7 +6,7 @@ Nearest: `scale aim=1` (crosshair -> one object, `Aim.SolidHit`), `trap remove=1
 Fingerprint: effect remove object / target the one object under the crosshair / placement crosshair / mechanism `ZNetView` + `ZNetScene.Destroy` (ZDO deleted for everyone)
 
 ## What it does
-- Trigger: `op=despawn`; spell bar Build tab 6.8 "Despawn" `op=despawn&confirm=1` (line sent to the spell-file owner session)
+- Trigger: `op=despawn`; spell bar Build tab 6.8 "Despawn" `op=despawn&confirm=1` (added to spells.txt by the test session 2026-10-25, 0 bad lines)
 - Targets: self off (never), other players off (never), enemies on, tamed off (`tamed=1`), bosses off (`boss=1`); objects: dropped items, pieces, trees, rocks, bushes, ships and carts
 - Refused always: players, tombstones (a player's items), objects that belong to a location (trader, altars, runestones, dungeon parts), objects without a networked `ZNetView`, terrain
 - Placement: crosshair, camera ray `range=60` (cap 100); the first hit that has a networked `ZNetView` and is not the local player
@@ -47,3 +47,16 @@ Answered by Maksym 2026-10-25 (all as recommended):
 ## Test log
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
+| 17:3x | `op=despawn&look=1` (no target) | `ERROR: nothing under the crosshair within 60 m` | - | pass |
+| 17:4x | `op=despawn&look=1` at a ward | `would despawn guard_stone at 6.9 m (piece) (needs confirm=1)` | single-ward dome d7065628b | pass |
+| 17:4x | `op=despawn` at the ward | `would despawn guard_stone at 6.9 m (piece): add confirm=1 ...` | nothing removed | pass |
+| 17:4x | `op=despawn&confirm=1` at the ward | `despawned guard_stone at 6.8 m (piece)` | `dome step=list` 2 -> 1 dome; no HomeCheat errors in LogOutput.log | pass (Maksym to confirm it vanished) |
+| 17:5x | `op=despawn&look=1` at a tree | `would despawn Beech1 at 53.5 m (tree)` | - | pass |
+| 17:5x | `op=despawn` at the tree | `despawned Beech1 at 53.5 m (tree)` | no confirm needed; no HomeCheat errors; Maksym saw the ward go (previous test) | pass (Maksym to confirm the tree vanished, no logs dropped) |
+| 17:5x | tree check | - | Maksym: tree gone, no logs dropped | pass |
+| 18:0x | `op=despawn&look=1` at a rock | `would despawn Rock_3 at 3.3 m (rock or bush)` | - | pass |
+| 18:0x | `op=despawn` at the rock | `despawned Rock_3 at 3.3 m (rock or bush)` | no HomeCheat errors | pass (Maksym to confirm) |
+| 18:0x | `op=despawn&look=1` at a blast furnace | `would despawn blastfurnace at 3.1 m (piece) (needs confirm=1)` | - | pass |
+| 18:1x | `op=despawn&confirm=1` at the blast furnace (Maksym's yes) | `despawned blastfurnace at 3.1 m (piece)` | no HomeCheat errors | pass (Maksym to confirm) |
+| 18:1x | `op=despawn&look=1` at Claude2 | `would refuse Player Claude2 at 2.1 m: players are never despawned` | - | pass |
+| 18:1x | `op=despawn&confirm=1&others=1&tamed=1&boss=1` at Claude2 | `ERROR: refused Player Claude2 at 2.1 m: players are never despawned` | every opt-in flag set, still refused | pass |

@@ -1,7 +1,6 @@
 // op=despawn: removes the one networked object under the crosshair through the game's own destroy path
 // (ZNetView.ClaimOwnership + ZNetScene.Destroy: the ZDO is deleted for every player, nothing drops). Host only.
-// Creatures, dropped items, trees, rocks and bushes go at once; player-built pieces, ships and carts need confirm=1
-// (without it the answer says what would go). Never a player, a tombstone, a location's own object (trader, altar,
+// Every allowed object goes at once (no confirm step: Maksym 2026-10-25; look=1 previews). Never a player, a tombstone, a location's own object (trader, altar,
 // runestone, vegvisir, dungeon), or anything without a ZNetView. Tamed animals and bosses only with tamed=1 / boss=1,
 // pieces another player built only with others=1 (Maksym's decisions 2026-10-25, card docs/Backlog/despawn.md).
 using HomeCheat.Kit;
@@ -35,7 +34,6 @@ namespace HomeCheat.Features.Despawn
             public string Kind;
             public float Distance;
             public string Refusal;   // null = may go
-            public bool NeedsConfirm;
         }
 
         public DespawnCommand()
@@ -49,7 +47,7 @@ namespace HomeCheat.Features.Despawn
         {
             get
             {
-                return "despawn [range=60 (cap 100)] [confirm=1 (player-built pieces, ships, carts)] [tamed=1] [boss=1] [others=1 (pieces another player built)]"
+                return "despawn [range=60 (cap 100)] [tamed=1] [boss=1] [others=1 (pieces another player built)]"
                     + " - removes the object under the crosshair for everyone (creature, item, piece, tree, rock, ship); never players, tombstones or location objects; no drops, no undo; host only";
             }
         }
@@ -58,8 +56,6 @@ namespace HomeCheat.Features.Despawn
         {
             Found f = Find(a);
             if (f.Refusal != null) throw new CommandException("refused " + f.Name + " at " + Fmt.F(f.Distance, 1) + " m: " + f.Refusal);
-            if (f.NeedsConfirm && !a.Flag("confirm", false))
-                return "would despawn " + Describe(f) + ": add confirm=1 (player-built pieces, ships and carts)";
             f.View.ClaimOwnership();
             ZNetScene.instance.Destroy(f.View.gameObject);
             return "despawned " + Describe(f);
@@ -69,7 +65,7 @@ namespace HomeCheat.Features.Despawn
         {
             Found f = Find(a);
             if (f.Refusal != null) return "would refuse " + f.Name + " at " + Fmt.F(f.Distance, 1) + " m: " + f.Refusal;
-            return "would despawn " + Describe(f) + (f.NeedsConfirm ? " (needs confirm=1)" : "");
+            return "would despawn " + Describe(f);
         }
 
         static string Describe(Found f) { return f.Name + " at " + Fmt.F(f.Distance, 1) + " m (" + f.Kind + ")"; }
@@ -124,9 +120,9 @@ namespace HomeCheat.Features.Despawn
 
             Piece piece = go.GetComponent<Piece>();
             bool built = piece != null && piece.IsPlacedByPlayer();
-            if (go.GetComponent<Ship>() != null) { f.Kind = "ship"; f.NeedsConfirm = true; }
-            else if (go.GetComponent<Vagon>() != null) { f.Kind = "cart"; f.NeedsConfirm = true; }
-            else if (built) { f.Kind = "piece"; f.NeedsConfirm = true; }
+            if (go.GetComponent<Ship>() != null) f.Kind = "ship";
+            else if (go.GetComponent<Vagon>() != null) f.Kind = "cart";
+            else if (built) f.Kind = "piece";
             else if (go.GetComponent<TreeBase>() != null || go.GetComponent<TreeLog>() != null) f.Kind = "tree";
             else if (go.GetComponent<MineRock>() != null || go.GetComponent<MineRock5>() != null || go.GetComponent<Destructible>() != null) f.Kind = "rock or bush";
             else f.Kind = "object";
