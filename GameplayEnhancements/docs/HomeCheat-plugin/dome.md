@@ -87,6 +87,7 @@ The window is drawn on this PC only (an interface, not world graphics, R0 holds)
 | `cost` | 0 | 1 = take the ward materials from your inventory (all wards at once, refused when short) |
 | `partial` | 0 | 1 = skip spots that cannot take a ward (gaps), place the rest |
 | `preview` | 0 | 1 = only say where the wards would go and which spots are refused; places nothing |
+| `bury` | 1 | 1 = every ward at its exact layout spot, the top 0.3 m under the terrain (`BuryGap`; only unloaded terrain or another player's ward area refuses a spot); 0 = on the surface, with the water, building and slope checks (and `partial=1` slides a blocked spot inland) |
 | `point` | alternates | `step=mark`: `start` or `end` |
 | `confirm` | 0 | `step=remove`: 1 = remove; without it the answer only says what would go |
 
