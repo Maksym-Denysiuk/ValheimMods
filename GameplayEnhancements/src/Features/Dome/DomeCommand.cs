@@ -42,7 +42,7 @@ namespace HomeCheat.Features.Dome
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
                 + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
                 + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=0 (New: 1 = leave gaps at blocked spots)] (the menu's Apply as a command)"
-                + " | step=show [alpha=0.1] [on=1] (TEST AID, this PC only: a see-through half-sphere of the ward radius over every active dome ward, a colour per group, redrawn on changes; on=0 removes)",
+                + " | step=show [alpha=0.1] [on=1] (TEST AID, this PC only: a see-through half-sphere of the ward radius over every active dome ward, a colour per ward, centred on it with its own radius, redrawn on changes; on=0 removes)",
                 delegate (Args a) { return Step(a); });
         }
 
@@ -449,7 +449,17 @@ namespace HomeCheat.Features.Dome
             Rescan();
             float alpha = Mathf.Clamp01(a.Float("alpha", 0.1f));
             int n = DomeShow.Show(groups, groupNos, WardArea(true).m_radius, alpha);
-            return "dome show (test aid, only on this PC): " + n + " sphere(s) over the active wards, radius " + Fmt.F(WardArea(true).m_radius, 0) + " m in " + groups.Count + " group(s), a colour per group, " + Fmt.F(alpha * 100f, 0) + " % visible; op=dome&step=show&on=0 removes them";
+            StringBuilder wl = new StringBuilder();
+            foreach (KeyValuePair<string, List<ZDO>> kv in groups)
+                foreach (ZDO z in kv.Value)
+                {
+                    PrivateArea pa = DomeWards.Loaded(z);
+                    Vector3 at = pa != null ? pa.transform.position : z.GetPosition();
+                    wl.Append("\n  ").Append(GroupName(kv.Key)).Append(" ward at ").Append(Fmt.Vec(at)).Append(", radius ")
+                        .Append(Fmt.F(pa != null ? pa.m_radius : WardArea(true).m_radius, 1)).Append(" m").Append(pa != null ? " (its own)" : " (prefab, not loaded)")
+                        .Append(z.GetBool(ZDOVars.s_enabled, false) ? "" : ", deactivated: not drawn");
+                }
+            return "dome show (test aid, only on this PC): " + n + " sphere(s) over the active wards, radius " + Fmt.F(WardArea(true).m_radius, 0) + " m in " + groups.Count + " group(s), a colour per ward, " + Fmt.F(alpha * 100f, 0) + " % visible; op=dome&step=show&on=0 removes them" + wl;
         }
 
         string OpenMenu()

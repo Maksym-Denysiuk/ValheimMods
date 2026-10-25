@@ -1,5 +1,6 @@
 // op=dome&step=show[&alpha=0.1][&on=0]: a TEST AID (Maksym 2026-10-25, "just for now, to test"). A see-through half-sphere of the ward radius
-// over every active dome ward (none over a deactivated one, Maksym 2026-10-25), one colour per group, 10 % visible by default (Maksym 2026-10-25), so the coverage and the overlaps
+// over every active dome ward (none over a deactivated one), centred on the ward with its own area radius, a colour per ward
+// (Maksym 2026-10-25), 10 % visible by default (Maksym 2026-10-25), so the coverage and the overlaps
 // can be seen; a transparent shader without culling, so it shows from inside too. Drawn on this PC only: it breaks
 // R0 (the same picture for everyone) on purpose and is never on by itself; on=0 or leaving the world removes it.
 // No collider: nothing in the world hits it or is blocked by it. While on, the host's sync tick redraws it when a ward
@@ -12,12 +13,6 @@ namespace HomeCheat.Features.Dome
 {
     internal static class DomeShow
     {
-        static readonly Color[] Colours =
-        {
-            new Color(0.95f, 0.75f, 0.2f), new Color(0.3f, 0.6f, 1f), new Color(0.4f, 0.85f, 0.4f),
-            new Color(0.9f, 0.35f, 0.35f), new Color(0.75f, 0.45f, 0.95f), new Color(0.3f, 0.85f, 0.85f)
-        };
-
         static readonly List<GameObject> shown = new List<GameObject>();
         static Material material;
         static bool on;
@@ -44,10 +39,6 @@ namespace HomeCheat.Features.Dome
             drawn = Key(groups);
             foreach (KeyValuePair<string, List<ZDO>> kv in groups)
             {
-                int no;
-                if (!numbers.TryGetValue(kv.Key, out no)) no = 0;
-                Color c = Colours[(no <= 0 ? 0 : no - 1) % Colours.Length];
-                c.a = alpha;
                 foreach (ZDO z in kv.Value)
                 {
                     if (!z.GetBool(ZDOVars.s_enabled, false)) continue;
@@ -55,13 +46,18 @@ namespace HomeCheat.Features.Dome
                     s.name = "HomeCheat.DomeShow";
                     Collider col = s.GetComponent<Collider>();
                     if (col != null) Object.Destroy(col);
-                    s.transform.position = z.GetPosition();
-                    s.transform.localScale = Vector3.one * wardRadius * 2f;
+                    // the ward itself when it is loaded here (its own area radius and position), else its saved position
+                    PrivateArea pa = DomeWards.Loaded(z);
+                    Vector3 at = pa != null ? pa.transform.position : z.GetPosition();
+                    float radius = pa != null ? pa.m_radius : wardRadius;
+                    s.transform.position = at;
+                    s.transform.localScale = Vector3.one * radius * 2f;
+                    Color c = WardColour(z);
                     Renderer r = s.GetComponent<Renderer>();
                     if (r != null)
                     {
                         r.sharedMaterial = Material();
-                        r.material.color = c;
+                        r.material.color = new Color(c.r, c.g, c.b, alpha);
                         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                         r.receiveShadows = false;
                     }
@@ -82,8 +78,15 @@ namespace HomeCheat.Features.Dome
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             foreach (KeyValuePair<string, List<ZDO>> kv in groups)
                 foreach (ZDO z in kv.Value)
-                    sb.Append(z.m_uid).Append(z.GetBool(ZDOVars.s_enabled, false) ? "+" : "-").Append(';');
+                    sb.Append(z.m_uid).Append(z.GetBool(ZDOVars.s_enabled, false) ? "+" : "-").Append(DomeWards.Loaded(z) != null ? "L" : "").Append(';');
             return sb.ToString();
+        }
+
+        // a colour of its own per ward, the same on every redraw: hues spread by the golden ratio over the ward's ZDO id
+        static Color WardColour(ZDO z)
+        {
+            double h = (z.m_uid.ID * 0.6180339887) % 1.0;
+            return Color.HSVToRGB((float)h, 0.75f, 1f);
         }
 
         static Material Material()
