@@ -5,7 +5,7 @@
 // one HitData each, built as TrapCommand.Boom builds its tar hit (two users: a Kit candidate). An attack: the PvP rule of AttackCommand.
 // Look: Hugin, the advice raven (Tutorial.m_ravenPrefab), poofs where you leave and where you appear (his despawn effect and the
 // animator trigger "poff", Raven.FlyAway 1.0.20); his model is local, so a networked smoke and crow call are added when his despawn
-// effect is not networked (probe=1 says which). Card docs/Backlog/blink.md.
+// effect is not networked (probe=1 says which). Card: docs/Spells/teleport.md, Cards.
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;

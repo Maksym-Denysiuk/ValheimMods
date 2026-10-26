@@ -11,7 +11,7 @@ namespace HomeCheat.Features.Construction
 {
     // construct: builds a saved blueprint (BepInEx/config/homecheat/blueprints/) as if the player had built it with the hammer.
     // Milestone 1 (Maksym 2026-10-25): list, place, continue, support, status, undo. The preview pillars, the material swap and
-    // the panel follow (card docs/Backlog/construct.md).
+    // the panel follow (card: docs/HomeCheat-plugin/construct.md).
     // Placement: the centre of the footprint at the crosshair (or at your feet), turned to your facing snapped to 22.5°, the
     // lowest collider bottom on the aimed surface (on the terrain without a hit). The ground step depends on that base
     // (Maksym 2026-10-25: stacking stairs must not raise the ground): on terrain the footprint is levelled to the base first and

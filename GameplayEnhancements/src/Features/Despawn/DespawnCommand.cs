@@ -2,7 +2,7 @@
 // (ZNetView.ClaimOwnership + ZNetScene.Destroy: the ZDO is deleted for every player, nothing drops). Host only.
 // Every allowed object goes at once (no confirm step: Maksym 2026-10-25; look=1 previews). Never a player, a tombstone, a location's own object (trader, altar,
 // runestone, vegvisir, dungeon), or anything without a ZNetView. Tamed animals and bosses only with tamed=1 / boss=1,
-// pieces another player built only with others=1 (Maksym's decisions 2026-10-25, card docs/Backlog/despawn.md).
+// pieces another player built only with others=1 (Maksym's decisions 2026-10-25, card: docs/HomeCheat-plugin/despawn.md).
 using HomeCheat.Kit;
 using UnityEngine;
 

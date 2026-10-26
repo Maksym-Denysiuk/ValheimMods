@@ -3,7 +3,7 @@
 // to=death: the death point of this world in your profile; no effect of ours (the game's teleport fade stays: it loads the area).
 // to=map: opens the large map and arms one left click (TeleportMapPatch); the click's world point is Minimap.ScreenToWorldPoint.
 // to=player: a random spot 2 m to radius m from that player (host only: a player outside your area is read from his character ZDO).
-// map and player: a smoke puff and a little pop at your feet once you have arrived, networked (card docs/Backlog/teleport.md).
+// map and player: a smoke puff and a little pop at your feet once you have arrived, networked (card: docs/Spells/teleport.md, Cards).
 using System;
 using System.Reflection;
 using HomeCheat.Kit;
