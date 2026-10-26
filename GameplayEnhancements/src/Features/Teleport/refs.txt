@@ -1,0 +1,6 @@
+# ZInput, GetStableHashCode (the Tared status effect of blink)
+assembly_utils.dll
+# PlatformUserID (a field of ZNet.PlayerInfo, to=player)
+Splatform.dll
+# Animator (Hugin's poff)
+UnityEngine.AnimationModule.dll

@@ -170,6 +170,11 @@ package "construction" as cn {
   class ConstructPatches
   class PreviewDoors
 }
+package "teleport" as tl {
+  class TeleportCommand
+  class BlinkCommand
+  class TeleportMapPatch
+}
 package "traps" as tp {
   class TrapCommand
   class TrapKind
@@ -219,6 +224,9 @@ DomeCommand ..> DomeNumbers : Group-N never reused
 DomeCommand ..> DomeShow : test-aid domes
 CommandBase <|-- DespawnCommand
 AttackCommand <|-- TrapCommand
+CommandBase <|-- TeleportCommand
+AttackCommand <|-- BlinkCommand
+TeleportMapPatch ..> TeleportCommand : armed map click
 CommandBase <|-- ConstructCommand
 ConstructCommand ..> BlueprintLibrary : blueprints (a folder = versions)
 ConstructCommand ..> TerrainLevel : one TerrainOp per vertex
