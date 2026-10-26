@@ -53,7 +53,7 @@ Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x
 
 ## What failed first
 
-The full story and the lessons are in HomeOS `references/ValheimModWork/construct-lessons-learned.md`. In short: the ground floor stood on its own foundation posts in the air; per-column terrain stamps made spikes; the hoe pieces' stamps shrank after a reload; own terrain operations were cancelled until registered in `ObjectDB.m_terrainOpsByHash`, and square ones stacked; the two gumdrop files are one house in two versions and stood inside each other; only stone needs ground; the 8 m terrain limit at a slope. Each was found by a measurement (`step=ground`, `step=flatness`, the breakage report, an alignment search), not by a guess.
+The lessons are folded into the `valheim-spells-craft` skill (`instructions/implement.md` and its evals). In short: the ground floor stood on its own foundation posts in the air; per-column terrain stamps made spikes; the hoe pieces' stamps shrank after a reload; own terrain operations were cancelled until registered in `ObjectDB.m_terrainOpsByHash`, and square ones stacked; the two gumdrop files are one house in two versions and stood inside each other; only stone needs ground; the 8 m terrain limit at a slope. Each was found by a measurement (`step=ground`, `step=flatness`, the breakage report, an alignment search), not by a guess.
 
 ## Change procedure
 

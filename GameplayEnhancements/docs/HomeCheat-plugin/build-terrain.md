@@ -143,7 +143,7 @@ Still untested (B): `avoid=1` / `shrink=1` of the circle next to a wall, the ±8
 
 ## Saved terrain operations (since 2026-10-25)
 
-**Problem.** `groundlevel` and `path` placed the Hoe's own pieces (`raise`, `path`, `paved_road`) with a changed radius (`TerrainStamp`). Those pieces carry the old `TerrainModifier`: it stays in the world and is re-applied from the prefab after the area reloads, with the prefab's radius (1.5 m level for `raise`, 2 m paint for `path`, 2.2 m for `paved_road`). A Start-end rectangle of 3 m stamps every 4 m then fell apart into 1.5 m circles, and a 2 m path grew to about 4 m. Found by `construct` (IL 1.0.20, lessons in HomeOS `references/ValheimModWork/construct-lessons-learned.md`).
+**Problem.** `groundlevel` and `path` placed the Hoe's own pieces (`raise`, `path`, `paved_road`) with a changed radius (`TerrainStamp`). Those pieces carry the old `TerrainModifier`: it stays in the world and is re-applied from the prefab after the area reloads, with the prefab's radius (1.5 m level for `raise`, 2 m paint for `path`, 2.2 m for `paved_road`). A Start-end rectangle of 3 m stamps every 4 m then fell apart into 1.5 m circles, and a 2 m path grew to about 4 m. Found by `construct` (IL 1.0.20, lessons folded into the `valheim-spells-craft` skill, `instructions/implement.md`).
 
 **Now.** Both commands write saved `TerrainOp`s through `TerrainOps` (feature World, the approach of Construction's `TerrainLevel`). Parameters, defaults and caps are unchanged.
 
