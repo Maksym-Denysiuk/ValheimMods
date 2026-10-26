@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-26 15:32 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-26 16:00 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261025175610.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261025173212.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.teleport.v20261026152544.dll, HomeCheat.Cmd.transform.v20261025230546.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
 
@@ -48,7 +48,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | docs/architecture/diagrams/homecheat-core.svg | 138043 | 474eb7de851e57e7 |
 | docs/architecture/diagrams/homecheat-features.svg | 254846 | 6e7b50fc319704b2 |
 | docs/architecture/diagrams/homecheat-spells.svg | 85507 | 766f069ed9081efd |
-| docs/architecture/homecheat-architecture.md | 88766 | 6f450412979c96f0 |
+| docs/architecture/homecheat-architecture.md | 89618 | 8b32efd585d426fd |
 | docs/architecture/homecheat-commands.md | 36106 | 1f9b08d4e0db0835 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
@@ -101,16 +101,16 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
 | skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
 | skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 16613 | a6df4ee20d4c1690 |
-| skills/valheim-spells-craft/baseline.md | 1934 | 7816ae2498067b6a |
-| skills/valheim-spells-craft/evals.md | 39414 | 210302331b49c3b0 |
-| skills/valheim-spells-craft/instructions/done-gate.md | 8902 | 71092e2929316c76 |
+| skills/valheim-spells-craft/SKILL.md | 17254 | b882a5f7a9122ead |
+| skills/valheim-spells-craft/baseline.md | 1934 | 0c4052e43ef3141b |
+| skills/valheim-spells-craft/evals.md | 42957 | 107414bade65f916 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 9058 | 18aa8ae40171c17f |
 | skills/valheim-spells-craft/instructions/implement.md | 12758 | 5fc89e4dbb337c61 |
 | skills/valheim-spells-craft/instructions/plan.md | 5942 | 2e05c05717896bee |
 | skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
 | skills/valheim-spells-craft/instructions/spec-card.md | 6148 | 2a441916c0026ce3 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 14847 | 1285bed016e8b6a0 |
-| skills/valheim-spells-craft/skill-meta-data.md | 17005 | 50c2ec5c1b586ff6 |
+| skills/valheim-spells-craft/skill-meta-data.md | 18132 | 806fe7f74777a0ad |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |
@@ -164,7 +164,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Features/Construction/BlueprintParse.cs | 8356 | ff6c649fc0efd2ab |
 | src/Features/Construction/BlueprintPiece.cs | 753 | cac4c4e5ca60dde4 |
 | src/Features/Construction/BlueprintRepeat.cs | 4722 | 7c2ae95bd6d94eb6 |
-| src/Features/Construction/ConstructCommand.cs | 98298 | 317ccdb7259143cc |
+| src/Features/Construction/ConstructCommand.cs | 98308 | 659bc8b14f3c0f15 |
 | src/Features/Construction/ConstructPanel.cs | 9729 | 5b0027478423bace |
 | src/Features/Construction/ConstructPatches.cs | 600 | 6d39123941f70dca |
 | src/Features/Construction/FitField.cs | 8549 | af5a495ec147d6f9 |
@@ -173,7 +173,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Features/Construction/PreviewDoors.cs | 10748 | 8690dbd4b76521a9 |
 | src/Features/Construction/TerrainLevel.cs | 6314 | b486e0f2c96c0f0e |
 | src/Features/Construction/refs.txt | 328 | e0adadfd1e55a886 |
-| src/Features/Despawn/DespawnCommand.cs | 8005 | 065913b2c60673ba |
+| src/Features/Despawn/DespawnCommand.cs | 8015 | f5008133e660ada8 |
 | src/Features/Diag/CheatInfoCommand.cs | 1489 | bfc3336345417073 |
 | src/Features/Diag/CheatStateCommand.cs | 7508 | c1cba61782242d31 |
 | src/Features/Dome/DomeCommand.cs | 47454 | 7a488469979559ef |
@@ -224,8 +224,8 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Features/Spells/SpellsSettings.cs | 3329 | 8c669fbe520ced6a |
 | src/Features/Spells/refs.txt | 237 | 4e6875fba330461a |
 | src/Features/Spellshot/SpellShotCommand.cs | 29932 | 7fd017a278a647ed |
-| src/Features/Teleport/BlinkCommand.cs | 12225 | e0d558be7083732d |
-| src/Features/Teleport/TeleportCommand.cs | 9285 | 39818c59a7045749 |
+| src/Features/Teleport/BlinkCommand.cs | 12235 | b250cd5c06e0a87e |
+| src/Features/Teleport/TeleportCommand.cs | 9292 | e7f563699b610630 |
 | src/Features/Teleport/TeleportMapPatch.cs | 1171 | 0f33faad8e4e05e6 |
 | src/Features/Teleport/refs.txt | 211 | e40763921bb8ecc5 |
 | src/Features/Transform/TransformCommand.cs | 18912 | 33886ef7e3c237c8 |
