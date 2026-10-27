@@ -1,9 +1,9 @@
 // op=teleport: moves you through the game's own portal path. Player.TeleportTo(pos, rot, distantTeleport=true) waits 2 s, waits for
 // the area, then puts you on the ground (y = ZoneSystem.GetSolidHeight + 0.5; Player.UpdateTeleport, IL 1.0.20).
-// to=death: the death point of this world in your profile; no effect of ours (the game's teleport fade stays: it loads the area).
+// to=death: the death point of this world in your profile (the game's teleport fade stays: it loads the area).
 // to=map: opens the large map and arms one left click (TeleportMapPatch); the click's world point is Minimap.ScreenToWorldPoint.
 // to=player: a random spot 2 m to radius m from that player (host only: a player outside your area is read from his character ZDO).
-// map and player: a smoke puff and a little pop at your feet once you have arrived, networked (card: docs/Spells/teleport.md, Cards).
+// every mode: the ward dome (fx_guardstone_activate, its sound the only one) and a slow sphere of smoke once the screen clears, networked (to=death too: Maksym 2026-10-27) (card: docs/Spells/teleport.md, Cards).
 using System;
 using System.Reflection;
 using HomeCheat.Kit;
@@ -17,9 +17,17 @@ namespace HomeCheat.Features.TeleportCommands
         const float MinRadius = 2f;
         const float MaxRadius = 50f;
         const float ArrivalTimeout = 30f;
-        const float WatchStep = 0.2f;
-        const string SmokeFx = "vfx_Place_HildirClothesRack";   // smoke_poof
-        const string PopFx = "sfx_cooking_station_take";        // Poof_CloudDisappear
+        const float WatchStep = 0.1f;
+        const float ArriveRadius = 2f;   // metres from the target (flat) that count as landed
+        const string SmokeFx = "vfx_Place_HildirClothesRack";   // smoke_poof, full size (a small puff; a quarter was not visible, Maksym 2026-10-27)
+        const int SmokePoints = 18;       // puffs on the sphere
+        const float SmokeRadius = 2.6f;   // metres from its centre (Maksym 2026-10-27: twice the first 1.3)
+        const float SmokeCentre = 1f;     // the centre, metres above your feet
+        const int SmokeWaves = 1;         // one sphere (Maksym 2026-10-27: "play it once and make it last longer") ...
+        const float SmokeTime = 3f;       // ... over this many seconds (Maksym 2026-10-27: "make it last 3 seconds")
+        const float SmokeLife = 6f;       // each puff is removed after this
+        const float SmokeSlow = 0.33f;    // particle speed: a third, so each puff lasts about three times as long (on this PC; others see the normal speed)
+        const string DomeFx = "fx_guardstone_activate";   // the ward's blue dome pulse with its "dome shield on" sound, the one sound of the appear (Maksym 2026-10-27, from 22 sounds heard)
 
         const BindingFlags All = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         static readonly MethodInfo mScreenToWorld = typeof(Minimap).GetMethod("ScreenToWorldPoint", All);
@@ -31,13 +39,25 @@ namespace HomeCheat.Features.TeleportCommands
         bool mapArmed;
         bool mapFx = true;
 
+        public TeleportCommand()
+        {
+            SubFlag("preview", "preview=1 (the appear effect where you stand, no teleport: a test aid for the look)",
+                delegate (Args a)
+                {
+                    Host.RequireWorld();
+                    Vector3 at = Players.Local.transform.position;
+                    Appear(Players.Local, 0f, true);
+                    return "appear effect at " + Fmt.Vec(at);
+                });
+        }
+
         public override string Name { get { return "teleport"; } }
         protected override string Usage
         {
             get
             {
-                return "teleport to=death|map|player [player=<nick> (to=player; host only)] [radius=5 (to=player: you land 2 m to radius m from them, cap 50)]"
-                    + " [fx=1 (map, player: smoke and a little pop where you appear; 0 = none)]"
+                return "teleport to=death|map|player|point|aim [player=<nick> (to=player; host only)] [at=x,y,z or x,z (to=point)] [radius=5 (to=player: you land 2 m to radius m from them, cap 50)]"
+                    + " [fx=1 (the ward dome and a sphere of smoke where you appear; 0 = none)]"
                     + " - moves you to your last death point in this world, to a spot you left-click on the large map (closing the map cancels), or next to another player";
             }
         }
@@ -50,22 +70,24 @@ namespace HomeCheat.Features.TeleportCommands
 
         protected override string Execute(Args a)
         {
-            string to = a.Required("to", "death, map or player").ToLowerInvariant();
+            string to = a.Required("to", "death, map, player, point or aim").ToLowerInvariant();
             bool fx = a.Flag("fx", true);
-            if (to == "death") return Death();
+            if (to == "death") return Death(fx);
             if (to == "map") return Map(fx);
             if (to == "player") return ToPlayer(a, fx);
-            throw new CommandException("to=" + to + " unknown: death, map or player");
+            if (to == "point") return ToPoint(a, fx);
+            if (to == "aim") return ToAim(fx);
+            throw new CommandException("to=" + to + " unknown: death, map, player, point or aim");
         }
 
-        string Death()
+        string Death(bool fx)
         {
             Host.RequireWorld();
             Player p = Players.Local;
             PlayerProfile prof = Game.instance.GetPlayerProfile();
             if (prof == null || !prof.HaveDeathPoint()) throw new CommandException("no death point in this world");
             Vector3 at = prof.GetDeathPoint();
-            Go(p, at, p.transform.rotation, false);
+            Go(p, at, p.transform.rotation, fx);
             return "teleporting to your death point at " + Fmt.Vec(at) + " (" + Fmt.F(Vector3.Distance(p.transform.position, at), 0) + " m)";
         }
 
@@ -118,6 +140,40 @@ namespace HomeCheat.Features.TeleportCommands
             mSetMapMode.Invoke(Minimap.instance, new object[] { Enum.Parse(t, mode) });
         }
 
+        // to=point&at=x,y,z (or x,z): a point you type (Maksym 2026-10-27, "teleport me to that spot"); the game puts you on the ground there
+        string ToPoint(Args a, bool fx)
+        {
+            Host.RequireWorld();
+            Player p = Players.Local;
+            string raw = a.Required("at", "x,y,z or x,z");
+            string[] parts = raw.Split(',');
+            float x = 0f, y = 0f, z = 0f;
+            System.Globalization.CultureInfo inv = System.Globalization.CultureInfo.InvariantCulture;
+            System.Globalization.NumberStyles num = System.Globalization.NumberStyles.Float;
+            bool ok = parts.Length == 3
+                ? float.TryParse(parts[0], num, inv, out x) & float.TryParse(parts[1], num, inv, out y) & float.TryParse(parts[2], num, inv, out z)
+                : parts.Length == 2 && float.TryParse(parts[0], num, inv, out x) & float.TryParse(parts[1], num, inv, out z);
+            if (!ok) throw new CommandException("at=" + raw + ": write x,y,z or x,z");
+            Vector3 at = new Vector3(x, y, z);
+            if (new Vector2(x, z).magnitude > 10400f) throw new CommandException("at=" + raw + " is outside the world");
+            float far = Vector3.Distance(p.transform.position, at);
+            Go(p, at, p.transform.rotation, fx);
+            return "teleporting to " + Fmt.Vec(at) + " (" + Fmt.F(far, 0) + " m)";
+        }
+
+        // to=aim: the spot under your crosshair (Kit.Aim: 60 m, solid objects and terrain; nothing hit = refused, not 8 m ahead)
+        string ToAim(bool fx)
+        {
+            Host.RequireWorld();
+            Player p = Players.Local;
+            bool aimed;
+            Vector3 at = Aim.Point(p, out aimed);
+            if (!aimed) throw new CommandException("nothing under the crosshair within 60 m");
+            float far = Vector3.Distance(p.transform.position, at);
+            Go(p, at, p.transform.rotation, fx);
+            return "teleporting to the crosshair at " + Fmt.Vec(at) + " (" + Fmt.F(far, 0) + " m)";
+        }
+
         string ToPlayer(Args a, bool fx)
         {
             Host.RequireServer();
@@ -160,21 +216,76 @@ namespace HomeCheat.Features.TeleportCommands
         void Go(Player p, Vector3 at, Quaternion rot, bool fx)
         {
             if (!p.TeleportTo(at, rot, true)) throw new CommandException("the game refused the teleport (already teleporting?)");
-            if (fx) WatchArrival(p, 0f);
+            WatchArrival(p, at, 0f, fx, false);
         }
 
-        // the appear effect waits until the game has put you down
-        void WatchArrival(Player p, float waited)
+        // UpdateTeleport (IL 1.0.20) moves you to the target after 2 s and then holds you there until the area is ready (8 s at least
+        // for a distant teleport) before it clears IsTeleporting; the loading screen is black while IsTeleporting and then fades
+        // (Hud.UpdateBlackScreen). So the fall guard starts the first moment you stand within ArriveRadius of the target, and again at
+        // the end; the pop and the smoke wait for the end, when you can see (Maksym 2026-10-27: the smoke was over before the screen cleared).
+        void WatchArrival(Player p, Vector3 target, float waited, bool fx, bool landed)
         {
             Later(WatchStep, delegate
             {
                 if (p == null) return;
-                if (p.IsTeleporting() && waited < ArrivalTimeout) { WatchArrival(p, waited + WatchStep); return; }
-                Vector3 at = p.transform.position;
-                if (Fx.Spawn(this, SmokeFx, at, 8f) == null) HomeApi.Log("teleport: " + SmokeFx + " prefab missing");
-                if (Fx.Spawn(this, PopFx, at + Vector3.up, 4f) == null) HomeApi.Log("teleport: " + PopFx + " prefab missing");
-                HomeApi.Log("teleport: arrived at " + Fmt.Vec(at) + " after " + Fmt.F(waited, 1) + " s");
+                bool teleporting = p.IsTeleporting() && waited < ArrivalTimeout;
+                if (!landed && teleporting && Flat(p.transform.position - target) < ArriveRadius && p.IsOnGround())
+                {
+                    landed = true;
+                    TeleportFx.FallGuard(this, p, TeleportFx.FallGuardTime);
+                    HomeApi.Log("teleport: landed at " + Fmt.Vec(p.transform.position) + " after " + Fmt.F(waited, 1) + " s (screen still black)");
+                }
+                if (teleporting) { WatchArrival(p, target, waited + WatchStep, fx, landed); return; }
+                Appear(p, waited, fx);
             });
         }
+
+        // the screen clears: fall guard, the dome with its sound, and the smoke sphere
+        void Appear(Player p, float waited, bool fx)
+        {
+            Vector3 at = p.transform.position;
+            TeleportFx.FallGuard(this, p, TeleportFx.FallGuardTime);
+            HomeApi.Log("teleport: appeared at " + Fmt.Vec(at) + " after " + Fmt.F(waited, 1) + " s");
+            if (!fx) return;
+            if (Fx.Spawn(this, DomeFx, at, 6f) == null) HomeApi.Log("teleport: " + DomeFx + " prefab missing");
+            SmokeWave(at, 0);
+        }
+
+        // a sphere of smoke around you (Maksym 2026-10-27): SmokePoints puffs spread evenly over a sphere of SmokeRadius m round your
+        // chest (a Fibonacci sphere), none below the ground; made again every SmokeTime / (SmokeWaves - 1) s, each wave turned, so the
+        // cloud lasts SmokeTime s. Each puff carries the game's "poof" sound; all are muted here, the dome is the sound
+        // (other players' copies still play theirs: a limit, check on Claude2)
+        void SmokeWave(Vector3 at, int wave)
+        {
+            Vector3 centre = at + Vector3.up * SmokeCentre;
+            float golden = Mathf.PI * (3f - Mathf.Sqrt(5f));
+            float turn = wave * 0.7f;
+            for (int i = 0; i < SmokePoints; i++)
+            {
+                float y = 1f - 2f * (i + 0.5f) / SmokePoints;
+                float r = Mathf.Sqrt(1f - y * y);
+                float ang = golden * i + turn;
+                Vector3 pos = centre + new Vector3(Mathf.Cos(ang) * r, y, Mathf.Sin(ang) * r) * SmokeRadius;
+                pos.y = Mathf.Max(pos.y, Ground.Height(pos) + 0.1f);
+                GameObject puff = Fx.Spawn(this, SmokeFx, pos, SmokeLife);
+                if (puff == null) { HomeApi.Log("teleport: " + SmokeFx + " prefab missing"); return; }
+                Slow(puff, SmokeSlow);
+                Mute(puff);
+            }
+            if (wave + 1 < SmokeWaves) Later(SmokeTime / Mathf.Max(1, SmokeWaves - 1), delegate { SmokeWave(at, wave + 1); });
+        }
+
+        static void Slow(GameObject go, float speed)
+        {
+            foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true)) { ParticleSystem.MainModule m = ps.main; m.simulationSpeed = m.simulationSpeed * speed; }
+        }
+
+        static void Mute(GameObject go)
+        {
+            foreach (ZSFX z in go.GetComponentsInChildren<ZSFX>(true)) z.enabled = false;
+            foreach (AudioSource s in go.GetComponentsInChildren<AudioSource>(true)) { s.Stop(); s.mute = true; }
+        }
+
+        static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }
     }
 }

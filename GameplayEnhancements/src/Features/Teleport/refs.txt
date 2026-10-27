@@ -4,3 +4,7 @@ assembly_utils.dll
 Splatform.dll
 # Animator (Hugin's poff)
 UnityEngine.AnimationModule.dll
+# ParticleSystem (the smoke at half size)
+UnityEngine.ParticleSystemModule.dll
+# AudioSource (the smoke puffs but one are muted)
+UnityEngine.AudioModule.dll

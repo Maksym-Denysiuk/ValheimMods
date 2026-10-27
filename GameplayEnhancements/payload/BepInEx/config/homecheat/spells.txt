@@ -91,7 +91,6 @@
 8 | Spawn... | op=spawn&prefab={prefab}&quality=max&where={where}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=where:Crosshair=crosshair,Inventory=inventory ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
 9 | Teleport
 9.1 | Last death | op=teleport&to=death
-9.2 | To coordinates
-9.2.1 | Map point | op=teleport&to=map
-9.2.2 | To player... | op=teleport&to=player&player={player} | ask=player:@players
+9.2 | Map point | op=teleport&to=map
 9.3 | Blink | op=blink&pvp=1 | pin=F6
+9.4 | To player... | op=teleport&to=player&player={player} | ask=player:@players

@@ -16,7 +16,7 @@ namespace HomeCheat.Features.TeleportCommands
 {
     public sealed class BlinkCommand : AttackCommand
     {
-        const float DefaultDist = 5f;
+        const float DefaultDist = 10f;
         const float MaxDist = 20f;
         const float DefaultWidth = 2f;
         const float MaxWidth = 5f;
@@ -27,9 +27,11 @@ namespace HomeCheat.Features.TeleportCommands
         const float HuginLife = 2f;
         const string TarEffect = "Tared";
         const string FallbackSmoke = "vfx_odin_despawn";
-        const string FallbackCall = "sfx_fallenvalkyrie_screech";
+        const string FallbackCall = "sfx_cooking_station_take";   // the pop teleport plays where you appear (Poof_CloudDisappear)
 
-        static readonly FieldInfo fMaxAir = typeof(Character).GetField("m_maxAirAltitude", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        static readonly MethodInfo mPushback = typeof(Character).GetMethod("ApplyPushback", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null, new System.Type[] { typeof(Vector3), typeof(float) }, null);
+        static readonly FieldInfo fMaxAir =typeof(Character).GetField("m_maxAirAltitude", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         public BlinkCommand()
         {
@@ -42,7 +44,7 @@ namespace HomeCheat.Features.TeleportCommands
         {
             get
             {
-                return "blink [dist=5 (metres along your flat look direction, cap 20)] [width=2 (metres to each side of the line, cap 5)] [push=150 (cap 500)]"
+                return "blink [dist=10 (metres along your flat look direction, cap 20)] [width=2 (metres to each side of the line, cap 5)] [push=150 (cap 500)]"
                     + " [tamed=0] [boss=0] " + PvpUsage + " [fx=1 (Hugin poofs where you leave and appear; 0 = none)]"
                     + " - dash through walls and creatures; everyone on the line is shoved aside and tarred, no damage; the ground and the world edge are the limit";
             }
@@ -72,6 +74,7 @@ namespace HomeCheat.Features.TeleportCommands
             int n = Shove(p, from, to, dir, dist, width, push, a.Flag("tamed", false), a.Flag("boss", false), HitsPlayers(a), shoved);
             if (fx) Poof(p, from, dir);
             Move(p, to);
+            TeleportFx.FallGuard(this, p, TeleportFx.FallGuardTime);
             if (fx) Poof(p, to, -dir);
             HomeApi.Log("blink: " + Fmt.Vec(from) + " -> " + Fmt.Vec(to) + ", " + n + " shoved");
             return "blinked " + Fmt.F(dist, 1) + " m to " + Fmt.Vec(to) + ", shoved and tarred " + n + Counts(shoved) + PvpNote(a);
@@ -98,6 +101,7 @@ namespace HomeCheat.Features.TeleportCommands
                 Vector3 side = rel - dir * Mathf.Clamp(Vector3.Dot(rel, dir), 0f, dist);
                 if (side.magnitude > width) continue;
                 Vector3 away = side.sqrMagnitude > 0.01f ? side.normalized : right * (Random.value < 0.5f ? 1f : -1f);
+                if (!player && Shoved(c, away, push, tar)) { Count(shoved, Prefabs.BaseName(c.gameObject)); n++; continue; }
                 HitData h = new HitData();
                 h.m_point = c.GetCenterPoint();
                 h.m_dir = (away + Vector3.up * 0.3f).normalized;
@@ -107,13 +111,29 @@ namespace HomeCheat.Features.TeleportCommands
                 h.SetAttacker(p);
                 PvpHits.ArmHit(h, hitPlayers);
                 c.Damage(h);
-                string key = player ? "player" : Prefabs.BaseName(c.gameObject);
-                int k;
-                shoved.TryGetValue(key, out k);
-                shoved[key] = k + 1;
+                Count(shoved, player ? "player" : Prefabs.BaseName(c.gameObject));
                 n++;
             }
             return n;
+        }
+
+        // a creature this PC owns: tar straight into its SEMan and the game's own side push (Character.ApplyPushback, what a hit
+        // calls), so no hit is shown: no flash, no hit sound, no damage number (Maksym 2026-10-27). Others (players, a creature another
+        // peer owns) still get the zero-damage hit, whose push and tar their owner applies.
+        static bool Shoved(Character c, Vector3 away, float push, int tar)
+        {
+            ZNetView nv = c.GetComponent<ZNetView>();
+            if (nv == null || !nv.IsValid() || !nv.IsOwner() || mPushback == null) return false;
+            c.GetSEMan().AddStatusEffect(tar, true, 0, 0f);
+            mPushback.Invoke(c, new object[] { away, push });
+            return true;
+        }
+
+        static void Count(Dictionary<string, int> shoved, string key)
+        {
+            int k;
+            shoved.TryGetValue(key, out k);
+            shoved[key] = k + 1;
         }
 
         static void Move(Player p, Vector3 to)
@@ -127,42 +147,44 @@ namespace HomeCheat.Features.TeleportCommands
         // Hugin at 'at', turned towards 'face', plays his vanish; removed after HuginLife s
         void Poof(Player p, Vector3 at, Vector3 face)
         {
-            GameObject prefab = HuginPrefab();
+            Raven raven = Hugin(HuginPrefab());
             bool everyoneSees = false;
             Quaternion rot = Quaternion.LookRotation(face);
-            if (prefab != null)
+            if (raven != null)
             {
-                Raven raven = prefab.GetComponent<Raven>();
-                if (raven != null && raven.m_despawnEffect != null)
+                if (raven.m_despawnEffect != null)
                 {
                     everyoneSees = Networked(raven.m_despawnEffect);
                     GameObject[] made = raven.m_despawnEffect.Create(at + Vector3.up, rot, null, 1f, -1);
-                    if (made != null) foreach (GameObject go in made) { GameObject g = go; Later(6f, delegate { Fx.Destroy(g); }); }
+                    if (made != null) foreach (GameObject go in made) { GameObject g = go; TeleportFx.Shrink(g, TeleportFx.Scale); Later(6f, delegate { Fx.Destroy(g); }); }
                 }
-                GameObject model = HuginModel(prefab, at, rot);
+                GameObject model = HuginModel(raven, at, rot);
                 if (model != null) Later(HuginLife, delegate { if (model != null) Object.Destroy(model); });
             }
-            else HomeApi.Log("blink: Hugin's prefab not found (Tutorial.m_ravenPrefab)");
+            else HomeApi.Log("blink: Hugin not found (Tutorial.m_ravenPrefab)");
             if (!everyoneSees)
             {
-                if (Fx.Spawn(this, FallbackSmoke, at + Vector3.up, 6f) == null) HomeApi.Log("blink: " + FallbackSmoke + " prefab missing");
+                GameObject smoke = Fx.Spawn(this, FallbackSmoke, at + Vector3.up, 6f);
+                if (smoke == null) HomeApi.Log("blink: " + FallbackSmoke + " prefab missing");
+                TeleportFx.Shrink(smoke, TeleportFx.Scale);
                 if (Fx.Spawn(this, FallbackCall, at + Vector3.up, 4f) == null) HomeApi.Log("blink: " + FallbackCall + " prefab missing");
             }
         }
 
         // a local copy of Hugin with his brain taken out (no texts, no chat), visual on, colliders off, "poff" fired
-        GameObject HuginModel(GameObject prefab, Vector3 at, Quaternion rot)
+        // only the Hugin child of the tutorial's "Ravens" (Hugin and Munin, one Raven each), copied on its own
+        GameObject HuginModel(Raven hugin, Vector3 at, Quaternion rot)
         {
-            bool was = prefab.activeSelf;
-            prefab.SetActive(false);
+            GameObject src = hugin.gameObject;
+            bool was = src.activeSelf;
+            src.SetActive(false);
             GameObject go;
-            try { go = Object.Instantiate(prefab, at, rot); }
-            finally { prefab.SetActive(was); }
+            try { go = Object.Instantiate(src, at, rot); }
+            finally { src.SetActive(was); }
             Raven raven = go.GetComponent<Raven>();
             GameObject visual = raven != null ? raven.m_visual : null;
-            if (raven != null) Object.DestroyImmediate(raven);
-            ZNetView nv = go.GetComponent<ZNetView>();
-            if (nv != null) Object.DestroyImmediate(nv);   // never a second networked Hugin
+            foreach (Raven r in go.GetComponentsInChildren<Raven>(true)) Object.DestroyImmediate(r);
+            foreach (ZNetView nv in go.GetComponentsInChildren<ZNetView>(true)) Object.DestroyImmediate(nv);   // never a second networked Hugin
             foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) c.enabled = false;
             OwnInWorld(go);
             go.SetActive(true);
@@ -184,6 +206,15 @@ namespace HomeCheat.Features.TeleportCommands
             return byName != null ? byName : Prefabs.Get("Raven");
         }
 
+        // the Raven named Hugin under the prefab, else the first one
+        static Raven Hugin(GameObject prefab)
+        {
+            if (prefab == null) return null;
+            Raven[] all = prefab.GetComponentsInChildren<Raven>(true);
+            foreach (Raven r in all) if (r.gameObject.name == "Hugin") return r;
+            return all.Length > 0 ? all[0] : null;
+        }
+
         static bool Networked(EffectList list)
         {
             if (list.m_effectPrefabs == null || list.m_effectPrefabs.Length == 0) return false;
@@ -198,9 +229,18 @@ namespace HomeCheat.Features.TeleportCommands
             StringBuilder sb = new StringBuilder();
             GameObject prefab = HuginPrefab();
             if (prefab == null) return "Hugin: prefab not found (Tutorial.m_ravenPrefab, Hugin, Raven)";
-            Raven raven = prefab.GetComponent<Raven>();
+            Raven raven = prefab.GetComponentInChildren<Raven>(true);
             sb.Append("Hugin: prefab ").Append(prefab.name).Append(", ZNetView ").Append(prefab.GetComponent<ZNetView>() != null)
                 .Append(", Animator ").Append(prefab.GetComponentInChildren<Animator>(true) != null).Append(", Raven ").Append(raven != null);
+            sb.Append("; children:");
+            foreach (Transform t in prefab.transform)
+                sb.Append(' ').Append(t.name).Append(t.gameObject.activeSelf ? "" : " (off)")
+                    .Append(t.GetComponentInChildren<Raven>(true) != null ? " Raven" : "")
+                    .Append(t.GetComponentInChildren<ZNetView>(true) != null ? " ZNetView" : "")
+                    .Append(t.GetComponentInChildren<Animator>(true) != null ? " Animator" : "");
+            foreach (Raven r in prefab.GetComponentsInChildren<Raven>(true))
+                sb.Append("; raven ").Append(r.gameObject.name).Append(" name=").Append(r.m_name)
+                    .Append(" visual=").Append(r.m_visual != null ? r.m_visual.name : "null");
             if (raven != null && raven.m_despawnEffect != null && raven.m_despawnEffect.m_effectPrefabs != null)
             {
                 sb.Append("; despawn effect:");
