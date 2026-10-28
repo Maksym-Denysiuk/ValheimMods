@@ -20,6 +20,7 @@ For a list of commands (a backlog, a menu group, "plan these"). Writes cards and
    - At most 2-3 implementation sessions at once: all tests share one game and Maksym's eyes.
    - Order: wave 0 alone; then presets and small extensions; then new commands; then items that need a design decision.
    - One brief per session (template below).
+   - **Planning protocol.** In HomeOS the wave and session table is a plan in `references/claude-code/planning-protocol.md` form: size (a backlog with sessions is L), Rules that apply (this skill's gates, `.claude/rules/agents.md` for the refresh, `.claude/rules/artifacts.md` for `LocalOutputs/`), Session column (`new:<name> · <model> · <effort>`), Turns per task, Context budget per session with seams and a `Seam rule:` line, and `## Worker briefs` with each brief's Reason line (`Reason: planned - <cards> · Expect: <n> requests`). The briefs below are those workers' prompts, Reason line first. The plan-flow gate checks this when the plan goes for approval.
 8. **Write** `LocalOutputs/<ts>/backlog-plan.md` (HomeOS; elsewhere next to the package): summary table, cards, wave 0 list, wave and session table, briefs, questions (or the Assumptions table), and a test list for Maksym that starts with every card's probes. Show the summary and the questions.
 9. **After Maksym approves**: store each approved card as `<pkg>/docs/Backlog/<name>.md` (one file per card, `description:` frontmatter), commit and push them with the plan's own paths only. Never start implementation sessions without his go.
 
@@ -31,6 +32,7 @@ For a list of commands (a backlog, a menu group, "plan these"). Writes cards and
 ## Session brief template
 
 ```markdown
+Reason: planned - implement <card names> · Expect: <n> requests
 Implement <card names> with /valheim-spells-craft implement mode.
 Cards: <pkg>/docs/Backlog/<name>.md (read first; update the card's test log as you go).
 Files you may edit: src/Features/<F>/, docs/<topic>/<page>.md, the index and catalog rows of these commands, your own spells.txt lines <ids> (fresh read before the edit).

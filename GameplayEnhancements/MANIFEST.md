@@ -1,4 +1,4 @@
-# GameplayEnhancements: manifest
+| skills/valheim-spells-craft/instructions/plan.md | 6675 | dd680f2d5e795821 || skills/valheim-spells-craft/SKILL.md | 18082 | d0e9be338b5aabf6 |# GameplayEnhancements: manifest
 
 Built 2026-10-27 22:02 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
