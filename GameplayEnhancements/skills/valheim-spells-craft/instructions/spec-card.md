@@ -5,9 +5,11 @@ One card per command or change, in one place at a time:
 | Card state | Where | Who writes |
 |---|---|---|
 | draft (plan mode) | inside `backlog-plan.md` | plan mode |
-| draft (implement mode without a plan) | `LocalOutputs/<ts>/<name>-spec.md` (HomeOS; elsewhere next to the package) | implement mode, until Maksym's go |
+| draft (implement mode without a plan, the package copy) | `<name>-spec.md` next to the package folder, never inside it | implement mode, until the owner's go |
 | approved | `<pkg>/docs/Backlog/<name>.md`, the only copy from then on | plan mode after the approval, or implement mode on the go (the draft is not kept beside it) |
 | done | the card becomes the command page (`done-gate.md` 1.1), the backlog file is removed | done gate |
+
+The package copy without a clone: an approved card stays beside the package folder (`<name>-spec.md`, status approved), never in `<pkg>/docs/Backlog/`, which a reinstall replaces; read `docs/Backlog/` below as that file.
 
 Implement mode updates the approved card in `docs/Backlog/` after every step (status, test log), so a new session can continue from it. It is in the public repository: gate 10 applies to everything written on it.
 
@@ -27,7 +29,7 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 - Placement: self | crosshair | radius <m> | ring | grid | line | world
 - Magnitude: damage / push / heal / count / size / duration, with defaults
 - Persists in the world: <objects, terrain, ZDO values> or nothing
-- Who sees it: everyone (networked on the host; checked on Claude2, which has no mod) | only this PC (a look other players should see is never left local)
+- Who sees it: everyone (networked on the host; checked on the second test account, which has no mod) | only this PC (a look other players should see is never left local)
 - Visual reference: <prefab> | to choose with /valheim-spell-fx
 - Probes: <facts only the game can tell (prefab names, asset values, status-effect names), each with the read-only command that reads it> | none
 - Measure: <the read-only step that measures the result on the world (terrain heights against the target, pieces standing, area covered) and the gate on it> | none (required for a command that changes terrain or builds)
@@ -47,11 +49,11 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 
 ## Open questions
 1. <question> - recommended: <answer> (what happens if chosen)
-   ASSUMPTION: <answer> (why; taken in an unattended run, Maksym reviews)
+   ASSUMPTION: <answer> (why; taken in an unattended run, the owner reviews)
 
 ## Test plan
-1. <command> -> expected <answer / measurement / what Maksym should see>
-(cheatstate before and after; Claude2 for other-player tests)
+1. <command> -> expected <answer / measurement / what the owner should see>
+(cheatstate before and after; the second test account for other-player tests)
 
 ## Test log
 | Time | Command | Answer (first line) | Observation | Verdict |
@@ -60,7 +62,7 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 
 ## Ask or decide
 
-| Ask Maksym (one message, recommended answer first) | Decide and state |
+| Ask the owner (one message, recommended answer first) | Decide and state |
 |---|---|
 | target classes and whether other players are affected | parameter names and placement, by the parameter conventions |
 | damage on/off and rough level; push strength when no game value fits | default counts and sizes inside caps |
@@ -71,8 +73,8 @@ Fingerprint: effect <...> / target <...> / placement <...> / mechanism <...>
 | a core change and the restart it needs | Harmony vs component vs reflection, which Kit helper |
 | spell-bar slot, pin, sticky; a menu level that would pass 12 entries | the `Usage` text, answer format |
 | dropping or forcing a safety flag a menu sends (`avoid=1`) | adding it as a form question with the safe answer first |
-| testing in a world other than ClaudeTest; casting at a player who is not Claude2 | test order, spawns, probes |
+| testing in a world other than the test world; casting at a player who is not the second test account | test order, spawns, probes |
 | a new docs topic folder; "фиксируем?" when satisfaction is unclear | page placement in an existing folder, index and catalog rows |
 | wrong-layout text that does not decode to a clear phrase | wrong-layout text that decodes cleanly |
 
-When to build without asking (the practice of the existing commands): a new command or feature is built after Maksym's go on the card; tweaks inside a test loop ("multiplier 7", "half closer", "rotate 90°") are built and tested straight away; a default change or anything aimed at another player is asked even inside a loop.
+When to build without asking (the practice of the existing commands): a new command or feature is built after the owner's go on the card; tweaks inside a test loop ("multiplier 7", "half closer", "rotate 90°") are built and tested straight away; a default change or anything aimed at another player is asked even inside a loop.

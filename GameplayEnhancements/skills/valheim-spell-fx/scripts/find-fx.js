@@ -6,12 +6,14 @@
 // Reads <FX docs>/<prefix>_descriptions.md. The FX docs folder is, first found:
 //   --fx-dir, env VALHEIM_FX_DIR,
 //   the package copy: GameplayEnhancements/skills/valheim-spell-fx/scripts -> GameplayEnhancements/docs/FX,
-//   HomeOS: .claude/skills/valheim-spell-fx/scripts -> references/ValheimCustomMods/GameplayEnhancements/docs/FX.
+//   a copy in <project>/.claude/skills/ where <project> is the unpacked GameplayEnhancements or a ValheimMods clone,
 const fs = require('fs');
 const path = require('path');
 
 const FX_CANDIDATES = [
   path.resolve(__dirname, '..', '..', '..', 'docs', 'FX'),
+  path.resolve(__dirname, '..', '..', '..', '..', 'docs', 'FX'),                          // installed in the package's own .claude/skills/
+  path.resolve(__dirname, '..', '..', '..', '..', 'GameplayEnhancements', 'docs', 'FX'),  // installed in a ValheimMods clone's .claude/skills/
   path.resolve(__dirname, '..', '..', '..', '..', 'references', 'ValheimCustomMods', 'GameplayEnhancements', 'docs', 'FX'),
 ];
 let FX_DIR = null;
@@ -77,7 +79,9 @@ function loadRows(prefix) {
 
 function main() {
   const o = parseArgs(process.argv.slice(2));
-  const dirs = [o.fxDir, process.env.VALHEIM_FX_DIR].filter(Boolean).concat(FX_CANDIDATES);
+  const given = [o.fxDir, process.env.VALHEIM_FX_DIR].filter(Boolean);
+  // a folder the caller named must hold the files: no silent fallback to another copy
+  const dirs = given.length ? given.slice(0, 1) : FX_CANDIDATES;
   FX_DIR = dirs.find(d => fs.existsSync(path.join(d, 'fx_descriptions.md')));
   if (!FX_DIR) {
     console.error('FX description files not found. Looked in:\n  ' + dirs.join('\n  ') + '\nPass --fx-dir <GameplayEnhancements/docs/FX> or set VALHEIM_FX_DIR.');

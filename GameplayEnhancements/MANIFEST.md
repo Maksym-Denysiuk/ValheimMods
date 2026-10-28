@@ -1,12 +1,12 @@
-| skills/valheim-spells-craft/instructions/plan.md | 6675 | dd680f2d5e795821 || skills/valheim-spells-craft/SKILL.md | 18082 | d0e9be338b5aabf6 |# GameplayEnhancements: manifest
+# GameplayEnhancements: manifest
 
-Built 2026-10-27 22:02 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-10-28 14:19 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261025175610.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261025173212.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.teleport.v20261027215812.dll, HomeCheat.Cmd.transform.v20261025230546.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
-| README.md | 7126 | 18d79d02b8c9d4a0 |
+| README.md | 7177 | 4a21acbb593445a7 |
 | check.ps1 | 2271 | ef377005b0ad1b74 |
 | common.ps1 | 6198 | e01932f7436ce07e |
 | docs/FX/README.md | 9876 | 9ca1e6b2789476df |
@@ -51,7 +51,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | docs/architecture/homecheat-architecture.md | 91884 | e261f3816a8d96bb |
 | docs/architecture/homecheat-commands.md | 36577 | dc7ee577b737c03a |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
-| docs/architecture/packaging.md | 8434 | b55706a7f064abd3 |
+| docs/architecture/packaging.md | 9933 | cbba60354a96e300 |
 | install.ps1 | 5396 | 6f2056c02f530ecc |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
 | payload/BepInEx/config/homecheat/spells-ui-test.txt | 3193 | e8d424c76af30e2f |
@@ -97,20 +97,19 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | payload/doorstop_config.ini | 1460 | 4d5c6dfa0f771c6a |
 | payload/winhttp.dll | 26112 | 93406d0a02e7c164 |
 | send-command.ps1 | 1587 | 58fc65dbc9e0a1a5 |
-| skills/valheim-spell-fx/SKILL.md | 9848 | 2f71e520f7c97d95 |
-| skills/valheim-spell-fx/evals.md | 1291 | 2437ff4a1a931c05 |
-| skills/valheim-spell-fx/scripts/find-fx.js | 5551 | e23474d9f5b04685 |
-| skills/valheim-spell-fx/skill-meta-data.md | 1480 | 555a782f9287753f |
-| skills/valheim-spells-craft/SKILL.md | 17254 | b882a5f7a9122ead |
-| skills/valheim-spells-craft/baseline.md | 1934 | 0c4052e43ef3141b |
-| skills/valheim-spells-craft/evals.md | 42957 | 107414bade65f916 |
-| skills/valheim-spells-craft/instructions/done-gate.md | 9058 | 18aa8ae40171c17f |
-| skills/valheim-spells-craft/instructions/implement.md | 12758 | 5fc89e4dbb337c61 |
-| skills/valheim-spells-craft/instructions/plan.md | 5942 | 2e05c05717896bee |
-| skills/valheim-spells-craft/instructions/refresh.md | 3757 | 78d8a2ebe5847db4 |
-| skills/valheim-spells-craft/instructions/spec-card.md | 6148 | 2a441916c0026ce3 |
-| skills/valheim-spells-craft/scripts/commands-check.js | 14847 | 1285bed016e8b6a0 |
-| skills/valheim-spells-craft/skill-meta-data.md | 18132 | 806fe7f74777a0ad |
+| skills/valheim-spell-fx/README.md | 2133 | ea42ba440bd507fe |
+| skills/valheim-spell-fx/SKILL.md | 8875 | 0b2bcfbe3a9a5854 |
+| skills/valheim-spell-fx/evals.md | 2334 | 8611eec6ce118bbe |
+| skills/valheim-spell-fx/scripts/find-fx.js | 5969 | b1b1fe2c4e4dd114 |
+| skills/valheim-spells-craft/README.md | 3174 | 3ec9111d4ecf8282 |
+| skills/valheim-spells-craft/SKILL.md | 7309 | 4d694a84ab775938 |
+| skills/valheim-spells-craft/baseline.md | 1928 | 667592cf4c6ce4a1 |
+| skills/valheim-spells-craft/evals.md | 4309 | 99d5e1004f69c556 |
+| skills/valheim-spells-craft/instructions/done-gate.md | 8394 | a2eca1414c72ee82 |
+| skills/valheim-spells-craft/instructions/implement.md | 12607 | dbbd1f336d29b7e8 |
+| skills/valheim-spells-craft/instructions/plan.md | 5328 | 52a42b0f8841d19d |
+| skills/valheim-spells-craft/instructions/spec-card.md | 6441 | e5608315d784c802 |
+| skills/valheim-spells-craft/scripts/commands-check.js | 15374 | 8a5ede93cb83838d |
 | src/Core/Builtins/CommandsCommand.cs | 890 | c710a8075675c9ae |
 | src/Core/Builtins/HarmEffectCommand.cs | 1176 | aaf7faf9d74262ef |
 | src/Core/Builtins/HelpCommand.cs | 873 | 46cff63a539bd8c0 |

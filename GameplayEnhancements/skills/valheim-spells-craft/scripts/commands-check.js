@@ -7,11 +7,11 @@
 //               in the game folder's spells.txt (--game, VALHEIM_DIR, VALHEIM_DIR_WIN, Steam libraries; else the payload copy, said so);
 //               every row of the catalog and index tables has its header's cell count (an unescaped | breaks the row)
 //   --list      print every command: name, feature, class, file
-//   --baseline  also check the anchors listed in baseline.md and how far its knowledge-sha is behind HEAD (git, HomeOS only)
+//   --baseline  also check the anchors listed in baseline.md and how far its knowledge-sha is behind HEAD (git: a repository checkout, not the package copy)
 // Exit: 0 clean, 1 differences found, 2 a folder or file was not found.
 // Folders, first found: --pkg / --mods; the package copy (GameplayEnhancements/skills/valheim-spells-craft/scripts ->
-// GameplayEnhancements, docs in GameplayEnhancements/docs/architecture); HomeOS (.claude/skills/valheim-spells-craft/scripts
-// -> references/ValheimCustomMods, docs in references/ValheimCustomMods/docs).
+// GameplayEnhancements, docs in GameplayEnhancements/docs/architecture); a copy installed in a project's .claude/skills/ whose
+// project is the unpacked GameplayEnhancements (package) or a ValheimMods clone (repository, docs in docs/);
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -28,9 +28,12 @@ function roots() {
   else if (pkg) { pkg = path.resolve(pkg); docs = path.join(pkg, 'docs', 'architecture'); mode = 'package'; }
   else {
     const asPackage = path.resolve(__dirname, '..', '..', '..');
-    const asHomeOS = path.resolve(__dirname, '..', '..', '..', '..', 'references', 'ValheimCustomMods');
+    const asProject = path.resolve(__dirname, '..', '..', '..', '..');   // <project>/.claude/skills/<skill>/scripts
+    const asSubmodule = path.join(asProject, 'references', 'ValheimCustomMods');
     if (fs.existsSync(path.join(asPackage, 'src', 'Features'))) { pkg = asPackage; docs = path.join(pkg, 'docs', 'architecture'); mode = 'package'; }
-    else if (fs.existsSync(path.join(asHomeOS, 'GameplayEnhancements', 'src', 'Features'))) { mods = asHomeOS; pkg = path.join(mods, 'GameplayEnhancements'); docs = path.join(mods, 'docs'); mode = 'repo'; }
+    else if (fs.existsSync(path.join(asProject, 'src', 'Features'))) { pkg = asProject; docs = path.join(pkg, 'docs', 'architecture'); mode = 'package'; }
+    else if (fs.existsSync(path.join(asProject, 'GameplayEnhancements', 'src', 'Features'))) { mods = asProject; pkg = path.join(mods, 'GameplayEnhancements'); docs = path.join(mods, 'docs'); mode = 'repo'; }
+    else if (fs.existsSync(path.join(asSubmodule, 'GameplayEnhancements', 'src', 'Features'))) { mods = asSubmodule; pkg = path.join(mods, 'GameplayEnhancements'); docs = path.join(mods, 'docs'); mode = 'repo'; }
   }
   if (!pkg || !fs.existsSync(path.join(pkg, 'src', 'Features'))) fail('GameplayEnhancements/src/Features not found (pass --mods or --pkg)');
   if (!fs.existsSync(docs)) fail('docs folder not found: ' + docs);

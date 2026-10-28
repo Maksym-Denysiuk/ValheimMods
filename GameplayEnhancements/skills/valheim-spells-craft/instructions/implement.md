@@ -5,15 +5,14 @@ One card: code, build, test, docs. Each phase 4 session runs this for its own ca
 ## 1. Card and questions
 
 1. Start-of-run check (SKILL.md). Read the docs listed in SKILL.md, the nearest command's page and its `src/Features/<F>/`.
-2. Use the given card (`<pkg>/docs/Backlog/<name>.md`, updated in place), or write a draft (`spec-card.md`) to `LocalOutputs/<ts>/<name>-spec.md` and move it to `<pkg>/docs/Backlog/<name>.md` on Maksym's go (where a card lives: `spec-card.md`).
-3. Blocking questions in one message (Ask column). A new command or feature waits for Maksym's go on the card; tweaks inside a test loop do not; default changes and anything aimed at another player are always asked.
+2. Use the given card (`<pkg>/docs/Backlog/<name>.md`, updated in place), or write a draft (`spec-card.md`, where a draft lives) and move it to `<pkg>/docs/Backlog/<name>.md` on the owner's go (where a card lives: `spec-card.md`).
+3. Blocking questions in one message (Ask column). A new command or feature waits for the owner's go on the card; tweaks inside a test loop do not; default changes and anything aimed at another player are always asked.
    Unattended: a card from an approved or unattended plan is the go; blocking questions found while building become `ASSUMPTION:` lines on the card (SKILL.md gate 2). Default changes and other players stay blocked (gates 3-4).
 
 ## 2. Discovery (what the game offers)
 
 Prefer the game's own objects and values over custom physics or drawing (`Aoe`, `Projectile`, `SE_*` status effects, hoe pieces, `RadialBase`, ward rules). To find them:
 - in game: `op=list&filter=<text>`, `op=inspect&prefab=<name>`, a command's `find=`/`dump=` sub-actions (`earthquake`, `slime`), `op=fxdump` for effects, `op=bless&list=1` for status effects;
-- offline (HomeOS): `node scripts/valheim/lib/il-reader.js <Valheim>/valheim_Data/Managed/assembly_valheim.dll <TypeName> <methodRegex> [--list]` prints a method's IL with tokens resolved (.NET reflection on the game DLLs is blocked by Smart App Control);
 - looks: `/valheim-spell-fx` gives prefab combinations; build the mechanics on the chosen one.
 Pin every visual or game reference in the request ("like Eikthyr") to a prefab before coding; write it on the card.
 
@@ -30,7 +29,7 @@ Pin every visual or game reference in the request ("like Eikthyr") to a prefab b
 - A vanilla piece (workbench, portal, ship) the player gets from a command is built as the hammer builds it (the `Player.PlacePiece` steps, as `dome` and `spawn` do: `SetCreator`, `WearNTear.OnPlaced`, place effect, a ship on the water surface) and never put into an inventory.
 - What other players see: anything they should see is networked from the host (a ZDO value the game syncs, a networked stand-in); a look that only this PC shows is not done. A test aid drawn on this PC only (dome `step=show`) is the one exception: opt-in, its help starts `TEST AID, this PC only`, and the page says why it exists.
 - Terrain: any terrain change that must survive a reload (a height, ground paint) goes through saved `TerrainOp`s from a registered template (architecture doc, Extension points "terrain changed exactly" and Kit by need: `TerrainLevel` in feature Construction, `TerrainOps` in feature World), never hoe pieces placed with a changed radius (their `TerrainModifier` comes back at the prefab radius after a reload). The approach exists twice already: a third feature that needs it asks for the Kit move (core change, gate 5) instead of a third copy; inside World or Construction use the copy there. A zone whose `TerrainComp` another peer owns drops every `TerrainOp` silently: claim its zones before each batch (construct `TerrainLevel.Claim`, World `TerrainOps.Claim`; a fix to one copy goes into the other too, Known defects), and when a level step reports the same misses twice, check zone ownership before tuning numbers. Old hoe stamps in the area are removed first, and the card's Measure line reads only what the command changed (a paint check reads its own paint channel).
-- Measure before you fix: when an effect on the world can fail silently or in part (terrain heights, pieces standing, ground covered), build the read-only step that measures it first (construct `step=flatness`, `step=support`), measure, then change the fix. Where the card allows, gate the world change on the measurement (construct stops at more than 5 % off). When the world change itself, or undoing it, is refused (a permission check, Maksym's no) or not wanted yet, measure the fix with a read-only dry run of that change against the world as it is (construct `step=fit`, `step=clear`); never work around the refusal.
+- Measure before you fix: when an effect on the world can fail silently or in part (terrain heights, pieces standing, ground covered), build the read-only step that measures it first (construct `step=flatness`, `step=support`), measure, then change the fix. Where the card allows, gate the world change on the measurement (construct stops at more than 5 % off). When the world change itself, or undoing it, is refused (a permission check, the owner's no) or not wanted yet, measure the fix with a read-only dry run of that change against the world as it is (construct `step=fit`, `step=clear`); never work around the refusal.
 - Kit: use the Kit by need table; a helper you need from another feature is copied into your folder only when it is small, and named on the card as a promotion candidate for the core owner.
 - Test helpers: never a heal, kill or clear mode inside the command; use `killmobs`, `heal`, `spawn`, or propose a separate test-helper command.
 - C# 5 and the Conventions section (no `?.`, `$""`, `nameof`, expression bodies; `== null` for Unity objects; copy a `for` variable before a lambda).
@@ -49,24 +48,24 @@ bash <pkg>/src/build.sh <feature>      # Git Bash; core must be installed (bash 
 
 ## 5. Test
 
-Only when Maksym says the game is running with a world loaded (default `ClaudeTest`; any other world only with his yes).
+Only when the owner says the game is running with a world loaded (default the test world; any other world only with the owner's yes).
 - One command at a time: `powershell -NoProfile -ExecutionPolicy Bypass -File <pkg>/send-command.ps1 "<form>"` (it picks a unique inbox name and withdraws an unanswered command). No loops in the background; anything started is confirmed stopped before the turn ends.
 - `op=cheatstate` before the first and after the last test; compare, do not read `[CheatCleanSlate]` as a cheat mark.
 - After every test read the new lines of `BepInEx/LogOutput.log`, not only the answer: success reports go only there, and some game failures show nowhere else (construct's cancelled terrain operations: `Failed to deserialize TerrainOp settings`).
-- Evidence per test, written to the card's test log: the answer's first line, new `HomeCheat` errors and game warnings in `BepInEx/LogOutput.log` since the command, probe numbers where the effect is measurable (hp, distance, counts), and Maksym's observation asked as concrete questions ("did Claude2 move, how far, any damage?").
-- Enemies: `op=spawn&prefab=<name>&count=<n>` (`tamed=1` for tamed-animal hits); clear with `op=killmobs`. Other-player tests on `Claude2` without asking; report the damage and push it took. Claude2 has no mod: it is also the check that other players see a look (a size, a form), before V.
-- A case that needs a zone or object another peer owns: Claude2 first. Without it, the temporary test build of the architecture doc's Test aids (a made-up owner, first batch only): its code never committed and kept out of the submodule working tree between builds (gate 10), the clean DLL built and loaded after it, and the several-batch case left as a Claude2 test (B) in the page.
-- Sessions in parallel in one submodule checkout: your spell lines go through the session that owns `spells.txt`; commit only your own paths (`done-gate.md` step 3.1).
-- Tuning loop: change, rebuild, reload, re-test, one parameter at a time; update `Usage`, the page and the catalog row in the same step (docs move with the code). When Maksym asks for a run of behaviour changes during a test, commit once per state he accepts, or when the loop pauses, with a subject that lists the changes. Do not commit once per rebuild: the construct loop left 12 small commits. Gate 10 still applies: nothing unfit to publish stays uncommitted in the submodule.
+- Evidence per test, written to the card's test log: the answer's first line, new `HomeCheat` errors and game warnings in `BepInEx/LogOutput.log` since the command, probe numbers where the effect is measurable (hp, distance, counts), and the owner's observation asked as concrete questions ("did the second test account move, how far, any damage?").
+- Enemies: `op=spawn&prefab=<name>&count=<n>` (`tamed=1` for tamed-animal hits); clear with `op=killmobs`. Other-player tests on the second test account without asking; report the damage and push it took. The second test account has no mod: it is also the check that other players see a look (a size, a form), before V.
+- A case that needs a zone or object another peer owns: the second test account first. Without it, the temporary test build of the architecture doc's Test aids (a made-up owner, first batch only): its code never committed and kept out of the repository working tree between builds (gate 10), the clean DLL built and loaded after it, and the several-batch case left as a the second test account test (B) in the page.
+- Sessions in parallel in one repository checkout: your spell lines go through the session that owns `spells.txt`; commit only your own paths (`done-gate.md` step 3.1).
+- Tuning loop: change, rebuild, reload, re-test, one parameter at a time; update `Usage`, the page and the catalog row in the same step (docs move with the code). When the owner asks for a run of behaviour changes during a test, commit once per state the owner accepts, or when the loop pauses, with a subject that lists the changes. Do not commit once per rebuild: the construct loop left 12 small commits. Gate 10 still applies: nothing unfit to publish stays uncommitted in the repository.
 
 ## 5b. No-game run
 
 When the brief says `no game`, instead of step 5:
 1. `bash <pkg>/src/build.sh selftest` (exit 0) and the feature build (exit 0). Selftest covers only `src/Core/Pure/`: Unity-free maths inside your feature is tested in a scratch console build (session scratchpad, never the repo), named in the handoff as outside selftest. Core changes (wave 0 core brief only): `bash src/build.sh core` (the game is closed in a no-game run).
-2. The card's Test plan becomes Maksym's test list: probes first, then one command per line with the expected first answer line and what to look at; `op=cheatstate` before and after; enemies by `spawn`, clean-up by `killmobs`.
+2. The card's Test plan becomes the owner's test list: probes first, then one command per line with the expected first answer line and what to look at; `op=cheatstate` before and after; enemies by `spawn`, clean-up by `killmobs`.
 3. Status stays B in the index, with the line "built YYYY-MM-DD, not run in game: test list in <card>".
 4. Then `done-gate.md`, trigger *built*.
 
 ## 6. Hand over to the done gate
 
-When Maksym is satisfied with an iteration or says it is done: `done-gate.md`. If the session ends before that, the card holds the state: status, what is built, test log, what is left.
+When the owner is satisfied with an iteration or says it is done: `done-gate.md`. If the session ends before that, the card holds the state: status, what is built, test log, what is left.

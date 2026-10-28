@@ -21,7 +21,7 @@ Done 2026-10-24, Valheim 1.0.20 (network version 41), BepInEx 5.4.2351. The pack
 | `README.md` and `*.ps1` of each package | HomeOS `scripts/valheim/packages/<Package>/`, shared `common.ps1` | HomeOS |
 | `AdminPanelEnchancements/kickban/` | HomeOS `scripts/valheim/kick-ban-patch.js`, `scripts/valheim/lib/il-reader.js` | HomeOS |
 | `GameplayEnhancements/payload/` | the game folder of the PC that builds: `BepInEx/plugins/HomeCheat.dll`, the BepInEx core, and for each feature the `HomeCheat.Cmd.<feature>.v<stamp>.dll` with the highest stamp as a number (the plugin's own rule) | rebuilt, never by hand |
-| `GameplayEnhancements/skills/valheim-spell-fx/`, `skills/valheim-spells-craft/` | HomeOS `.claude/skills/` (spell effect composer; command builder) | HomeOS |
+| `GameplayEnhancements/skills/valheim-spell-fx/`, `skills/valheim-spells-craft/` | HomeOS `.claude/skills/` (spell effect composer; command builder), rendered as independent copies: see [Skill copies](#skill-copies) | HomeOS |
 | `GameplayEnhancements/docs/architecture/` | this repository's `docs/*.md` and `docs/diagrams/*.svg`, links rewritten (inside the package: relative; elsewhere: GitHub) | here, in `docs/` |
 | `MANIFEST.md` | size and sha256 of every file | rebuilt |
 
@@ -34,6 +34,21 @@ node scripts/valheim/packages/build.js [--game <Valheim folder>] [--zips <dir>]
 ```
 
 It rewrites the generated parts in place, stops when a feature DLL has no `src/Features/<Feature>/` folder or a feature folder has no build, and writes the two zips to `LocalOutputs/<yyyy-mm-dd--hh-mm>/packages/` (or `--zips`). Then commit and push this repository, then the submodule pointer in HomeOS.
+
+`--no-game` rebuilds GameplayEnhancements without the game folder: the package scripts and README, the skill copies, `docs/architecture/` and `MANIFEST.md` (the feature list read from `payload/`). It leaves `payload/` as committed, skips AdminPanelEnchancements and writes no zips. Use it when only docs, scripts or the skills changed.
+
+### Skill copies
+
+The skills in `GameplayEnhancements/skills/` are independent copies for people without HomeOS, rendered from the HomeOS originals by `renderSkill` in `build.js`:
+
+| Step | What |
+|---|---|
+| drop | lines marked `homeos-only`, blocks between `homeos-only:start` and `homeos-only:end`, files whose first line holds `homeos-only:file` (`instructions/refresh.md`), the HomeOS security record `skill-meta-data.md` |
+| overlay | the original's `package/` folder: `README.md` (requirements, install, what the copy skips) and `evals.md` (the copy's evals, in place of the HomeOS ones) |
+| swap | the owner's name, the second test account and the test world get generic names |
+| leak check | any HomeOS path, rule, step or personal path left in a rendered file stops the build with file:line; nothing is written |
+
+Installed in a project's `.claude/skills/` (the unpacked package, or a clone of this repository), `commands-check.js` and `find-fx.js` find the package by themselves. Edit the originals in HomeOS; HomeOS `HomeOS-Documentation/skill-versions.md` explains both versions.
 
 ## Package scripts
 

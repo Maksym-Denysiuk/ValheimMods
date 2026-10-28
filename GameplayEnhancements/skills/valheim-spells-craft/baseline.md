@@ -3,7 +3,7 @@
 knowledge-sha: `31237a7`
 refreshed: 2026-10-26
 
-`knowledge-sha` is the ValheimMods commit whose docs this skill was last checked against. `scripts/commands-check.js --baseline baseline.md` reports how far it is behind and stops the run when `src/Core/` or `homecheat-architecture.md` changed since (refresh first: `instructions/refresh.md`). Only the refresh session changes this file.
+`knowledge-sha` is the ValheimMods commit whose docs this skill was last checked against. `scripts/commands-check.js --baseline baseline.md` reports how far it is behind and stops the run when `src/Core/` or `homecheat-architecture.md` changed since (the skill needs a refresh first). Only a refresh of the skill changes this file.
 
 ## Doc sections the skill relies on
 

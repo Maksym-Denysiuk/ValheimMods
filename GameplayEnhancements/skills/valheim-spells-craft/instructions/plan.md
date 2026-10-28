@@ -15,14 +15,12 @@ For a list of commands (a backlog, a menu group, "plan these"). Writes cards and
 7. **Waves and sessions.**
    - Items in the same feature folder never run in two sessions at the same time. Either one session takes them all, or several sessions (one per command is fine) run **in sequence**, each starting after the previous one pushed.
    - Shared files have one owner at a time: the game folder's `spells.txt` and `spells-ui-test.txt` and `SpellFile.DefaultText`. Write the whole planned menu once, in the session that owns the spell bar. A not-yet-built command gets an `@dummy` line in `spells.txt` (label ending in "(soon)"; `commands-check.js` flags any `op=` that names no command) and its real form in a comment above it. The session that builds the command swaps in the real form. Later sessions change only their own lines, with a fresh read of the file just before the edit, and list the lines in their handoff. Index and catalog: own rows only, `git pull --rebase` before the commit. `payload/`: commit only your own feature's DLL; `build.js` also refreshes other features' builds, so leave those unstaged.
-   - After a wave that changed `src/Core/` or `homecheat-architecture.md`, a refresh session (`refresh.md`) runs alone before the next wave starts: the start-of-run check of every later session stops until `knowledge-sha` is bumped. Put it in the session table as **attended** (its security record needs Maksym's yes, `refresh.md` step 9): an unattended plan ends its unattended part at that point.
-   - The HomeOS sync pushes every uncommitted submodule change (SKILL.md gate 10, known hole): briefs tell sessions to keep the submodule tree publishable at all times and to commit their own paths as soon as an iteration builds and is accepted (one commit per accepted state, not per rebuild).
-   - At most 2-3 implementation sessions at once: all tests share one game and Maksym's eyes.
+   - At most 2-3 implementation sessions at once: all tests share one game and the owner's eyes.
    - Order: wave 0 alone; then presets and small extensions; then new commands; then items that need a design decision.
    - One brief per session (template below).
-   - **Planning protocol.** In HomeOS the wave and session table is a plan in `references/claude-code/planning-protocol.md` form: size (a backlog with sessions is L), Rules that apply (this skill's gates, `.claude/rules/agents.md` for the refresh, `.claude/rules/artifacts.md` for `LocalOutputs/`), Session column (`new:<name> · <model> · <effort>`), Turns per task, Context budget per session with seams and a `Seam rule:` line, and `## Worker briefs` with each brief's Reason line (`Reason: planned - <cards> · Expect: <n> requests`). The briefs below are those workers' prompts, Reason line first. The plan-flow gate checks this when the plan goes for approval.
-8. **Write** `LocalOutputs/<ts>/backlog-plan.md` (HomeOS; elsewhere next to the package): summary table, cards, wave 0 list, wave and session table, briefs, questions (or the Assumptions table), and a test list for Maksym that starts with every card's probes. Show the summary and the questions.
-9. **After Maksym approves**: store each approved card as `<pkg>/docs/Backlog/<name>.md` (one file per card, `description:` frontmatter), commit and push them with the plan's own paths only. Never start implementation sessions without his go.
+8. **Write** `backlog-plan.md` (where: the next line): summary table, cards, wave 0 list, wave and session table, briefs, questions (or the Assumptions table), and a test list for the owner that starts with every card's probes. Show the summary and the questions.
+   The package copy: next to the package folder, never inside it (a reinstall replaces it).
+9. **After the owner approves**: store each approved card as `<pkg>/docs/Backlog/<name>.md` (one file per card, `description:` frontmatter), commit and push them with the plan's own paths only. Never start implementation sessions without the owner's go.
 
 ## Summary table
 
@@ -32,14 +30,13 @@ For a list of commands (a backlog, a menu group, "plan these"). Writes cards and
 ## Session brief template
 
 ```markdown
-Reason: planned - implement <card names> · Expect: <n> requests
 Implement <card names> with /valheim-spells-craft implement mode.
 Cards: <pkg>/docs/Backlog/<name>.md (read first; update the card's test log as you go).
 Files you may edit: src/Features/<F>/, docs/<topic>/<page>.md, the index and catalog rows of these commands, your own spells.txt lines <ids> (fresh read before the edit).
 Run mode: <attended | unattended> and <game | no game> (unattended: ASSUMPTION lines, SKILL.md gate 2; no game: implement.md 5b, done-gate trigger built).
 Rules: no edits under src/Core/ (stop and ask); unique inbox names (<session-prefix>-<n>); one command at a time in the game;
-no game restart; commit only your own paths; deliver after each iteration Maksym is satisfied with; "done" runs the done gate.
-Shared game: other sessions may be testing; ask Maksym before spawning or clearing creatures near another test.
+no game restart; commit only your own paths; deliver after each iteration the owner is satisfied with; "done" runs the done gate.
+Shared game: other sessions may be testing; ask the owner before spawning or clearing creatures near another test.
 Done when: every card is V in the index, documented, pushed, and the refresh brief is extended.
 (No-game run: every card built, selftest passes, docs with status B and the test list, pushed: done-gate trigger built.)
 ```
