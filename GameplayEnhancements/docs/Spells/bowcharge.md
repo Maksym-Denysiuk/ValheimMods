@@ -20,8 +20,9 @@ Approved 2026-11-03 (plan item 5; Maksym: "timer starts after when max vanila ho
 - Arrows: spellshot `type=arrow` (`ArrowNeedle`'s projectile `bow_projectile_needle`, the needle arrow's damage, 60 m/s), no ammo taken. The normal shot is the game's own and uses your arrow as always.
 - Grid: n arrows, ceil(sqrt n) per row, rows filled top to bottom, each row centred on its own count (a short last row stays centred); 0.6 m apart, 1 m ahead of your eye, all along the camera's forward (aim at the sky and they go there). 8 arrows = rows of 3, 3, 2; 25 = 5x5.
 - On by default while loaded; `on=0|1`; `status=1`, `probe=1`. Spell 2.8 Bow charge sends `on=1&pvp=1`, Shift `on=0`.
-- PvP: `pvp=1` (the `AttackCommand` rule, read at each release): with your PvP on other players are hit; tamed creatures by the core PvP tamed rule (yours spared, others' hit).
-- ASSUMPTION: the `pvp` setting starts at 0 when the DLL loads, so before spell 2.8 is used the extra arrows are unmarked (gate 4: no silent widening of who is hit). With your PvP off they hit enemies only. With your PvP on they behave as a vanilla bow: players whose PvP is also on and every tamed creature, yours too (read 2026-11-03: `Projectile.IsValidTarget`, `PvpTamedPatch` only sees marked shots). Spell 2.8 sets it to 1. The settings live in memory only: a game restart or `op=reload` brings back on, `pvp=0`.
+- PvP: follows your PvP switch from the start, no spell needed (Maksym 2026-11-03: "Bow should follow user settings"). The `AttackCommand` rule, read at each release: your PvP on = other players (whatever their own setting) and their tamed creatures are hit, yours spared; off = other players and every tamed creature spared. The normal arrow is the game's own and is not under this rule.
+- `pvp=0` opts out: unmarked arrows, as a vanilla bow. With your PvP on those hit players whose PvP is also on and every tamed creature, yours too (`Projectile.IsValidTarget`; `PvpTamedPatch` only sees marked shots).
+- The settings live in memory only: a game restart or `op=reload` brings back on, `pvp=1`.
 - ASSUMPTION: no extra arrows when the game's own shot does not start (no ammo, no stamina or eitr): "the normal bow shot fires, plus the extra arrows".
 - Caps: 25 arrows (`Caps.Clamp`, named in the log line, `arrows capped at 25 (asked 28)`). Crossbows have no hold (`m_bowDraw` false, they load instead): not affected.
 
@@ -30,7 +31,8 @@ Approved 2026-11-03 (plan item 5; Maksym: "timer starts after when max vanila ho
 | Form | Does |
 |---|---|
 | `op=bowcharge` or `op=bowcharge&status=1` | `bow charge on (1 spell arrow per whole second past full draw, cap 25)` and, while you hold a bow at full draw, how long and how many extra so far |
-| `op=bowcharge&on=1&pvp=1` | spell 2.8: on, other players hit while your PvP is on |
+| `op=bowcharge&on=1&pvp=1` | spell 2.8: on, following your PvP switch (the default) |
+| `op=bowcharge&pvp=0` | unmarked arrows, as a vanilla bow |
 | `op=bowcharge&on=0` | spell 2.8 with Shift: off (the bow is vanilla again) |
 | `op=bowcharge&probe=1` | read-only: whether `Player.UpdateAttackBowDraw` and the two draw fields exist, the patch state, your weapon, its draw duration and the draw now |
 
@@ -64,7 +66,7 @@ Not run yet. ClaudeTest, a vanilla bow and arrows in the inventory; `op=cheatsta
 | T3 | aim at the sky, hold 5 s past full | the extra arrows fly up along the crosshair |
 | T4 | release before full draw; and a crossbow shot | no extra arrows, no log line |
 | T5 | `op=bowcharge&on=0`, hold 3 s past full | vanilla shot only; `on=1&pvp=1` brings it back |
-| T6 | Claude2 in front, your PvP off, then on (spell 2.8 used first) | Claude2 not hit with your PvP off, hit with it on |
+| T6 | Claude2 in front, your PvP off, then on (no spell cast since the load) | Claude2 not hit with your PvP off, hit with it on |
 | T7 | your own tamed creature, then Claude2's, in the grid with your PvP on | yours spared, Claude2's hit (core tamed rule) |
 | T8 | no arrows in the inventory, hold past full | no shot, log `released without a shot ...: no extra arrows` |
 
@@ -76,7 +78,7 @@ Not run yet. ClaudeTest, a vanilla bow and arrows in the inventory; `op=cheatsta
 ## Limits
 
 - The local player only; a player without the mod has a vanilla bow.
-- Settings in memory: a restart or a reload gives on, `pvp=0` until spell 2.8 is used.
+- Settings in memory: a restart or a reload gives on, `pvp=1`.
 - Spell arrows use the needle arrow's damage, whatever arrow the bow fires.
 - The extra arrows leave at the release; the game's own arrow leaves with the attack's animation, a moment later.
 

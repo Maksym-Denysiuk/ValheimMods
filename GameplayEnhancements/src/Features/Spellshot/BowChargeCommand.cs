@@ -3,7 +3,8 @@
 // 25 (a 5x5 matrix). On release the normal bow shot fires as the game fires it, plus the extra arrows as spellshot type=arrow
 // (spell damage, no ammo used): a centred grid (ceil(sqrt n) per row, rows filled top to bottom, each row centred), from the
 // crosshair centre along the crosshair direction, the spellshot way (eye point + 1 m along the camera's forward, 0.6 m apart).
-// On by default while loaded; on=0|1, pvp=1 (the PvP rule of AttackCommand, read at each release). Crossbows have no hold
+// On by default while loaded; on=0|1; follows your PvP switch by default (Maksym 2026-11-03: the PvP rule of AttackCommand, read at
+// each release: your PvP on = other players and their tamed creatures hit, yours spared; off = all spared; pvp=0 opts out). Crossbows have no hold
 // (their m_bowDraw is false): not affected. The hook is BowChargePatch on Player.UpdateAttackBowDraw (probe 2026-11-03: the
 // draw time grows there while the attack is held, and the release calls StartAttack and zeroes it). Page: docs/Spells/bowcharge.md.
 using System;
@@ -29,7 +30,7 @@ namespace HomeCheat.Features.Spellshot
         internal static BowChargeCommand Current;
 
         bool on = true;          // on by default while loaded
-        bool pvpAsked;           // the pvp=1 setting (spell 2.8 passes it)
+        bool pvpAsked = true;    // follows your PvP switch from the start; pvp=0 opts out
         internal float FullAt = -1f;   // Time.time when the held draw reached full, -1 = not held at full
 
         public BowChargeCommand()
@@ -45,7 +46,7 @@ namespace HomeCheat.Features.Spellshot
         {
             get
             {
-                return "bowcharge [on=1|0 (on by default while loaded)] " + PvpUsage
+                return "bowcharge [on=1|0 (on by default while loaded)] [pvp=1 (default: follow your PvP switch: your PvP on = other players and their tamed creatures are hit, yours spared; off = all spared; never you; 0 = unmarked arrows, as a vanilla bow)]"
                     + " - hold a vanilla bow past its full draw: every whole second adds 1 spell arrow to the shot (cap " + MaxArrows
                     + ", a 5x5 grid), fired on release with the normal arrow, from the crosshair centre along the crosshair (spellshot type=arrow:"
                     + " spell damage, no ammo); the setting lasts until the game restarts; crossbows are not affected";
