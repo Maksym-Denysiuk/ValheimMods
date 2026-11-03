@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-11-03 22:20 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-11-03 22:24 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCheat.Cmd.construction.v20261103203705.dll, HomeCheat.Cmd.despawn.v20261103195028.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261103203542.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261103205053.dll, HomeCheat.Cmd.spellshot.v20261103221952.dll, HomeCheat.Cmd.teleport.v20261103195038.dll, HomeCheat.Cmd.transform.v20261103195037.dll, HomeCheat.Cmd.traps.v20261103221501.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261103203416.dll.
 
@@ -114,10 +114,10 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | skills/valheim-spell-fx/scripts/find-fx.js | 5969 | b1b1fe2c4e4dd114 |
 | skills/valheim-spells-craft/README.md | 3174 | 3ec9111d4ecf8282 |
 | skills/valheim-spells-craft/SKILL.md | 7309 | 4d694a84ab775938 |
-| skills/valheim-spells-craft/baseline.md | 1928 | ef8e055231fb6af0 |
+| skills/valheim-spells-craft/baseline.md | 1928 | aaf7202f8b27349c |
 | skills/valheim-spells-craft/evals.md | 4309 | 99d5e1004f69c556 |
 | skills/valheim-spells-craft/instructions/done-gate.md | 8394 | a2eca1414c72ee82 |
-| skills/valheim-spells-craft/instructions/implement.md | 12607 | dbbd1f336d29b7e8 |
+| skills/valheim-spells-craft/instructions/implement.md | 12607 | c618c57c20ca8e47 |
 | skills/valheim-spells-craft/instructions/plan.md | 5328 | 52a42b0f8841d19d |
 | skills/valheim-spells-craft/instructions/spec-card.md | 6441 | e5608315d784c802 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 15374 | 8a5ede93cb83838d |

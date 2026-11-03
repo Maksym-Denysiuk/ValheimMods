@@ -49,7 +49,7 @@ bash <pkg>/src/build.sh <feature>      # Git Bash; core must be installed (bash 
 ## 5. Test
 
 Only when the owner says the game is running with a world loaded (default the test world; any other world only with the owner's yes).
-- One command at a time: `powershell -NoProfile -ExecutionPolicy Bypass -File <pkg>/send-command.ps1 "<form>"` (it picks a unique inbox name and withdraws an unanswered command). No loops in the background; anything started is confirmed stopped before the turn ends.
+- One command at a time: `powershell -NoProfile -ExecutionPolicy Bypass -File <pkg>/send-command.ps1 '<form>'` (it picks a unique inbox name and withdraws an unanswered command). No loops in the background; anything started is confirmed stopped before the turn ends.
 - `op=cheatstate` before the first and after the last test; compare, do not read `[CheatCleanSlate]` as a cheat mark.
 - After every test read the new lines of `BepInEx/LogOutput.log`, not only the answer: success reports go only there, and some game failures show nowhere else (construct's cancelled terrain operations: `Failed to deserialize TerrainOp settings`).
 - Evidence per test, written to the card's test log: the answer's first line, new `HomeCheat` errors and game warnings in `BepInEx/LogOutput.log` since the command, probe numbers where the effect is measurable (hp, distance, counts), and the owner's observation asked as concrete questions ("did the second test account move, how far, any damage?").
