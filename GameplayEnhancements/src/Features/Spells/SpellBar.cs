@@ -30,6 +30,7 @@ namespace HomeCheat.Features.Spells
         Dictionary<RadialMenuElement, string> cellOf = new Dictionary<RadialMenuElement, string>();   // radial Hotbar element -> cell, for RMB
         MethodInfo mQueuedOpen;
         Dictionary<int, Sprite> iconCache = new Dictionary<int, Sprite>();
+        internal SpellHudLift Lift = new SpellHudLift();   // the game's bars and build requirements above the panels (card hud-above)
 
         // the bar of the loaded build (SpellsSettings.Current)
         public static SpellBar Find() { return SpellsSettings.ActiveBar; }
@@ -50,6 +51,7 @@ namespace HomeCheat.Features.Spells
         // the patches belong to the command (removed on unload); the bar only forgets itself
         void OnDestroy()
         {
+            Lift.Restore();
             if (SpellsSettings.Current != null && SpellsSettings.Current.Bar == this) SpellsSettings.Current.Bar = null;
         }
 
@@ -385,6 +387,29 @@ namespace HomeCheat.Features.Spells
                     return;
                 }
             }
+        }
+
+        // after the game's own Update and animators: lift the game's bars and build requirements while the panels show (hudlift=1)
+        void LateUpdate()
+        {
+            try { Lift.Tick(SpellsSettings.On && barVisible && SpellsSettings.HudLiftOn, PanelTopPx()); }
+            catch (Exception e) { HomeApi.Log("spells: hud lift failed, restored: " + e.Message); Lift.Restore(); }
+        }
+
+        // top edge of the highest row of panels in screen pixels from the bottom (the same layout as OnGUI); 0 = no row shown
+        internal float PanelTopPx()
+        {
+            if (!barVisible) return 0f;
+            float sc = Screen.height / 1080f * PanelScale;
+            float W = Screen.width / sc, H = Screen.height / sc, top = 0f;
+            for (int row = 0; row < 2; row++)
+            {
+                char kind = row == 0 ? 'F' : 'S';
+                bool any = false;
+                foreach (string cell in SpellFile.PinOrder) if (cell[0] == kind && file.Pins.ContainsKey(cell)) { any = true; break; }
+                if (any) top = Mathf.Max(top, Screen.height - CellRect(0, row, W, H).y * sc);
+            }
+            return top;
         }
 
         static KeyCode FKey(string k)

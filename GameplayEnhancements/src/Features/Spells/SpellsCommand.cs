@@ -36,6 +36,12 @@ namespace HomeCheat.Features.Spells
                 if (!settings.Enabled) throw new CommandException("spells are off (enabled=1)");
                 return "radial: " + bar.OpenRadial();
             });
+            SubAction("probe", "probe=hud (read only: the game's HUD elements in the bottom 40 % of the screen, their anchors, positions and screen pixels, the panel top and what the HUD lift moved)", delegate (Args a)
+            {
+                if (a.Str("probe", "") != "hud") throw new CommandException("probe=hud is the only value");
+                SpellBar bar = Bar();
+                return bar.Lift.Probe(bar.PanelTopPx(), SpellsSettings.HudLiftOn);
+            });
             SubAction("pin", "pin=F1&spell=6.5.3 (this session only)", delegate (Args a) { return Bar().SetPin(a.Str("pin", "").ToUpperInvariant(), a.Str("spell", "")); });
         }
 
@@ -44,7 +50,7 @@ namespace HomeCheat.Features.Spells
         {
             get
             {
-                return "spells [enabled=1|0] [status=1 (also the radial's MaxElementsRange)] [placeholder=1|0 (default 1: fake spells from spells-ui-test.txt, a cast only shows a toast; 0: real spells from spells.txt)] - "
+                return "spells [enabled=1|0] [status=1 (also the radial's MaxElementsRange)] [placeholder=1|0 (default 1: fake spells from spells-ui-test.txt, a cast only shows a toast; 0: real spells from spells.txt)] [hudlift=1|0 (default 1: while the bar shows, the game's stamina, eitr and adrenaline bars and the build requirements move above the panels; this PC only)] - "
                     + "G = radial with our sections and sub-sections (Shift+G vanilla, T emotes; long levels continue as a spiral; ask= spells ask one level per question, right click = previous question); "
                     + "always-on bar of 20 cells in two rows: F1-F10, and 1..0 on Shift+1..Shift+0 (radial Hotbar: Panel 1-5 = Shift+1..5 and F1-F5, Panel 6-0 = Shift+6..Shift+0 and F6-F10); Shift+click a spell in the radial, then click a cell to place it; files BepInEx/config/homecheat/spells-ui-test.txt and spells.txt (format v4, + .pins)";
             }
@@ -89,6 +95,13 @@ namespace HomeCheat.Features.Spells
                 settings.Save();
                 if (settings.Enabled) bar.Baseline();
                 return "spells " + (settings.Enabled ? "ON" : "OFF") + ": " + r + (settings.Enabled ? ". Press G for the radial (Shift+G = vanilla radial); the 10-cell bar is on screen." : ". G opens the vanilla radial again.");
+            }
+            if (a.Str("hudlift", "").Length > 0)
+            {
+                settings.HudLift = a.Flag("hudlift", true);
+                settings.Save();
+                if (!settings.HudLift) bar.Lift.Restore();
+                return "hudlift " + (settings.HudLift ? "ON: the game's bars and build requirements move above the panels while the bar shows" : "OFF: the game's HUD stays where the game draws it");
             }
             if (a.Str("placeholder", "").Length > 0)
             {

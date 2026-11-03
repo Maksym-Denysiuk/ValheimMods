@@ -20,6 +20,7 @@ namespace HomeCheat.Features.Spells
         public int ConsumedFrame = -1;
         public SpellBar Bar;
         public PatchSet Patches;
+        public bool HudLift = true;       // the game's bars and build requirements move above the panels while the bar shows (hudlift=0: off)
         public bool Patched;              // the two patches are in; applied only once a world is loaded (see SpellPatches.EnsureApplied)
 
         public static string Dir { get { return Path.Combine(Paths.ConfigPath, "homecheat"); } }
@@ -31,6 +32,7 @@ namespace HomeCheat.Features.Spells
         public static bool On { get { return Current != null && Current.Enabled; } }
         public static bool IsPlaceholder { get { return Current == null || Current.Placeholder; } }
         public static SpellBar ActiveBar { get { return Current == null ? null : Current.Bar; } }
+        public static bool HudLiftOn { get { return Current != null && Current.HudLift; } }
         public static string ActiveFile { get { return IsPlaceholder ? TestFile : RealFile; } }
 
         public static bool ShiftHeld()
@@ -48,10 +50,10 @@ namespace HomeCheat.Features.Spells
             Current.Save();
         }
 
-        // reads spells.state (enabled=, placeholder=); a missing file or line means enabled=0, placeholder=1
+        // reads spells.state (enabled=, placeholder=, hudlift=); a missing file or line means enabled=0, placeholder=1, hudlift=1
         public void Load()
         {
-            Enabled = false; Placeholder = true;
+            Enabled = false; Placeholder = true; HudLift = true;
             try
             {
                 if (File.Exists(StateFile))
@@ -59,15 +61,16 @@ namespace HomeCheat.Features.Spells
                     string t = File.ReadAllText(StateFile);
                     Enabled = t.Contains("enabled=1");
                     Placeholder = !t.Contains("placeholder=0");
+                    HudLift = !t.Contains("hudlift=0");
                 }
             }
             catch (Exception) { }
         }
 
-        // writes both settings
+        // writes the settings
         public void Save()
         {
-            try { Directory.CreateDirectory(Dir); File.WriteAllText(StateFile, "enabled=" + (Enabled ? "1" : "0") + "\nplaceholder=" + (Placeholder ? "1" : "0") + "\n"); }
+            try { Directory.CreateDirectory(Dir); File.WriteAllText(StateFile, "enabled=" + (Enabled ? "1" : "0") + "\nplaceholder=" + (Placeholder ? "1" : "0") + "\nhudlift=" + (HudLift ? "1" : "0") + "\n"); }
             catch (Exception e) { HomeApi.Log("spells: cannot save state: " + e.Message); }
         }
     }

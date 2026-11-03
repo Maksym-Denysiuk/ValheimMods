@@ -8,3 +8,5 @@ Unity.TextMeshPro.dll
 assembly_utils.dll
 # Input.GetMouseButtonDown
 UnityEngine.InputLegacyModule.dll
+# Canvas, RectTransformUtility (HUD lift)
+UnityEngine.UIModule.dll
