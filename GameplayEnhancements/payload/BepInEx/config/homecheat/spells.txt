@@ -35,8 +35,7 @@
 2.7.2 | Remove mine | op=trap&remove=1 | shift=radius=50 shiftlabel=Remove_mines_r50
 2.7.3 | Place mine field | op=trap&type={kind}&field={field}&safe={safe}&radius={radius}&rows={rows}&perrow={perrow}&scatter=1&at=front&fxboom={fx}&prefab={look}&pvp=1 | button=Set_mines ask=field/Layout:*Radius=1,Rows=0 ask=kind/Mine_type:Random=random,Explosive=mine,Tar=tar,Fence_(soon)=@off ask=safe/Safe_radius?field=1:5,10,30,60 ask=radius/Minefield_radius>safe?field=1:10,20,30,40,50,60,70,80,90,100 ask=rows/Rows?field=0:1,2,*3,5,9 ask=perrow/Items_in_row?field=0:1,3,*5,7,9 ask=fx/Mine_effect:Random=random,Dynamite=dynamite,Grenade=grenade,Lava=lava,Siege=siege,Fireball=fireball,Glacier=glacier,Wrath=wrath,Blue=blue,Shock=shock,Gas=gas ask=look/Mine_texture:Floor_tile=wood_floor_1x1,Sapling=Beech_Sapling,Trap=piece_trap_troll
 2.7.4 | Detonate mines | op=trap&detonate=1&radius=100
-# real form (hc-bow): 2.8 | Bow charge | op=bowcharge&on=1&pvp=1 | shift=on=0 shiftlabel=Bow_charge_off
-2.8 | Bow charge (soon) | @dummy
+2.8 | Bow charge | op=bowcharge&on=1&pvp=1 | shift=on=0 shiftlabel=Bow_charge_off
 4 | Fun
 4.1 | Transform
 4.1.1 | Raven | op=transform&type=raven&toggle=1 | pin=S4
