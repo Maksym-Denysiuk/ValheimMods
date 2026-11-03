@@ -65,6 +65,22 @@ New opt-in parameters:
 - Item prefabs (`ItemDrop`) fall to the ground there like any other spawn; the answer marks them `(items, dropped)`. Creatures get `level=` stars as before.
 - Spell bar 6.4.1 `Spawn...` asks prefab (`@prefabs`), count (1, 5, 10, 50), yaw (0, 90, 180, 270), pitch (0, 90) and player (`@players`), then runs `op=spawn&prefab={prefab}&count={count}&yaw={yaw}&pitch={pitch}&player={player}`.
 
+## spawn: materials for constructions (cost=nearby, since 2026-11-03)
+
+Opt-in, built 2026-11-03 (card [materials-nearby](../Backlog/materials-nearby.md), Maksym: "Our commands only", "Safe chests, menu"), **not yet run in game**: the test list is on the card.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cost` | 0 | `0` = built free, as typed commands always were; `nearby` = per piece your inventory first, then safe chests within `radius` nearest first, the rest built free; `check` = say what `nearby` would take and change nothing |
+| `radius` | 50 | metres around you for `cost=nearby` and `check`; cap 100 (a larger value is lowered and named in the answer) |
+
+- A safe chest is one a player built (no dungeon loot, no tombstones), not another player's private chest, not inside a ward you lack access to, and not open by anyone (a cart in use counts as open). Chests that are skipped are counted in the answer (`1 chest(s) skipped (warded 1)`). Code: `Kit.Materials` (architecture doc, Kit by need).
+- The answer's first line ends with the counts: `materials (radius 50 m): 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40), no undo`.
+- What is taken is gone: no undo gives materials back (removing the build or the plants does not either). Only HomeCheat commands take materials this way; the vanilla hammer and cultivator stay vanilla.
+- Constructions only (a prefab with a `Piece`: workbench, portal, furnace, ships): each costs its recipe (`Piece.m_resources`), taken once it stands. Items and creatures ignore `cost=` (spawn stays a test helper for them), so the Spawn... spell line can pass `cost=nearby` for everything.
+- `cost=check`: `cost=check, nothing built: N <prefab>; materials that would be taken ...`.
+- Spell line: 8 Spawn... passes `cost=nearby`.
+
 ## Files and settings
 
 - Code: `src/Features/World/CoordCommand.cs` (new), `GroundLevelCommand.cs`, `PathCommand.cs`, `SpawnCommand.cs`.

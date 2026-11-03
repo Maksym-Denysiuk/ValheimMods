@@ -131,6 +131,22 @@ World `ClaudeTest`, one command at a time. `op=reload` must name the new `HomeCh
 
 Undo: saplings and grown trees are ordinary world objects (an axe, or a world backup).
 
+## Materials: cost=nearby (plant, field, since 2026-11-03)
+
+Opt-in, built 2026-11-03 (card [materials-nearby](../Backlog/materials-nearby.md), Maksym: "Our commands only", "Safe chests, menu"), **not yet run in game**: the test list is on the card.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cost` | 0 | `0` = built free, as typed commands always were; `nearby` = per piece your inventory first, then safe chests within `radius` nearest first, the rest built free; `check` = say what `nearby` would take and change nothing |
+| `radius` | 50 | metres around you for `cost=nearby` and `check`; cap 100 (a larger value is lowered and named in the answer) |
+
+- A safe chest is one a player built (no dungeon loot, no tombstones), not another player's private chest, not inside a ward you lack access to, and not open by anyone (a cart in use counts as open). Chests that are skipped are counted in the answer (`1 chest(s) skipped (warded 1)`). Code: `Kit.Materials` (architecture doc, Kit by need).
+- The answer's first line ends with the counts: `materials (radius 50 m): 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40), no undo`.
+- What is taken is gone: no undo gives materials back (removing the build or the plants does not either). Only HomeCheat commands take materials this way; the vanilla hammer and cultivator stay vanilla.
+- `plant`: each sapling costs its own recipe (the sapling piece's `m_resources`, for example `Birch_Sapling` -> BirchSeeds 1). `field`: each crop costs the recipe of the seed piece that grows it (`Pickable_Carrot` -> `sapling_carrot` -> CarrotSeeds 1), crop by crop with `crops=`. Only the saplings or crops really planted are paid; cells skipped (blocked, no soil, would not grow, over the cap) cost nothing.
+- `cost=check`: `cost=check, nothing planted: would plant N ...; materials that would be taken (cost=check, nothing taken): ...`.
+- Spell lines: 7.4 Plant trees... and 7.2 Plant food... pass `cost=nearby`.
+
 ## Undo
 
 Planted and placed objects are ordinary world objects: remove them in game (Hoe/Cultivator for soil, an axe or the build tool for the rest) or restore a world backup (make a fresh one before big runs; see [backup-settings-lessons-learned.md](../../../AdminPanelEnchancements/docs/backup-settings-lessons-learned.md)). There is no mod-side undo for these commands; `op=despawn` removes the one object under the crosshair ([despawn.md](despawn.md)). To remove the commands themselves see [README.md](README.md#undo-and-uninstall).

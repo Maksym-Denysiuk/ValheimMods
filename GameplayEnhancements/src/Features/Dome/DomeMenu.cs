@@ -16,6 +16,7 @@ namespace HomeCheat.Features.Dome
     {
         internal static DomeMenu Current;   // the open menu, null when closed
         internal DomeCommand Cmd;
+        internal DomeCommand.DomeCost Cost;   // from the menu's spell line (cost=nearby): what New takes (null = free)
 
         static readonly string[] StatusNames = { "Active", "Deactivated", "Deleted" };
         const float W = 900f, H = 660f, Gap = 6f;
@@ -85,7 +86,7 @@ namespace HomeCheat.Features.Dome
             string answer;
             // New always places what fits (Maksym 2026-10-25: "make decisions on your end"): a blocked ward is searched for nearby,
             // then slid toward the centre, and only then left out; the answer names it
-            try { answer = Cmd.Apply(sel, list, StatusNames[status], true); }
+            try { answer = Cmd.Apply(sel, list, StatusNames[status], true, Cost); }
             catch (CommandException e) { error = e.Message; return; }
             catch (Exception e) { error = e.Message; HomeApi.LogError("dome menu: " + e); return; }
             HomeApi.Log("dome menu: " + answer);

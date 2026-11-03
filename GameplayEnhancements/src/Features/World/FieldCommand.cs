@@ -13,6 +13,8 @@ namespace HomeCheat.Features.WorldCommands
     // area= (W2-world-field, 2026-10-25) plants on a world X/Z grid instead of the grid from your cell: area=coords every cultivated
     // cell in the rectangle between op=coord start and end (no connection rule), area=patch the whole cultivated patch you stand on
     // (FieldPatch.Sample). rows/perrow/dist are ignored there; crops= bands repeat along world Z.
+    // cost=nearby (card materials-nearby, 2026-11-03; the Plant food spell passes it): each crop's seeds (the m_resources of
+    // the seed piece that grows it) from you, then safe chests within radius=, the rest free (MaterialCost); cost=check plants nothing.
     public sealed class FieldCommand : CommandBase
     {
         const int MaxCells = 40000, MaxPlanted = 10000;   // planted per cast (was 2500: a 4000 m2 patch stopped at a third, test 2026-10-25)
@@ -22,7 +24,7 @@ namespace HomeCheat.Features.WorldCommands
         public override string Name { get { return "field"; } }
         protected override string Usage
         {
-            get { return "field prefab=<Pickable_*> | crops=<a:n,b:n> [rows=1] [perrow=1] [spacing=<minimum for the crops, from the game: carrot 0.68 m>] [scale=1] [clear=0.4] [dist=<m from you to row 1, default 0 = your own cell>] [area=aim|coords|patch (aim = left out: rows and perrow from your cell; coords: every cultivated cell in the rectangle of op=coord start and end; patch: the whole cultivated patch you stand on; rows, perrow, dist ignored)] - crops on the cultivated soil connected to your cell (own grid, may be denser than op=cultivate); caps " + MaxCells + " cells examined, " + MaxPlanted + " planted"; }
+            get { return "field prefab=<Pickable_*> | crops=<a:n,b:n> [rows=1] [perrow=1] [spacing=<minimum for the crops, from the game: carrot 0.68 m>] [scale=1] [clear=0.4] [dist=<m from you to row 1, default 0 = your own cell>] [area=aim|coords|patch (aim = left out: rows and perrow from your cell; coords: every cultivated cell in the rectangle of op=coord start and end; patch: the whole cultivated patch you stand on; rows, perrow, dist ignored)] " + Materials.Usage + " (each crop's seeds) - crops on the cultivated soil connected to your cell (own grid, may be denser than op=cultivate); caps " + MaxCells + " cells examined, " + MaxPlanted + " planted"; }
         }
 
         protected override string Execute(Args a)
@@ -34,6 +36,8 @@ namespace HomeCheat.Features.WorldCommands
             if (prefab.Length == 0 && crops.Length == 0) throw new CommandException("prefab (or crops) required, e.g. prefab=Pickable_Carrot");
             int rows = a.Int("rows", 1), cols = a.Int("perrow", a.Int("cols", 1));
             float spacing = a.Float("spacing", 0f), scale = a.Float("scale", 1f), clear = a.Float("clear", 0.4f);
+            string radiusNote;
+            MaterialCost cost = MaterialCost.From(a, out radiusNote);
 
             List<string> names = new List<string>();
             List<GameObject> prefabs = new List<GameObject>();
@@ -62,7 +66,7 @@ namespace HomeCheat.Features.WorldCommands
                 if (spacing <= 0f) spacing = 1.5f;
                 spacingNote = "spacing " + spacing.ToString("F2") + " m (minimum: " + src + ")";
             }
-            if (area.Length > 0) return AreaField(a, area, names, prefabs, counts, spacing, scale, clear, spacingNote);
+            if (area.Length > 0) return AreaField(a, area, names, prefabs, counts, spacing, scale, clear, spacingNote, cost, radiusNote);
             Anchor an =FieldAnchor.AheadOfPlayer(Players.Local, a, spacing);
             int totalRows = 0;
             foreach (int n in counts) totalRows += n;
@@ -100,13 +104,14 @@ namespace HomeCheat.Features.WorldCommands
                 }
             StringBuilder per = new StringBuilder();
             for (int k = 0; k < prefabs.Count; k++) per.Append(" ").Append(names[k]).Append("=").Append(madeOf[k]);
-            string batches = Spawn(todo, scale);
-            return "planted " + made + batches + " (" + per.ToString().Trim() + ") on the soil connected to your cell; " + apart + " cultivated cells not connected, "
-                + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + NoGrow(noGrow, noGrowWhy) + Capped(capped) + "; " + spacingNote;
+            string mat = Pay(cost, prefabs, madeOf, radiusNote);
+            string batches = cost.CheckOnly ? "" : Spawn(todo, scale);
+            return Planted(cost) + made + batches + " (" + per.ToString().Trim() + ") on the soil connected to your cell; " + apart + " cultivated cells not connected, "
+                + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + NoGrow(noGrow, noGrowWhy) + Capped(capped) + "; " + spacingNote + mat;
         }
 
         // area=coords | patch: a world X/Z grid over the rectangle (coords) or the patch's bounding box (patch), GridMath.RectCells
-        string AreaField(Args a, string area, List<string> names, List<GameObject> prefabs, List<int> counts, float spacing, float scale, float clear, string spacingNote)
+        string AreaField(Args a, string area, List<string> names, List<GameObject> prefabs, List<int> counts, float spacing, float scale, float clear, string spacingNote, MaterialCost cost, string radiusNote)
         {
             Host.RequireWorld();
             Player p = Players.Local;
@@ -159,11 +164,27 @@ namespace HomeCheat.Features.WorldCommands
             StringBuilder per = new StringBuilder();
             for (int k = 0; k < prefabs.Count; k++) per.Append(" ").Append(names[k]).Append("=").Append(madeOf[k]);
             bool ignored = a.Has("rows") || a.Has("perrow") || a.Has("cols") || a.Has("dist");
-            string batches = Spawn(todo, scale);
-            return "planted " + made + batches + " (" + per.ToString().Trim() + ") in " + where + ", grid " + cols + " x " + rows + "; "
+            string mat = Pay(cost, prefabs, madeOf, radiusNote);
+            string batches = cost.CheckOnly ? "" : Spawn(todo, scale);
+            return Planted(cost) + made + batches + " (" + per.ToString().Trim() + ") in " + where + ", grid " + cols + " x " + rows + "; "
                 + (patch != null ? apart + " cultivated cells not in this patch, " : "") + noSoil + " cells without cultivated soil, " + blocked + " blocked by objects" + NoGrow(noGrow, noGrowWhy)
                 + Capped(capped) + "; " + spacingNote
-                + (ignored ? "; rows/perrow/dist ignored with area=" : "");
+                + (ignored ? "; rows/perrow/dist ignored with area=" : "") + mat;
+        }
+
+        static string Planted(MaterialCost cost)
+        {
+            return cost.CheckOnly ? "cost=check, nothing planted: would plant " : "planted ";
+        }
+
+        // cost=nearby|check: the seeds of every crop planted, crop by crop (one run: the chests are found once)
+        static string Pay(MaterialCost cost, List<GameObject> prefabs, int[] madeOf, string radiusNote)
+        {
+            MaterialsRun mats = cost.Begin(Players.Local);
+            if (mats == null) return "";
+            for (int k = 0; k < prefabs.Count; k++)
+                if (madeOf[k] > 0) mats.Take(MaterialCost.Times(MaterialCost.Recipe(prefabs[k]), madeOf[k]));
+            return cost.Line(mats, radiusNote);
         }
 
         // spawns the crops BatchSize at a time, BatchGap s apart; " in 18 batches over 1.7 s" when more than one

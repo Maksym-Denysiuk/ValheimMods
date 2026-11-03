@@ -4,6 +4,10 @@
 // larger zone; the group acts as one (on/off and the permitted list are copied to every ward by the host).
 // Not here yet: the server monster guard (step 4), the owner panel and hover text (step 5), extra effects (step 6).
 // All logic is host only: the wards are shared world data.
+// Materials (card materials-nearby, Maksym 2026-11-03): cost=0 free (default); cost=1 the ward recipe from your inventory, all
+// or nothing (as before); cost=nearby Kit.Materials per ward (you, then safe chests within radius= nearest first, the rest
+// free), taken for the wards really placed; cost=check = a preview that says what nearby would take. The Ward spell line
+// (6.6) opens the menu with cost=nearby, and the menu's Apply passes it on.
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -41,11 +45,11 @@ namespace HomeCheat.Features.Dome
         public DomeCommand()
         {
             SubAction("step", "step=mark [point=start|end] (stand on a point: first the start, then the end; uses the coord points)"
-                + " | step=build from=coords|x,z [to=x,z] [cost=0] [partial=0] [preview=0] [bury=1 (0 = on the surface, with the water / building / slope checks)] (as without step)"
+                + " | step=build from=coords|x,z [to=x,z] [cost=0|1|nearby|check] [radius=50] [partial=0] [preview=0] [bury=1 (0 = on the surface, with the water / building / slope checks)] (as without step)"
                 + " | step=list (every dome: centre, radius, wards, on/off, permitted)"
                 + " | step=remove [confirm=0] (the dome at the crosshair with all its wards; without confirm=1 only says what it would remove)"
-                + " | step=menu (the ward menu: New or one of your groups, Allowed players, Status; Apply)"
-                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=1 (New, as the menu: blocked wards slide inland, else are left out; 0 = place nothing when one is blocked)] (the menu's Apply as a command)"
+                + " | step=menu [cost=0|1|nearby] [radius=50] (the ward menu: New or one of your groups, Allowed players, Status; Apply; its New takes materials as cost= says)"
+                + " | step=apply group=new|<n> [allow=<name>,...] [status=active|deactivated|deleted] [partial=1 (New, as the menu: blocked wards slide inland, else are left out; 0 = place nothing when one is blocked)] [cost=0|1|nearby|check] [radius=50] (the menu's Apply as a command)"
                 + " | step=show [alpha=0.1] [on=1] (TEST AID, this PC only: a see-through half-sphere of the ward radius over every active dome ward, a colour per ward, centred on it with its own radius, redrawn on changes; on=0 removes)",
                 delegate (Args a) { return Step(a); });
         }
@@ -56,7 +60,7 @@ namespace HomeCheat.Features.Dome
         {
             get
             {
-                return "dome step=menu (the ward menu of the spell bar: New or one of your groups, Allowed players, Status) | dome from=coords | from=x,z&to=x,z [cost=0 (1 = take the ward materials from your inventory)] [partial=0 (1 = skip spots that"
+                return "dome step=menu (the ward menu of the spell bar: New or one of your groups, Allowed players, Status) | dome from=coords | from=x,z&to=x,z [cost=0 (1 = the ward materials from your inventory, all or nothing; nearby = per ward from you, then safe chests within radius= nearest first, the rest free; check = say what nearby would take, place nothing)] [radius=50 (cap " + Fmt.F(Kit.Materials.MaxRadius, 0) + ", cost=nearby|check)] [partial=0 (1 = skip spots that"
                     + " cannot take a ward, leaving gaps)] [preview=0 (1 = only say where the wards would go)] - a protected zone of vanilla wards between two"
                     + " points on opposite edges (centre = midpoint, radius = half the distance + 10 %, cap " + Fmt.F(MaxRadius, 0) + " m): one ward while the zone"
                     + " fits in one ward's radius, else a group of up to " + MaxWards + " wards without gaps; you are their creator, as with the hammer;"
@@ -79,7 +83,7 @@ namespace HomeCheat.Features.Dome
             if (step == "build") return Build(a);
             if (step == "list") return List();
             if (step == "remove") return Remove(a);
-            if (step == "menu") return OpenMenu();
+            if (step == "menu") return OpenMenu(a);
             if (step == "apply") return ApplyStep(a);
             if (step == "show") return Show(a);
             throw new CommandException("step=" + step + " is unknown: menu, apply, mark, build, list, remove or show");
@@ -137,7 +141,32 @@ namespace HomeCheat.Features.Dome
                 s = ParseXZ("from", from);
                 e = ParseXZ("to", a.Required("to", "to=x,z (the point on the opposite edge)"));
             }
-            return PlaceZone(s, e, a.Flag("cost", false), a.Flag("partial", false), a.Flag("preview", false), null, a.Flag("bury", true));
+            return PlaceZone(s, e, DomeCost.From(a), a.Flag("partial", false), a.Flag("preview", false), null, a.Flag("bury", true));
+        }
+
+        // cost=0|1|nearby|check and radius= (the materials radius, capped at Kit.Materials.MaxRadius)
+        internal sealed class DomeCost
+        {
+            public string Mode = "0";
+            public float Radius = Kit.Materials.DefaultRadius;
+            public string Note = "";
+            public bool Nearby { get { return Mode == "nearby" || Mode == "check"; } }
+
+            public static DomeCost From(Args a)
+            {
+                DomeCost c = new DomeCost();
+                string v = a.Str("cost", "0").Trim().ToLowerInvariant();
+                if (v == "" || v == "0" || v == "false" || v == "off" || v == "no") v = "0";
+                else if (Args.IsTrue(v)) v = "1";
+                if (v != "0" && v != "1" && v != "nearby" && v != "check")
+                    throw new CommandException("cost must be 0, 1 (your inventory, all or nothing), nearby (you, then safe chests, the rest free) or check");
+                c.Mode = v;
+                float r = a.Float("radius", Kit.Materials.DefaultRadius);
+                if (r < 0f) throw new CommandException("radius must be >= 0");
+                if (c.Nearby && r > Kit.Materials.MaxRadius) c.Note = " (radius " + Fmt.F(r, 0) + " lowered to the cap " + Fmt.F(Kit.Materials.MaxRadius, 0) + " m)";
+                c.Radius = Mathf.Min(r, Kit.Materials.MaxRadius);
+                return c;
+            }
         }
 
         // covers the circle between s and e plus 10 % (DomeLayout.Margin) with wards of the caller. Lattice spots whose cell your
@@ -145,9 +174,11 @@ namespace HomeCheat.Features.Dome
         // join that group (several touched: they merge into the lowest number), else they form a new group.
         // wanted: the state of a new group (the menu's Allowed and Status); null = the first new ward's own state.
         // Joining a group keeps the group's on/off; its permitted list gains the wanted players.
-        internal string PlaceZone(Vector3 s, Vector3 e, bool cost, bool partial, bool preview, WardState wanted, bool bury)
+        internal string PlaceZone(Vector3 s, Vector3 e, DomeCost cost, bool partial, bool preview, WardState wanted, bool bury)
         {
             Host.RequireServer();
+            if (cost == null) cost = new DomeCost();
+            if (cost.Mode == "check") preview = true;   // cost=check places nothing
             Player p = Players.Local;
             long me = p.GetPlayerID();
             float cx, cz, radius;
@@ -213,10 +244,11 @@ namespace HomeCheat.Features.Dome
 
             Piece piece = prefab.GetComponent<Piece>();
             string paid = "";
-            if (cost && !preview) paid = Pay(p, piece, good);
+            if (cost.Mode == "1" && !preview) paid = Pay(p, piece, good);
 
             if (preview)
-                return "preview: " + good + " ward(s) would be placed" + (bad > 0 ? ", " + bad + " spot(s) skipped (gaps)" : "") + skippedCovered + " (" + zone + ")" + joins
+                return (cost.Mode == "check" ? "cost=check, nothing placed: " : "preview: ") + good + " ward(s) would be placed" + (bad > 0 ? ", " + bad + " spot(s) skipped (gaps)" : "") + skippedCovered + " (" + zone + ")" + joins
+                    + (cost.Nearby ? Nearby(p, piece, good, cost, true) : "")
                     + Lines(spots, true) + (bad > 0 ? "\n  skipped: " + Refusals(spots) : "");
 
             string id;
@@ -244,6 +276,7 @@ namespace HomeCheat.Features.Dome
                 placed.Add(z);
             }
             if (placed.Count == 0) throw new CommandException("no ward could be created (the guard_stone prefab has no network view?)");
+            if (cost.Mode == "nearby") paid = Nearby(p, piece, placed.Count, cost, false);   // only the wards really placed
 
             // the whole group after this build: the new wards and every ward of the touched groups
             List<ZDO> all = new List<ZDO>(placed);
@@ -379,7 +412,7 @@ namespace HomeCheat.Features.Dome
         // the menu's Apply (and step=apply): group 0 = New (a zone from the coord points), else Group-N of the caller.
         // status: active, deactivated or deleted (all wards removed, no materials back). The caller is the wards' creator and
         // always has access, so the permitted list holds only the others.
-        internal string Apply(int no, List<KeyValuePair<long, string>> allowed, string status, bool partial)
+        internal string Apply(int no, List<KeyValuePair<long, string>> allowed, string status, bool partial, DomeCost cost)
         {
             Host.RequireServer();
             long me = Players.Local.GetPlayerID();
@@ -392,7 +425,7 @@ namespace HomeCheat.Features.Dome
             if (no == 0)
             {
                 if (status == "deleted") throw new CommandException("New cannot be Deleted: pick Active or Deactivated");
-                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), false, partial, false, st, true);
+                return PlaceZone(Coords.Require(Coords.Start), Coords.Require(Coords.End), cost, partial, false, st, true);
             }
             Rescan();
             string id = null;
@@ -440,7 +473,7 @@ namespace HomeCheat.Features.Dome
             }
             else if (cur != null) allowed.AddRange(cur.State.Permitted);
             string status = a.Str("status", cur == null ? "active" : (cur.State.Enabled ? "active" : "deactivated"));
-            return Apply(no, allowed, status, a.Flag("partial", true));
+            return Apply(no, allowed, status, a.Flag("partial", true), DomeCost.From(a));
         }
 
         static string KnownNames()
@@ -473,9 +506,11 @@ namespace HomeCheat.Features.Dome
             return "dome show (test aid, only on this PC): " + n + " sphere(s) over the active wards, radius " + Fmt.F(WardArea(true).m_radius, 0) + " m in " + groups.Count + " group(s), a colour per ward, " + Fmt.F(alpha * 100f, 0) + " % visible; op=dome&step=show&on=0 removes them" + wl;
         }
 
-        string OpenMenu()
+        string OpenMenu(Args a)
         {
             Host.RequireServer();
+            DomeCost cost = DomeCost.From(a);
+            if (cost.Mode == "check") throw new CommandException("cost=check is for step=build and step=apply: the menu takes cost=0, 1 or nearby");
             Rescan();
             if (menu == null)
             {
@@ -483,8 +518,10 @@ namespace HomeCheat.Features.Dome
                 menu = go.AddComponent<DomeMenu>();
                 menu.Cmd = this;
             }
+            menu.Cost = cost;
             menu.Open();
-            return "dome menu opened: " + MyGroups().Count + " group(s) of yours, " + DomePlayers.Known().Count + " known player(s)";
+            return "dome menu opened: " + MyGroups().Count + " group(s) of yours, " + DomePlayers.Known().Count + " known player(s)"
+                + (cost.Mode == "0" ? "" : "; New takes the ward materials " + (cost.Mode == "1" ? "from your inventory (cost=1)" : "from you, then safe chests within " + Fmt.F(cost.Radius, 0) + " m (cost=nearby)"));
         }
 
         static Vector3 ParseXZ(string key, string text)
@@ -652,6 +689,17 @@ namespace HomeCheat.Features.Dome
             if (wnt != null) wnt.OnPlaced();
             if (piece != null && piece.m_placeEffect != null) piece.m_placeEffect.Create(pos, rot, go.transform, 1f, -1);
             return nv.GetZDO();
+        }
+
+        // cost=nearby: per ward its recipe from you, then safe chests within the radius nearest first, the rest free (Kit.Materials);
+        // check = only counted. One run, so the chests are found once.
+        static string Nearby(Player p, Piece piece, int count, DomeCost cost, bool check)
+        {
+            Kit.MaterialsRun run = Kit.Materials.Begin(p, cost.Radius, check);
+            Piece.Requirement[] reqs = piece != null ? piece.m_resources : null;
+            for (int i = 0; i < count; i++) run.Take(reqs);
+            return check ? "; materials that would be taken (nothing taken): " + run.Report.Summary() + cost.Note
+                : ", materials (radius " + Fmt.F(cost.Radius, 0) + " m): " + run.Report.Summary() + cost.Note + ", no undo";
         }
 
         // takes count x the ward's recipe from the inventory, after checking all of it is there

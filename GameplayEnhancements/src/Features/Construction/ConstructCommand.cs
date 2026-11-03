@@ -90,6 +90,52 @@ namespace HomeCheat.Features.Construction
             public int Placed, Scaled, Signs, ExtraIgnored, Invalid, Poles;
         }
 
+        // cost=0|nearby|check and radius= (card materials-nearby, Maksym 2026-11-03: our commands only; the construct panel's
+        // spell line passes cost=nearby). nearby: per piece placed its recipe (Piece m_resources) from you, then safe chests
+        // within the radius nearest first, the rest free (Kit.Materials). check: what nearby would take, nothing changes.
+        sealed class Cost
+        {
+            public string Mode = "0";
+            public float Radius = HomeCheat.Kit.Materials.DefaultRadius;
+            public string Note = "";
+
+            public static Cost From(Args a)
+            {
+                Cost c = new Cost();
+                string v = a.Str("cost", "0").Trim().ToLowerInvariant();
+                if (v == "" || v == "0" || v == "false" || v == "off" || v == "no") v = "0";
+                if (v != "0" && v != "nearby" && v != "check")
+                    throw new CommandException("cost must be 0, nearby (materials from you, then safe chests within radius=, the rest free) or check");
+                c.Mode = v;
+                float r = a.Float("radius", HomeCheat.Kit.Materials.DefaultRadius);
+                if (r < 0f) throw new CommandException("radius must be >= 0");
+                if (v != "0" && r > HomeCheat.Kit.Materials.MaxRadius) c.Note = " (radius " + Fmt.F(r, 0) + " lowered to the cap " + Fmt.F(HomeCheat.Kit.Materials.MaxRadius, 0) + " m)";
+                c.Radius = Mathf.Min(r, HomeCheat.Kit.Materials.MaxRadius);
+                return c;
+            }
+
+            // what the panel adds to its Start form
+            public string Form()
+            {
+                return Mode == "0" ? "" : "&cost=" + Mode + (Mathf.Abs(Radius - HomeCheat.Kit.Materials.DefaultRadius) > 0.01f ? "&radius=" + Fmt.F(Radius, 0) : "");
+            }
+        }
+
+        string lastMaterials = "";   // the last build's materials line (cost=nearby), for step=status
+
+        // the recipe of every job (a support pole costs its own recipe too); check = only counted
+        static void TakeAll(HomeCheat.Kit.MaterialsRun run, List<Job> jobs)
+        {
+            foreach (Job j in jobs) TakeOne(run, j);
+        }
+
+        static void TakeOne(HomeCheat.Kit.MaterialsRun run, Job j)
+        {
+            if (run == null || j.Prefab == null) return;
+            Piece gp = j.Prefab.GetComponent<Piece>();
+            if (gp != null) run.Take(gp.m_resources);
+        }
+
         public override string Name { get { return "construct"; } }
         protected override string Usage
         {
@@ -101,9 +147,9 @@ namespace HomeCheat.Features.Construction
                     + " m up (pieces that need ground: stone, other non-wood, loose objects; not non-wood resting on non-wood straight down to the ground); flatten = only the levelling; pillars = poles under bottom pieces, terrain unchanged)]"
                     + " [base=floor|lowest (floor: the ground floor on the base, foundations below it sunk)] [material=blueprint|<family> (step=materials lists them)]"
                     + " (5 columns of " + PillarStack + " poles at the corners and centre, and the plan's doors at their place, on poles where they hang; the plan is kept per world in construct.state)"
-                    + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] | step=remove (poles down, nothing built)"
+                    + " | step=rotate [by=90] | step=start&confirm=1 [overlap=0 (1 = build even with player-built pieces inside the footprint)] " + HomeCheat.Kit.Materials.Usage + " (per piece placed; check works without confirm=1 and builds nothing) | step=remove (poles down, nothing built)"
                     + " | step=level&name=<construction> [at=] [yaw=] [ground=flatten|fit] (only the ground, no pieces: task 0, then build with ground=none; the plan is kept) | step=flatness (read-only) | step=materials&name= (read-only)"
-                    + " | step=place&name=<construction> (direct, no preview; same keys)"
+                    + " | step=place&name=<construction> (direct, no preview; same keys, cost= too)"
                     + " | step=place&continue=1 [count=1 (max " + MaxCopies + ")] [name=<default the aimed build's>] (aim at the top of a build: the next copy stacks on it, no ground change)"
                     + " | step=support [id=<default the last>] (read-only) | step=ground [id=] (read-only: terrain against the lowest piece of every 1 m cell) | step=clear [id=] (read-only: the world's objects still in the build's clearing box, pivot or body, and the build's own loose objects) | step=fit&name=<construction> [at=] [yaw=] (read-only: what ground=fit would raise here, with and without the carried rule, against the terrain now) | step=status | step=undo [id=<build id, default the last>] [items=0 (1 = also the items dropped inside the build's box + 2 m)] [confirm=1]"
                     + " - builds a blueprint from BepInEx/config/homecheat/blueprints/ (a file = one construction, a subfolder = one construction of all its files);"
@@ -115,16 +161,18 @@ namespace HomeCheat.Features.Construction
 
         public ConstructCommand()
         {
-            SubFlag("panel", "panel=1 (opens the construct panel: constructions, versions, material, ground, state, one button per step)", delegate (Args a) { return OpenPanel(); });
+            SubFlag("panel", "panel=1 [cost=0|nearby] [radius=50] (opens the construct panel: constructions, versions, material, ground, state, one button per step; its Start sends cost= on)", delegate (Args a) { return OpenPanel(a); });
         }
 
         bool panelPatched;
 
         // the panel (card A1): an object for this world, the cursor patch applied the first time, inside a world
-        string OpenPanel()
+        string OpenPanel(Args a)
         {
             Host.RequireServer();
             Player p = Players.Local;
+            Cost cost = Cost.From(a);
+            if (cost.Mode == "check") throw new CommandException("cost=check is for step=start: the panel takes cost=0 or nearby");
             if (!panelPatched)
             {
                 System.Reflection.MethodInfo m = typeof(TextInput).GetMethod("IsVisible", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
@@ -138,8 +186,9 @@ namespace HomeCheat.Features.Construction
                 OwnInWorld(go);
                 ConstructPanel.Current = go.AddComponent<ConstructPanel>();
             }
+            ConstructPanel.Current.CostForm = cost.Form();
             ConstructPanel.Current.Open();
-            return "construct panel open (Esc or Close hides it)";
+            return "construct panel open (Esc or Close hides it)" + (cost.Mode == "nearby" ? "; Start construction takes materials from you, then safe chests within " + Fmt.F(cost.Radius, 0) + " m, the rest free (cost=nearby)" : "");
         }
 
         protected override void OnUnload()
@@ -150,7 +199,7 @@ namespace HomeCheat.Features.Construction
         protected override void OnWorldExit()
         {
             ConstructPanel.Current = null;
-            lastId = ""; lastName = ""; lastPlaced = 0;
+            lastId = ""; lastName = ""; lastPlaced = 0; lastMaterials = "";
             lastDoors = null; lastDoorsMark = "";
         }
 
@@ -399,11 +448,13 @@ namespace HomeCheat.Features.Construction
             Host.RequireServer();
             Player p = Players.Local;
             BlueprintEntry e = Require(a.Required("name", "op=construct&step=list shows the names"));
-            return Build(MakePlan(a, p, e), e, p, a.Flag("overlap", false), false);
+            Cost cost = Cost.From(a);
+            if (cost.Mode == "check") return CheckMaterials(MakePlan(a, p, e), e, p, cost);
+            return Build(MakePlan(a, p, e), e, p, a.Flag("overlap", false), false, cost);
         }
 
         // restore: a build from step=start puts its plan and preview poles back when the ground gate stops it
-        string Build(Plan pl, BlueprintEntry e, Player p, bool overlap, bool restore)
+        string Build(Plan pl, BlueprintEntry e, Player p, bool overlap, bool restore, Cost cost)
         {
             int count = Caps.Check("pieces", e.PieceCount, MaxPieces);
             if (count == 0) throw new CommandException(e.Name + " has no pieces");
@@ -469,8 +520,11 @@ namespace HomeCheat.Features.Construction
                 string cleared = ClearSpace(jobs, baseY);
                 HomeApi.Log("construct: " + buildName + " " + cleared);
                 notes.Add(cleared);
-                Run(jobs, id, yaw, buildName, me, t, notes);
+                // materials once the build really starts (after the ground gate), per piece as it is placed
+                HomeCheat.Kit.MaterialsRun mats = cost != null && cost.Mode == "nearby" ? HomeCheat.Kit.Materials.Begin(p, cost.Radius, false) : null;
+                Run(jobs, id, yaw, buildName, me, t, notes, mats, cost != null ? cost.Note : "");
             };
+            lastMaterials = "";
             if (delay <= 0f) build(); else Later(delay, build);
             lastId = id; lastName = e.Name; lastPlaced = jobs.Count;
 
@@ -481,6 +535,8 @@ namespace HomeCheat.Features.Construction
                 + ", ground " + ground + (g != null ? " (" + (g.Legacy > 0 ? g.Legacy + " old hoe stamps removed, " : "") + g.Targets.Count + " vertices levelled, " + g.Raised + " raised, " + g.Carried + " non-wood pieces carried by non-wood, pieces after " + Fmt.F(delay, 1) + " s)" : "")
                 + (t.Poles > 0 ? ", " + t.Poles + " support pole(s)" : "")
                 + ", yaw " + Fmt.F(yaw, 1) + ", id " + id
+                + (cost != null && cost.Mode == "nearby" ? "; materials per piece as it is placed (you, then safe chests within " + Fmt.F(cost.Radius, 0) + " m, the rest free): "
+                    + (delay <= 0f && jobs.Count <= BatchSize && lastMaterials.Length > 0 ? lastMaterials : "the totals go to LogOutput.log and step=status when the last piece stands") : "")
                 + "; support on screen in " + Fmt.F(delay + CheckAfter, 0) + " s and settled in " + Fmt.F(delay + SettleCheck, 0) + " s (op=construct&step=support)";
         }
 
@@ -766,13 +822,16 @@ namespace HomeCheat.Features.Construction
             Plan pl = RequirePlan();
             BlueprintEntry e = Require(pl.Name);
             bool overlap = a.Flag("overlap", false);
+            Cost cost = Cost.From(a);
+            if (cost.Mode == "check") return CheckMaterials(pl, e, p, cost);
             if (!a.Flag("confirm", false)) return "would build " + Describe(pl, e) + ": add confirm=1";
+            string estimate = cost.Mode == "nearby" ? Estimate(pl, e, p, cost) : "";
             int removed = RemovePillars(pl.PillarId);
             ClearPlan(pl.World);
             // the poles go at the end of this frame: build a moment later so the pole check and the keep-away do not see them
             Later(PillarClear, delegate
             {
-                try { HomeApi.Log("construct: start " + Build(pl, e, p, overlap, true)); }
+                try { HomeApi.Log("construct: start " + Build(pl, e, p, overlap, true, cost)); }
                 catch (CommandException ex)
                 {
                     SavePlan(pl);
@@ -781,7 +840,36 @@ namespace HomeCheat.Features.Construction
                     HomeApi.Log("construct: start refused: " + ex.Message + " (plan and poles restored)");
                 }
             });
-            return "building " + pl.Name + ": " + removed + " preview objects removed (poles, torches, doors), construction starts in " + Fmt.F(PillarClear, 1) + " s (the result shows on screen; op=construct&step=support)";
+            return "building " + pl.Name + ": " + removed + " preview objects removed (poles, torches, doors), construction starts in " + Fmt.F(PillarClear, 1) + " s" + estimate
+                + " (the result shows on screen; op=construct&step=support)";
+        }
+
+        // cost=check (step=start or place): what cost=nearby would take for the plan's pieces; nothing is taken or built, the plan stays
+        string CheckMaterials(Plan pl, BlueprintEntry e, Player p, Cost cost)
+        {
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
+            HomeCheat.Kit.MaterialsRun run = HomeCheat.Kit.Materials.Begin(p, cost.Radius, true);
+            TakeAll(run, jobs);
+            return "cost=check, nothing built: " + pl.Name + " (" + jobs.Count + " pieces" + (skipped > 0 ? ", " + skipped + " unknown, skipped" : "") + ") would take "
+                + run.Report.Summary() + cost.Note + " within " + Fmt.F(cost.Radius, 0) + " m; a stone foundation or support poles the ground step adds are not counted";
+        }
+
+        // cost=nearby on start: the counts now, before the ground step (the real take is per piece as it is placed)
+        string Estimate(Plan pl, BlueprintEntry e, Player p, Cost cost)
+        {
+            List<string> missing = new List<string>();
+            int skipped;
+            Vector3 origin;
+            string floorText;
+            List<Job> jobs = Layout(pl, e, missing, out skipped, out origin, out floorText);
+            HomeCheat.Kit.MaterialsRun run = HomeCheat.Kit.Materials.Begin(p, cost.Radius, true);
+            TakeAll(run, jobs);
+            return "; materials (cost=nearby, radius " + Fmt.F(cost.Radius, 0) + " m), counted now: " + run.Report.Summary() + cost.Note
+                + "; taken per piece as it is placed, totals in LogOutput.log and step=status, no undo";
         }
 
         string RemovePlan()
@@ -848,7 +936,7 @@ namespace HomeCheat.Features.Construction
 
             string id = e.Name + "-" + DateTime.Now.ToString("yyyyMMddHHmmss");
             Tally t = new Tally();
-            Run(jobs, id, yaw, e.Name, p.GetPlayerID(), t, new List<string>());
+            Run(jobs, id, yaw, e.Name, p.GetPlayerID(), t, new List<string>(), null, "");
             lastId = id; lastName = e.Name; lastPlaced = jobs.Count;
             return (jobs.Count <= BatchSize ? "placed " + t.Placed : "placing " + jobs.Count) + " of " + e.Name + " in " + copies + " cop" + (copies == 1 ? "y" : "ies")
                 + " on " + fromId + " (shift " + Fmt.F(dx, 2) + "," + Fmt.F(dy, 2) + "," + Fmt.F(dz, 2) + " a copy, " + shared.Count + " shared landing piece(s) not placed twice"
@@ -1288,14 +1376,23 @@ namespace HomeCheat.Features.Construction
         }
 
         // places the jobs bottom-up in batches, then reports standing and support
-        void Run(List<Job> jobs, string id, float yaw, string name, long me, Tally t, List<string> notes)
+        void Run(List<Job> jobs, string id, float yaw, string name, long me, Tally t, List<string> notes, HomeCheat.Kit.MaterialsRun mats, string matNote)
         {
             jobs.Sort(delegate (Job l, Job r) { return l.Pos.y.CompareTo(r.Pos.y); });
             int batches = (jobs.Count + BatchSize - 1) / BatchSize;
             for (int bi = 0; bi < batches; bi++)
             {
                 int from = bi * BatchSize, to = Mathf.Min(jobs.Count, from + BatchSize);
-                Action stepAct = delegate { for (int i = from; i < to; i++) PlaceOne(jobs[i], id, yaw, name, me, t); };
+                bool lastBatch = bi == batches - 1;
+                Action stepAct = delegate
+                {
+                    for (int i = from; i < to; i++) { PlaceOne(jobs[i], id, yaw, name, me, t); if (jobs[i].Placed != null) TakeOne(mats, jobs[i]); }
+                    if (lastBatch && mats != null)
+                    {
+                        lastMaterials = mats.Report.Summary() + matNote;
+                        HomeApi.Log("construct: " + name + " materials: " + lastMaterials + " (id " + id + ")");
+                    }
+                };
                 if (bi == 0) stepAct(); else Later(bi * BatchGap, stepAct);
             }
             // the game computes support over several seconds (a fresh piece reads as fully supported until then), so the
@@ -1504,6 +1601,7 @@ namespace HomeCheat.Features.Construction
                 List<ZNetView> mine;
                 int standing = g.TryGetValue(lastId, out mine) ? mine.Count : 0;
                 sb.Append("last build ").Append(lastName).Append(" (id ").Append(lastId).Append("): ").Append(standing).Append(" of ").Append(lastPlaced).Append(" standing");
+                if (lastMaterials.Length > 0) sb.Append("; materials ").Append(lastMaterials);
             }
             else sb.Append("no build in this session");
             Plan pl = LoadPlan(Host.RequireWorld());

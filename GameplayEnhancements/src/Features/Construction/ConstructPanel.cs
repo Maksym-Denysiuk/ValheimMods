@@ -13,6 +13,7 @@ namespace HomeCheat.Features.Construction
     {
         public static ConstructPanel Current;
         public bool Visible;
+        public string CostForm = "";   // "&cost=nearby" from the panel's spell line (card materials-nearby): Start sends it on
 
         static readonly string[] Grounds = new string[] { "auto", "fit", "flatten", "none" };
         const float W = 1100f, H = 720f;
@@ -172,7 +173,7 @@ namespace HomeCheat.Features.Construction
             GUI.enabled = true;
             if (GUI.Button(new Rect(x + 180f, by, 120f, 36f), "Rotate 90", sBtn)) Send("op=construct&step=rotate&by=90");
             if (GUI.Button(new Rect(x + 310f, by, 130f, 36f), "Rotate 22.5", sBtn)) Send("op=construct&step=rotate&by=22.5");
-            if (GUI.Button(new Rect(x + 450f, by, 200f, 36f), "Start construction", sBtnOn)) Send("op=construct&step=start&confirm=1");
+            if (GUI.Button(new Rect(x + 450f, by, 200f, 36f), "Start construction", sBtnOn)) Send("op=construct&step=start&confirm=1" + CostForm);
             if (GUI.Button(new Rect(x + 660f, by, 170f, 36f), "Remove preview", sBtn)) Send("op=construct&step=remove");
             if (GUI.Button(new Rect(x + 840f, by, 220f, 36f), undoArmed ? "Click again: undo" : "Undo last build", undoArmed ? sBtnOn : sBtn))
             {

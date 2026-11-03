@@ -84,7 +84,8 @@ The window is drawn on this PC only (an interface, not world graphics, R0 holds)
 |---|---|---|
 | `from` | required (build) | `coords` (the start and end points) or `x,z` |
 | `to` | required with `from=x,z` | the point on the opposite edge |
-| `cost` | 0 | 1 = take the ward materials from your inventory (all wards at once, refused when short) |
+| `cost` | 0 | 1 = take the ward materials from your inventory (all wards at once, refused when short); `nearby` = per ward placed, from you, then safe chests within `radius`, the rest free; `check` = a preview that also says what `nearby` would take ([Materials](#materials-costnearby-since-2026-11-03)) |
+| `radius` | 50 | `cost=nearby` / `check`: metres around you for chests (cap 100) |
 | `partial` | 0 | 1 = skip spots that cannot take a ward (gaps), place the rest |
 | `preview` | 0 | 1 = only say where the wards would go and which spots are refused; places nothing |
 | `bury` | 1 | 1 = every ward at its exact layout spot, the top 0.3 m under the terrain (`BuryGap`; only unloaded terrain or another player's ward area refuses a spot); 0 = on the surface, with the water, building and slope checks (and `partial=1` slides a blocked spot inland) |
@@ -101,6 +102,22 @@ Answers (first line):
 - errors: `coord 'start' is not set ...`, `the two points are 0.4 m apart ...`, `radius=180.00 is over the cap 150.00`, `wards=61 is over the cap 50`, `cost=1: ...`, `host only: ...`, `no dome at the crosshair ...`
 
 Spell bar (`spells.txt`, 2026-10-25): Build > Ward 6.6, `op=dome&step=menu` (pinned on F3). Renamed from Shield, and Protect and Lights > Shield 3.5 removed with its section, at Maksym's request. Start and end points: Build > Coordinates (`coord`). The former entries 3.5.1-3.5.5 / 6.6.1-6.6.5 (start, end, place, list, remove) are gone; their commands still work typed.
+
+## Materials: cost=nearby (since 2026-11-03)
+
+Opt-in, built 2026-11-03 (card [materials-nearby](../Backlog/materials-nearby.md), Maksym: "Our commands only", "Safe chests, menu"), **not yet run in game**: the test list is on the card.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cost` | 0 | `0` = built free, as typed commands always were; `nearby` = per piece your inventory first, then safe chests within `radius` nearest first, the rest built free; `check` = say what `nearby` would take and change nothing |
+| `radius` | 50 | metres around you for `cost=nearby` and `check`; cap 100 (a larger value is lowered and named in the answer) |
+
+- A safe chest is one a player built (no dungeon loot, no tombstones), not another player's private chest, not inside a ward you lack access to, and not open by anyone (a cart in use counts as open). Chests that are skipped are counted in the answer (`1 chest(s) skipped (warded 1)`). Code: `Kit.Materials` (architecture doc, Kit by need).
+- The answer's first line ends with the counts: `materials (radius 50 m): 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40), no undo`.
+- What is taken is gone: no undo gives materials back (removing the build or the plants does not either). Only HomeCheat commands take materials this way; the vanilla hammer and cultivator stay vanilla.
+- Each ward placed costs the `guard_stone` recipe; wards that cannot be placed (gaps) cost nothing. `cost=1` stays as it was: your inventory only, all wards at once, refused when short.
+- The ward menu: spell 6.6 Build > Ward opens it with `op=dome&step=menu&cost=nearby`; the menu keeps it and its Apply of New takes the materials (the opening answer says so). `step=apply` takes `cost=` and `radius=` the same way. A change to an existing group (on/off, allowed, Deleted) costs nothing.
+- `cost=check` (step=build, step=apply): `cost=check, nothing placed: N ward(s) would be placed ...; materials that would be taken (nothing taken): ...`. The menu refuses `cost=check`.
 
 ## How it works
 

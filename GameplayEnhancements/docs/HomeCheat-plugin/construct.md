@@ -22,10 +22,10 @@ Before: a blueprint downloaded for PlanBuild or InfinityHammer could not be used
 | Step | Form | What happens |
 |---|---|---|
 | list | `op=construct&step=list` | every construction: pieces, footprint, versions of a folder, "stacks" for a repeating blueprint, missing prefabs |
-| panel | `op=construct&panel=1` (spell 6.7.1) | the panel: constructions and versions, material, ground, the state of the plan, one button per step; every button sends the forms below |
+| panel | `op=construct&panel=1[&cost=nearby]` (spell 6.7.1 passes `cost=nearby`) | the panel: constructions and versions, material, ground, the state of the plan, one button per step; every button sends the forms below |
 | preview | `op=construct&step=preview&name=<n>[&material=][&ground=][&base=][&at=][&yaw=]` | 5 columns of 5 core-wood poles with a ground torch at the corners and the centre of the turned footprint, and every door of the plan (doors, gates, grates; not window shutters) at its exact place and turn, on core-wood poles under both ends where it hangs more than 0.15 m; the plan is kept per world in `construct.state`; nothing else changes |
 | rotate | `op=construct&step=rotate&by=90` | turns the plan, moves the columns and the doors |
-| start | `op=construct&step=start&confirm=1` | the preview down (columns, torches, doors), ground step, ground check, stone foundation, the space cleared, the pieces placed; a stopped start puts the plan and the preview back |
+| start | `op=construct&step=start&confirm=1[&cost=nearby\|check][&radius=50]` | the preview down (columns, torches, doors), ground step, ground check, stone foundation, the space cleared, the pieces placed; a stopped start puts the plan and the preview back |
 | remove | `op=construct&step=remove` | the preview down (columns, torches, doors), plan dropped, nothing built |
 | place | `op=construct&step=place&name=<n>[keys as preview]` | the same build without a preview |
 | level | `op=construct&step=level&name=<n>[&ground=flatten\|fit][keys]` | the ground step alone, measured; the plan is kept with `ground=none` |
@@ -33,7 +33,23 @@ Before: a blueprint downloaded for PlanBuild or InfinityHammer could not be used
 | reports | `step=status`, `step=support[&id=]`, `step=ground[&id=]`, `step=flatness`, `step=clear[&id=]`, `step=fit&name=<n>[keys as preview]`, `step=materials&name=` | read-only: plan and builds; support colours and the weak pieces by prefab, plus the last breakage; terrain under every 1 m cell; the last ground step against its targets; the world objects still in a build's clearing box (pivot or body, by kind, the first 8 named) and the build's own loose objects (the blueprint's bushes, pickables, animals); what `ground=fit` would raise at a spot, with and without the carried rule, against the terrain there now, and how many terrain zones another peer owns; the material families |
 | undo | `op=construct&step=undo[&id=][&items=1]&confirm=1` | removes a build's loaded pieces (with `items=1` also the items dropped inside its box + 2 m); without `confirm=1` it only says what it would remove; the ground stays |
 
-Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x,z|x,y,z`; `yaw=` world degrees (default your facing, snapped to 22.5); `ground=auto` (default: on terrain, a rock, a tree or a bush `fit`, on a player-built piece `none`; a natural object under the crosshair is cleared before the build, so the base is the terrain under it) `|fit|flatten|pillars|none`; `base=floor` (default) `|lowest`; `material=blueprint` (default) `|<family>`; `overlap=1` builds over player-built pieces. Caps (refused): 4 000 pieces, 64 m a side, 6 000 levelled vertices, 20 copies, 50 listed; the foundation stops at 1 500 pieces.
+Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x,z|x,y,z`; `yaw=` world degrees (default your facing, snapped to 22.5); `ground=auto` (default: on terrain, a rock, a tree or a bush `fit`, on a player-built piece `none`; a natural object under the crosshair is cleared before the build, so the base is the terrain under it) `|fit|flatten|pillars|none`; `base=floor` (default) `|lowest`; `material=blueprint` (default) `|<family>`; `overlap=1` builds over player-built pieces; `cost=0` (default) `|nearby|check` and `radius=50` on `start`, `place` and the panel ([Materials](#materials-costnearby-since-2026-11-03)). Caps (refused): 4 000 pieces, 64 m a side, 6 000 levelled vertices, 20 copies, 50 listed; the foundation stops at 1 500 pieces.
+
+## Materials: cost=nearby (since 2026-11-03)
+
+Opt-in, built 2026-11-03 (card [materials-nearby](../Backlog/materials-nearby.md), Maksym: "Our commands only", "Safe chests, menu"), **not yet run in game**: the test list is on the card.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cost` | 0 | `0` = built free, as typed commands always were; `nearby` = per piece your inventory first, then safe chests within `radius` nearest first, the rest built free; `check` = say what `nearby` would take and change nothing |
+| `radius` | 50 | metres around you for `cost=nearby` and `check`; cap 100 (a larger value is lowered and named in the answer) |
+
+- A safe chest is one a player built (no dungeon loot, no tombstones), not another player's private chest, not inside a ward you lack access to, and not open by anyone (a cart in use counts as open). Chests that are skipped are counted in the answer (`1 chest(s) skipped (warded 1)`). Code: `Kit.Materials` (architecture doc, Kit by need).
+- The answer's first line ends with the counts: `materials (radius 50 m): 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40), no undo`.
+- What is taken is gone: no undo gives materials back (removing the build or the plants does not either). Only HomeCheat commands take materials this way; the vanilla hammer and cultivator stay vanilla.
+- Per piece as it is placed (after the ground step and its check), so a build the ground gate stops costs nothing; the support poles and stone foundation pieces the build adds cost their recipes too. The `step=start` answer gives the counts at that moment (`materials (cost=nearby, radius 50 m), counted now: ...`); the real totals go to `LogOutput.log` (`construct: <name> materials: ...`) and `step=status` once the last batch is placed.
+- The panel: spell 6.7.1 opens it with `op=construct&panel=1&cost=nearby`; the panel keeps it and its Start construction button sends `op=construct&step=start&confirm=1&cost=nearby`. `step=place&name=<n>` takes `cost=` too; `continue=1` copies are free.
+- `cost=check` on `step=start` (with or without `confirm=1`) or `step=place`: `cost=check, nothing built: <name> (N pieces) would take ...`; the plan stays. The foundation and poles a ground step would add are not counted there.
 
 ## Files and settings
 

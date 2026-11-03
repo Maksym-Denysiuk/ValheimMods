@@ -10,6 +10,8 @@ namespace HomeCheat.Features.WorldCommands
     // area=coords (W3-world-plant, 2026-10-25): the cells of the rectangle with op=coord start and end as opposite corners, edges
     // along world X and Z (GridMath.RectCells); rows/perrow/aimcol ignored. area=aim = the crosshair block (the default).
     // avoid=1: a cell with a player-built piece within clear x scale + PieceMargin is skipped (Constructions.Near).
+    // cost=nearby (card materials-nearby, 2026-11-03; the Plant trees spell passes it): each sapling's seeds (its Piece
+    // m_resources) from you, then safe chests within radius=, the rest free (MaterialCost); cost=check plants nothing.
     public sealed class PlantCommand : CommandBase
     {
         const int MaxSaplings = 2000;   // planted per cast (was 400 and refused a larger Start-end as a whole, test 2026-10-25)
@@ -26,7 +28,7 @@ namespace HomeCheat.Features.WorldCommands
             {
                 return "plant prefab=<Sapling> [rows=1] [perrow=1] [spacing=<2 x grow radius x scale>] [aimcol=<middle>] [scale=1 (cap " + MaxScale
                     + ")] [clear=<auto>] [area=aim|self|coords (self = from you: row 1 one spacing ahead, rows run towards the crosshair; coords = the rectangle of op=coord start and end, edges along world X/Z; rows, perrow, aimcol ignored)]"
-                    + " [avoid=0 (1 = skip cells within clear x scale + " + PieceMargin + " m of a player-built piece)] - saplings at the crosshair; cap " + MaxSaplings + " saplings per cast (more: cast again), " + MaxCells + " cells with area=coords";
+                    + " [avoid=0 (1 = skip cells within clear x scale + " + PieceMargin + " m of a player-built piece)] " + Materials.Usage + " (each sapling's seeds) - saplings at the crosshair; cap " + MaxSaplings + " saplings per cast (more: cast again), " + MaxCells + " cells with area=coords";
             }
         }
 
@@ -40,6 +42,8 @@ namespace HomeCheat.Features.WorldCommands
             int aimcol = a.Int("aimcol", (cols - 1) / 2);
             float spacing = a.Float("spacing", 0f), scale = a.Float("scale", 1f), clear = a.Float("clear", 0f);
             bool avoid = a.Flag("avoid", false);
+            string radiusNote;
+            MaterialCost cost = MaterialCost.From(a, out radiusNote);
             if (scale <= 0f) throw new CommandException("scale must be > 0");
             Caps.Check("scale", scale, MaxScale);
             Player p = Players.Local;
@@ -116,12 +120,14 @@ namespace HomeCheat.Features.WorldCommands
             }
             string avoided = avoid ? ", " + nearPieces + " skipped near buildings (keep " + Fmt.F(keep, 1) + " m"
                 + (firstPiece != null ? ", e.g. " + Constructions.Describe(firstPiece, firstCell) : "") + ")" : "";
-            string batches = Spawn(go, todo, scale);
-            return "planted " + made + batches + " " + prefab + " x" + scale.ToString("F2") + " " + where + ", " + blocked
+            MaterialsRun mats = cost.Begin(p);
+            if (mats != null) mats.Take(MaterialCost.Times(MaterialCost.Recipe(go), todo.Count));
+            string batches = cost.CheckOnly ? "" : Spawn(go, todo, scale);
+            return (cost.CheckOnly ? "cost=check, nothing planted: would plant " : "planted ") + made + batches + " " + prefab + " x" + scale.ToString("F2") + " " + where + ", " + blocked
                 + " blocked by objects (clear radius " + clear.ToString("F2") + ")"
                 + (capped > 0 ? ", " + capped + " over the cap of " + MaxSaplings + " per cast: cast again to plant the rest" : "")
                 + (noGrow > 0 ? ", " + noGrow + " not planted: the game would not let them grow there (" + noGrowWhy + ")" : "") + avoided + ", spacing " + spacing.ToString("F2")
-                + " m (growRadius " + need.ToString("F2") + ")" + tail;
+                + " m (growRadius " + need.ToString("F2") + ")" + tail + cost.Line(mats, radiusNote);
         }
         // the saplings BatchSize at a time, BatchGap s apart; " in 7 batches over 0.6 s" when more than one
         string Spawn(GameObject go, List<Vector3> todo, float scale)

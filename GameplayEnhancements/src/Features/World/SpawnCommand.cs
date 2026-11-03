@@ -16,6 +16,9 @@ namespace HomeCheat.Features.WorldCommands
     // (creator = you, so the hammer can take it down; WearNTear.OnPlaced; its place effect), standing on the ground, facing you
     // (yaw= turns it), several side by side in a row; a ship floats on the water when the ground there is under water;
     // tag= names a portal (TeleportWorld) for pairing.
+    // cost=nearby (card materials-nearby, 2026-11-03; the Spawn spell passes it): constructions only, per piece its recipe
+    // (Piece m_resources) from you, then safe chests within radius=, the rest free (MaterialCost); cost=check builds nothing.
+    // Items and creatures ignore cost= (spawn stays a test aid for them).
     public sealed class SpawnCommand : CommandBase
     {
         const int MaxCount = 100;
@@ -28,7 +31,7 @@ namespace HomeCheat.Features.WorldCommands
                 return "spawn prefab=<name> [count=1 (max " + MaxCount + ")] [dist=4] [level=0 (star level of creatures)]"
                     + " [quality=1 (items: level 1..the item's max, or max; durability always full)] [where=ahead|crosshair|inventory (inventory: items only; player=<another> drops them at his feet)]"
                     + " [player=<nick> (ahead of that player; another player: host only)] [yaw=0] [pitch=0 (degrees, world axes; constructions: yaw turns it from facing you, pitch ignored)] [tamed=0 (1 = creatures spawn tamed; a test aid for tamed-animal hits)]"
-                    + " [tag=<portal name> (portals: the tag that pairs two portals)]; constructions (a Piece: workbench, portal, furnace, ships) are built as by the hammer: on the ground, you as creator, in a row";
+                    + " [tag=<portal name> (portals: the tag that pairs two portals)] " + Materials.Usage + " (constructions only; items and creatures ignore it); constructions (a Piece: workbench, portal, furnace, ships) are built as by the hammer: on the ground, you as creator, in a row";
             }
         }
 
@@ -41,6 +44,8 @@ namespace HomeCheat.Features.WorldCommands
             bool tamed = a.Flag("tamed", false);
             float dist = a.Float("dist", 4f), yaw = a.Float("yaw", 0f), pitch = a.Float("pitch", 0f);
             string where = a.Str("where", "ahead").ToLowerInvariant();
+            string radiusNote;
+            MaterialCost cost = MaterialCost.From(a, out radiusNote);
             if (where != "ahead" && where != "crosshair" && where != "inventory") throw new CommandException("where must be ahead, crosshair or inventory");
             Caps.Check("count", count, MaxCount);
             GameObject go = Prefabs.Require(prefab, "(try op=list&filter=...)");
@@ -85,7 +90,7 @@ namespace HomeCheat.Features.WorldCommands
             bool aimed = false;
             if (where == "crosshair") pos = Aim.Point(p, out aimed) + Vector3.up * 0.5f;
             else pos = at.transform.position + at.transform.forward * dist + Vector3.up;
-            if (go.GetComponent<Piece>() != null) return Build(go, p, at, pos, where == "crosshair", aimed, count, yaw, a.Str("tag", ""));
+            if (go.GetComponent<Piece>() != null) return Build(go, p, at, pos, where == "crosshair", aimed, count, yaw, a.Str("tag", ""), cost, radiusNote);
             Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
             int made = 0;
             for (int i = 0; i < count; i++)
@@ -106,9 +111,16 @@ namespace HomeCheat.Features.WorldCommands
 
         // a construction as Player.PlacePiece makes it (as dome does): on the ground (a ship on the water when the ground is under
         // it), facing the player it is built for, yaw turning it; count > 1 side by side to the right, one width + 0.5 m apart
-        string Build(GameObject go, Player p, Player at, Vector3 pos, bool crosshair, bool aimed, int count, float yaw, string tag)
+        string Build(GameObject go, Player p, Player at, Vector3 pos, bool crosshair, bool aimed, int count, float yaw, string tag, MaterialCost cost, string radiusNote)
         {
             Host.RequireServer();
+            MaterialsRun mats = cost.Begin(p);
+            Piece.Requirement[] recipe = MaterialCost.Recipe(go);
+            if (cost.CheckOnly)
+            {
+                mats.Take(MaterialCost.Times(recipe, count));
+                return "cost=check, nothing built: " + count + " " + go.name + cost.Line(mats, radiusNote);
+            }
             bool ship = go.GetComponent<Ship>() != null;
             Vector3 fwd = at.transform.forward; fwd.y = 0f;
             if (fwd.sqrMagnitude < 0.01f) fwd = Vector3.forward;
@@ -135,13 +147,14 @@ namespace HomeCheat.Features.WorldCommands
                 if (wnt != null) wnt.OnPlaced();
                 if (piece.m_placeEffect != null) piece.m_placeEffect.Create(spot, rot, inst.transform, 1f, -1);
                 if (tag.Length > 0 && inst.GetComponent<TeleportWorld>() != null) { nv.GetZDO().Set("tag", tag); tagged++; }
+                if (mats != null) mats.Take(recipe);   // per piece, once it stands
                 made++;
             }
             string where = crosshair ? (aimed ? " at the crosshair" : " 8 m ahead (nothing under the crosshair within 60 m)") : at == p ? " ahead of you" : " ahead of " + at.GetPlayerName();
             return "built " + made + " " + go.name + where + ", facing " + (at == p ? "you" : at.GetPlayerName()) + (yaw != 0f ? " turned " + Fmt.F(yaw, 0) + " deg" : "")
                 + (count > 1 ? ", in a row " + Fmt.F(step, 1) + " m apart" : "") + (onWater > 0 ? ", " + onWater + " on the water" : "")
                 + (tagged > 0 ? ", portal tag '" + tag + "'" : tag.Length > 0 ? " (tag= ignored: not a portal)" : "")
-                + "; you are the creator (the hammer can take it down); it stays in the world";
+                + cost.Line(mats, radiusNote) + "; you are the creator (the hammer can take it down); it stays in the world";
         }
 
         // the widest box collider of the prefab across x and z (scaled), 2 m without one: the row step of constructions

@@ -3,7 +3,7 @@ description: backlog card materials-nearby (approved 2026-11-03) - build and pla
 ---
 # materials-nearby: build and plant take materials from you, then safe chests, then build free
 
-Status: Kit helper B (built 2026-11-03, selftest; in-game test with its first user, hc-materials); the five command users: approved, wave 2 · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
+Status: B: Kit helper and the five users built 2026-11-03 (selftest, feature builds), not run in game: test list below · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
 Fingerprint: give item (negative) / self, containers / radius 50 m / `Inventory`, `Container`
 
 - Helper: `Kit.Materials.Take(player, requirements, radius, out report)`: per requirement, your inventory first, then containers within `radius` nearest first, the rest free. Per piece, never all or nothing. Report: from you, from N chests, free.
@@ -30,7 +30,41 @@ Fingerprint: give item (negative) / self, containers / radius 50 m / `Inventory`
 - `src/Core/Kit/Materials.cs`: `Materials.Take(player, requirements, radius, out report)` and `Take(..., checkOnly, out report)` for one piece; `Materials.Begin(player, radius, checkOnly)` returns a `MaterialsRun` for many pieces (chests found once, nearest first; `run.Take(reqs)` per piece returns the free count; `run.Report.Summary()` = `10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40); 1 chest(s) skipped (warded 1)`). `Materials.Usage`, `DefaultRadius` 50, `MaxRadius` 100 (clamped).
 - Chests that are not built by a player (dungeon loot, tombstones) are never touched and not counted as skipped. A chest found safe at the start is checked again before each take; one opened since is skipped and that part is free.
 - ASSUMPTION (hc-core, conservative): only player-built containers count as chests, and the ward check runs for every chest, not only those with `m_checkGuardStone`. Maksym may widen it.
-- In-game test: hc-materials (no command uses the helper yet).
+- In-game test: with the users below.
+
+## Built (2026-11-03, hc-materials: the five users)
+
+Pages: [construct.md](../HomeCheat-plugin/construct.md#materials-costnearby-since-2026-11-03), [build-terrain.md](../HomeCheat-plugin/build-terrain.md#spawn-materials-for-constructions-costnearby-since-2026-11-03) (spawn), [dome.md](../HomeCheat-plugin/dome.md#materials-costnearby-since-2026-11-03), [plant-field-place.md](../HomeCheat-plugin/plant-field-place.md#materials-costnearby-plant-field-since-2026-11-03).
+
+- Keys on all five: `cost=0` (default, free; typed commands unchanged) `|nearby|check`, `radius=50` (cap 100, lowered and named). Dome also keeps `cost=1` (inventory only, all or nothing).
+- `construct` (`ConstructCommand.Cost`): `step=start` and `step=place`; materials per piece as `PlaceOne` places it (`TakeOne`, after the ground gate: a refused build costs nothing; poles and foundation pieces pay too). The start answer counts with a check-only run over the plan's pieces ("counted now"); the totals go to the log line `construct: <name> materials: ...` and `step=status` after the last batch. `cost=check` on start or place builds nothing, plan kept. The panel: `panel=1&cost=nearby` stores `&cost=nearby` on `ConstructPanel.CostForm`; Start sends `op=construct&step=start&confirm=1&cost=nearby`. `continue=1` stays free.
+- `spawn` (World `MaterialCost`): constructions only, per piece once it stands; items and creatures ignore `cost=`; `cost=check` builds nothing.
+- `dome` (`DomeCommand.DomeCost`): `nearby` per ward really placed (after placing); `check` = a preview with the counts; the menu (`step=menu&cost=nearby`) keeps a `DomeCost` on `DomeMenu.Cost` and New's Apply passes it; `step=apply` reads `cost=`/`radius=`; the menu refuses `cost=check`.
+- `plant`, `field` (World `MaterialCost`): n x the recipe in one take (`MaterialCost.Times`, same split as n single takes); sapling: its `Piece.m_resources`; crop: the seed piece that grows it (`GrowRules.PlantOf`). Only what is planted pays. `cost=check` plants nothing.
+- Spell lines (hc-menu, not edited here): 6.6 `op=dome&step=menu&cost=nearby`, 6.7.1 `op=construct&panel=1&cost=nearby`, 7.2 field, 7.4 plant, 8 spawn with `&cost=nearby` after the `{...}` answers: the forms pass it through as a plain key (no `ask=` touches it).
+- Promotion candidate (Known defects row): the `cost=`/`radius=` reader exists three times (World `MaterialCost`, `DomeCost`, construct `Cost`); a `Kit.Materials` reader with the next core change.
+- Probe left for the game: the `m_resources` of saplings and crops in this version (expected: `Birch_Sapling` BirchSeeds 1, `sapling_carrot` CarrotSeeds 1); the test reads them from the answers' item lists.
+
+## Test list
+
+Not run: the game was not running on 2026-11-03 (hc-materials waited 10 minutes). World `ClaudeTest`; Claude2 is Maksym's own account. `op=reload` first (the staged world, dome and construction DLLs), `op=cheatstate` before and after; read `BepInEx/LogOutput.log` after each line.
+
+| # | Setup | Command | Expected (first answer line) | Look at |
+|---|---|---|---|---|
+| M1 | none | `op=help&cmd=plant` (and field, spawn, dome, construct) | `Usage` lists `[cost=0 (nearby = ...; check = ...)] [radius=50 (cap 100)]` | the help of all five |
+| M2 | 10 Wood on you, a chest you built 20 m away with 50 Wood, none other within 50 m; a construction preview of 100 Wood (or `step=place` of a 100-wood blueprint) | `op=construct&step=start&cost=check` | `cost=check, nothing built: <name> (N pieces) would take 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40) ...` | inventory and chest unchanged, plan and poles still there |
+| M3 | as M2 | `op=construct&step=start&confirm=1&cost=nearby` | `building <name>: ... materials (cost=nearby, radius 50 m), counted now: 10 from you, 50 from 1 chest(s), 40 free (Wood 10/50/40) ...` | log `construct: <name> materials: 10 from you, 50 from 1 chest(s), 40 free ...`; 0 Wood on you and in the chest; `op=construct&step=status` shows the same line |
+| M4 | a chest with Wood inside a ward of Claude2 that does not permit you, within 50 m; Claude2 online | `op=spawn&prefab=piece_workbench&where=crosshair&cost=nearby` with no Wood on you | `built 1 piece_workbench ...; materials (radius 50 m): 0 from you, 0 from 0 chest(s), 10 free (Wood 0/0/10); 1 chest(s) skipped (warded 1), no undo` | Claude2's chest untouched (ask Maksym or open it as Claude2) |
+| M5 | a chest Claude2 holds open (or private, built by Claude2) | as M4 | skipped with `in use 1` (or `private 1`) | chest untouched |
+| M6 | BirchSeeds 5 on you, 20 in a near chest | `op=plant&prefab=Birch_Sapling&rows=2&perrow=5&cost=nearby` | `planted 10 ...; materials (radius 50 m): 5 from you, 5 from 1 chest(s), 0 free (BirchSeeds 5/5/0), no undo` (amounts from the sapling's recipe) | seeds left: 0 on you, 15 in the chest; probe: the item and amount per sapling |
+| M7 | cultivated patch, CarrotSeeds 3 on you, none in chests | `op=field&prefab=Pickable_Carrot&rows=1&perrow=5&cost=nearby` | `planted 5 ...; materials ...: 3 from you, 0 from 0 chest(s), 2 free (CarrotSeeds 3/0/2)` | probe: the seed item name; 0 CarrotSeeds left |
+| M8 | as M6 | `op=plant&prefab=Birch_Sapling&rows=2&perrow=5&cost=check` | `cost=check, nothing planted: would plant 10 ...; materials that would be taken (cost=check, nothing taken): ...` | no saplings, seeds unchanged |
+| M9 | coord start and end 20 m apart, Stone on you | `op=dome&from=coords&cost=check`, then `op=dome&from=coords&cost=nearby` | check: `cost=check, nothing placed: N ward(s) would be placed ...; materials that would be taken ...`; nearby: `dome Group-N ...; ..., materials (radius 50 m): ...` | wards placed only by the second; items gone per ward |
+| M10 | spell 6.6 Build > Ward | open the menu, New, Apply | opening answer in the log ends `New takes the ward materials from you, then safe chests within 50 m (cost=nearby)`; Apply's answer (on screen) names the materials | as M9 |
+| M11 | spell 6.7.1 | the panel's Start construction | the panel's answer line names `counted now: ...` | as M3 |
+| M12 | spell lines 7.2, 7.4, 8 | one cast each | the answer ends with a materials part | no `cost` error from a form |
+| M13 | typed, no `cost=` | `op=plant&prefab=Birch_Sapling` | no materials part, nothing taken (default unchanged) | inventory unchanged |
+| M14 | none | `op=plant&prefab=Birch_Sapling&cost=1` | `ERROR: cost must be 0, nearby or check ...` | nothing planted |
 
 ## Test log
 
