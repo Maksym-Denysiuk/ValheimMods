@@ -36,7 +36,8 @@ class SpellsSettings <<internal sealed>> {
   +Load()
   +Save()
 }
-class SpellBar <<MonoBehaviour>> {
+class SpellHudLift
+  class SpellBar <<MonoBehaviour>> {
   -file : SpellFile
   ~Root() : SpellRootConfig
   ~MakeNodeElement(node, owner, radial)
@@ -158,4 +159,5 @@ SpellBar ..> SpellLeafConfig
 SpellBar ..> SpellForm : a spell with ask=
 SpellBar ..> Notify : failures only
 SpellGroupConfig ..> SpellGroupConfig : sub-section
+SpellBar ..> SpellHudLift : top edge of the panels
 @enduml

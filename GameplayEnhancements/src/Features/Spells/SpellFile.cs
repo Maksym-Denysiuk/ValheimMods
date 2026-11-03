@@ -25,139 +25,100 @@ namespace HomeCheat.Features.Spells
 "#   title (a group or a sub-section): \"id | label\", or \"id | label | | sticky\" (sticky on a title = every spell below it is sticky)\n" +
 "#   command: the form of an inbox file (op=...&k=v); chain commands with ;;   @dummy only shows a toast (a spell not built yet)\n" +
 "#   flags (space separated): sticky (the radial stays on its level after the cast)  pin=F1..F10|S1..S10 (S = Shift+key: S1..S9 = Shift+1..9, S10 = Shift+0)\n" +
-"#     shift=<form added when Shift is held while casting>\n" +
+"#     shift=<form added when Shift is held while casting> or shift=@<id> (Shift casts that spell)  shiftlabel=<name of the Shift version, \"_\" = space>\n" +
+"#     (Shift+F on an F cell casts the Shift version; the bar shows its name under the cell; Shift+1..= cells have none)\n" +
 "#     ask=<key>:<Label=value,...> one radial level per ask flag, in order; the answer replaces {key} in the command; \"_\" in a\n" +
 "#     label shows as a space; dynamic answers: @players @crops @trees @prefabs (more than 40 answers are split A-Z into sub-levels).\n" +
 "#     Back (right click) goes to the previous question, closing the radial cancels.\n" +
 "# F5 is also the game console key: a pin on F5 opens the console as well.\n" +
 "# \"(soon)\" lines: the command arrives later; the line above each one is its real form, swapped in by the session that builds it.\n" +
 "2 | Attack\n" +
-"2.1 | Arrow | op=spellshot&type=arrow | pin=F1 shift=perrow=3&rows=3\n" +
-"2.2 | Arrow 3x3 | op=spellshot&type=arrow&perrow=3&rows=3\n" +
-"2.3 | Balista | op=spellshot&type=balistashot\n" +
-"2.4 | Thunderbolt | op=spellshot&type=thunderbolt\n" +
-"2.5 | Quake (damage) | op=earthquake&damage=1&noStones=1&players=0\n" +
-"2.6 | Slime ring | op=slime&hurtself=0\n" +
-"2.7 | Stone circle | op=earthquake&damage=1&players=0\n" +
-"2.8 | Stone circle (trolls) | op=earthquake&damage=1&mode=strong&players=0\n" +
-"2.9 | Thunderbolt wall 5x2 | op=spellshot&type=thunderbolt&perrow=5&rows=2\n" +
-"# real form (W1-harpoon): 2.10 | Harpoon | op=spellshot&type=harpoon\n" +
-"2.10 | Harpoon (soon) | @dummy\n" +
-"# real form (W3-mines): 2.11 | Place mine | op=mine\n" +
-"2.11 | Place mine (soon) | @dummy\n" +
-"# real form (W3-mines): 2.12 | Remove mines | op=mine&remove=1&radius=10\n" +
-"2.12 | Remove mines (soon) | @dummy\n" +
-"3 | Protect\n" +
-"3.1 | Push away | op=earthquake&noStones=1&players=0 | pin=F2 shift=mode=strong\n" +
-"3.2 | Stone circle | op=earthquake&damage=1&players=0 | pin=S2 shift=mode=strong\n" +
-"3.3 | Strong push | op=earthquake&mode=strong&noStones=1&players=0\n" +
-"3.4 | Slime moat | op=slime&gap=3&hurtself=0\n" +
-"3.5 | Shield\n" +
-"# real form (W1-world-build): 3.5.1 | Start point | op=coord&set=start\n" +
-"3.5.1 | Start point (soon) | @dummy\n" +
-"# real form (W1-world-build): 3.5.2 | End point | op=coord&set=end\n" +
-"3.5.2 | End point (soon) | @dummy\n" +
-"# real form (W2-dome): 3.5.3 | Place shield | op=dome&from=coords\n" +
-"3.5.3 | Place shield (soon) | @dummy\n" +
-"# real form (W2-dome): 3.5.4 | List shields | op=dome&step=list\n" +
-"3.5.4 | List shields (soon) | @dummy\n" +
-"# real form (W2-dome): 3.5.5 | Remove shield | op=dome&step=remove\n" +
-"3.5.5 | Remove shield (soon) | @dummy\n" +
+"2.1 | Arrows\n" +
+"2.1.1 | Arrow | op=spellshot&type=arrow&pvp=1 | pin=F1 shift=@2.1.2\n" +
+"2.1.2 | Arrow 3x3 | op=spellshot&type=arrow&perrow=3&rows=3&pvp=1 | shift=spread=10 shiftlabel=Arrow_3x3_fan\n" +
+"2.2 | Balista\n" +
+"2.2.1 | Balista | op=spellshot&type=balistashot&pvp=1 | shift=@2.2.2\n" +
+"2.2.2 | Balista 3x3 | op=spellshot&type=balistashot&perrow=3&rows=3&pvp=1 | shift=spread=10 shiftlabel=Balista_3x3_fan\n" +
+"2.3 | Thunderbolt\n" +
+"2.3.1 | Thunderbolt | op=spellshot&type=thunderbolt&pvp=1 | shift=@2.3.2\n" +
+"2.3.2 | Thunderbolt wall 5x2 | op=spellshot&type=thunderbolt&perrow=5&rows=2&pvp=1 | shift=perrow=7&rows=3 shiftlabel=Thunderbolt_wall_7x3\n" +
+"2.4 | Slime\n" +
+"2.4.1 | Slime ring | op=slime&pvp=1 | shift=rings=3 shiftlabel=Slime_ring_x3\n" +
+"2.4.2 | Slime moat | op=slime&gap=3&cloudr=3.5&pvp=1 | shift=rings=3 shiftlabel=Slime_moat_x3\n" +
+"2.5 | Stone circle\n" +
+"2.5.1 | Stone circle | op=earthquake&damage=1&pvp=1 | shift=@2.5.2\n" +
+"2.5.2 | Stone circle (trolls) | op=earthquake&damage=1&mode=strong&pvp=1\n" +
+"2.6 | Harpoon\n" +
+"2.6.1 | Harpoon | op=spellshot&type=harpoon&pvp=1 | shift=@2.6.2\n" +
+"2.6.2 | Harpoon 3x3 fan | op=spellshot&type=harpoon&perrow=3&rows=3&spread=15&pvp=1\n" +
+"2.7 | Mines\n" +
+"2.7.1 | Place mine | op=trap&type=random&pvp=1 | shift=type=tar shiftlabel=Tar_mine\n" +
+"2.7.2 | Remove mine | op=trap&remove=1 | shift=radius=50 shiftlabel=Remove_mines_r50\n" +
+"2.7.3 | Place mine field | op=trap&type={kind}&field={field}&safe={safe}&radius={radius}&rows={rows}&perrow={perrow}&scatter=1&at=front&fxboom={fx}&prefab={look}&pvp=1 | button=Set_mines ask=field/Layout:*Radius=1,Rows=0 ask=kind/Mine_type:Random=random,Explosive=mine,Tar=tar,Fence_(soon)=@off ask=safe/Safe_radius?field=1:5,10,30,60 ask=radius/Minefield_radius>safe?field=1:10,20,30,40,50,60,70,80,90,100 ask=rows/Rows?field=0:1,2,*3,5,9 ask=perrow/Items_in_row?field=0:1,3,*5,7,9 ask=fx/Mine_effect:Random=random,Dynamite=dynamite,Grenade=grenade,Lava=lava,Siege=siege,Fireball=fireball,Glacier=glacier,Wrath=wrath,Blue=blue,Shock=shock,Gas=gas ask=look/Mine_texture:Floor_tile=wood_floor_1x1,Sapling=Beech_Sapling,Trap=piece_trap_troll\n" +
+"2.7.4 | Detonate mines | op=trap&detonate=1&radius=100\n" +
+"2.8 | Bow charge | op=bowcharge&on=1&pvp=1 | shift=on=0 shiftlabel=Bow_charge_off\n" +
 "4 | Fun\n" +
-"4.1 | Raven 60 s | op=transform&type=raven&duration=60 | pin=S4\n" +
-"4.2 | Serpent 60 s | op=transform&type=serpent&duration=60\n" +
-"4.3 | Fish 60 s | op=transform&type=fish&duration=60\n" +
-"4.4 | Human | op=transform&type=human | pin=S5\n" +
-"4.5 | Oaks x2 | op=scale&filter=Oak&factor=2&radius=30\n" +
-"4.6 | Reset sky | op=visualeffect&name=reset\n" +
-"# real form (W3-world-plant): 4.7 | Tree x3 (only you see) | op=scale&aim=1&factor=3\n" +
-"4.7 | Tree x3 (soon) | @dummy\n" +
-"# real form (W3-world-plant): 4.8 | Tree x5 (only you see) | op=scale&aim=1&factor=5\n" +
-"4.8 | Tree x5 (soon) | @dummy\n" +
-"# real form (W3-world-plant): 4.9 | Tree x10 (only you see) | op=scale&aim=1&factor=10\n" +
-"4.9 | Tree x10 (soon) | @dummy\n" +
-"# real form (W1-ship): 4.10 | Ship x5 | op=ship&speed=5\n" +
-"4.10 | Ship x5 (soon) | @dummy\n" +
-"# real form (W1-ship): 4.11 | Ship x10 | op=ship&speed=10\n" +
-"4.11 | Ship x10 (soon) | @dummy\n" +
-"# real form (W1-ship): 4.12 | Ship normal | op=ship&speed=1\n" +
-"4.12 | Ship normal (soon) | @dummy\n" +
+"4.1 | Transform\n" +
+"4.1.1 | Raven | op=transform&type=raven&toggle=1 | pin=S4\n" +
+"4.1.2 | Serpent | op=transform&type=serpent&toggle=1\n" +
+"4.1.3 | Fish | op=transform&type=fish&toggle=1\n" +
+"4.1.4 | Human | op=transform&type=human | pin=S5\n" +
+"4.2 | Trees\n" +
+"4.2.1 | Tree normal size | op=scale&aim=1&factor=1\n" +
+"4.2.2 | Tree x3 | op=scale&aim=1&factor=3 | shift=@4.2.3\n" +
+"4.2.3 | Tree x5 | op=scale&aim=1&factor=5 | shift=@4.2.4\n" +
+"4.2.4 | Tree x10 | op=scale&aim=1&factor=10 | shift=factor=20 shiftlabel=Tree_x20\n" +
+"4.3 | Ship\n" +
+"4.3.1 | ShipSpeed (x3) | op=ship&speed=3 | shift=@4.3.2\n" +
+"4.3.2 | ShipSpeed+ (x5) | op=ship&speed=5 | shift=@4.3.3\n" +
+"4.3.3 | ShipSpeed++ (x10) | op=ship&speed=10\n" +
+"4.3.4 | Ship normal | op=ship&speed=1\n" +
+"4.4 | Reset sky | op=visualeffect&name=reset\n" +
 "5 | Heal, defence, bless\n" +
 "5.1 | Heal | op=heal | pin=F3\n" +
-"5.2 | Cleanse | op=cleanse\n" +
-"5.3 | Bonemass | op=bless&name=bonemass | pin=S3\n" +
-"5.4 | Eikthyr | op=bless&name=eikthyr\n" +
-"5.5 | The Elder | op=bless&name=elder\n" +
-"5.6 | Moder | op=bless&name=moder\n" +
-"5.7 | Yagluth | op=bless&name=yagluth\n" +
-"5.8 | The Queen | op=bless&name=queen\n" +
-"5.9 | Fader | op=bless&name=fader\n" +
-"5.10 | Remove all effects | op=cleanse&all=1\n" +
+"5.2 | Cleanse | op=cleanse | shift=@5.4\n" +
+"5.3 | Blessings\n" +
+"5.3.1 | Bonemass | op=bless&name=bonemass | pin=S3 shift=duration=900 shiftlabel=Bonemass_15_min\n" +
+"5.3.2 | Eikthyr | op=bless&name=eikthyr | shift=duration=900 shiftlabel=Eikthyr_15_min\n" +
+"5.3.3 | The Elder | op=bless&name=elder | shift=duration=900 shiftlabel=The_Elder_15_min\n" +
+"5.3.4 | Moder | op=bless&name=moder | shift=duration=900 shiftlabel=Moder_15_min\n" +
+"5.3.5 | Yagluth | op=bless&name=yagluth | shift=duration=900 shiftlabel=Yagluth_15_min\n" +
+"5.3.6 | The Queen | op=bless&name=queen | shift=duration=900 shiftlabel=The_Queen_15_min\n" +
+"5.3.7 | Fader | op=bless&name=fader | shift=duration=900 shiftlabel=Fader_15_min\n" +
+"5.4 | Remove all effects | op=cleanse&all=1\n" +
 "6 | Build\n" +
-"6.1 | Flatten | | sticky\n" +
-"# real form (W1-world-build): 6.1.1 | Flatten here | op=groundlevel&delta=0&avoid=1\n" +
-"6.1.1 | Flatten here (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.1.2 | Flatten +5 | op=groundlevel&delta=5&avoid=1\n" +
-"6.1.2 | Flatten +5 (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.1.3 | Flatten +8 (max) | op=groundlevel&delta=8&avoid=1\n" +
-"6.1.3 | Flatten +8 (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.1.4 | Flatten -3 | op=groundlevel&delta=-3&avoid=1\n" +
-"6.1.4 | Flatten -3 (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.1.5 | Flatten -5 | op=groundlevel&delta=-5&avoid=1\n" +
-"6.1.5 | Flatten -5 (soon) | @dummy\n" +
+"6.1 | Flatten... | op=groundlevel&area={area}&delta={level}&radius={radius}&avoid=1 | ask=area:*From_me=self,Start-end=coords ask=level/Flatten_level:-10,-8,-5,-3,-1,*0,1,3,5,8,10 ask=radius/Radius:2,*4,6,8,12\n" +
 "6.2 | Coordinates\n" +
-"# real form (W1-world-build): 6.2.1 | Start point | op=coord&set=start\n" +
-"6.2.1 | Start point (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.2.2 | End point | op=coord&set=end\n" +
-"6.2.2 | End point (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.2.3 | Show points | op=coord&show=1\n" +
-"6.2.3 | Show points (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.2.4 | Clear points | op=coord&clear=1\n" +
-"6.2.4 | Clear points (soon) | @dummy\n" +
+"6.2.1 | Start point | op=coord&set=start\n" +
+"6.2.2 | End point | op=coord&set=end\n" +
+"6.2.3 | Show points | op=coord&show=1\n" +
+"6.2.4 | Clear points | op=coord&clear=1\n" +
 "6.3 | Paths\n" +
-"# real form (W1-world-build): 6.3.1 | Dirt path start-end | op=path&type=dirt&from=coords&avoid=1\n" +
-"6.3.1 | Dirt path start-end (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.3.2 | Stone path start-end | op=path&type=stone&from=coords&avoid=1\n" +
-"6.3.2 | Stone path start-end (soon) | @dummy\n" +
-"6.3.3 | Dirt path 5 m | op=path&type=dirt&length=5\n" +
-"6.3.4 | Stone path 5 m | op=path&type=stone&length=5\n" +
-"6.4 | Spawn\n" +
-"# real form (W1-world-build): 6.4.1 | Spawn... | op=spawn&prefab={prefab}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players\n" +
-"6.4.1 | Spawn... (soon) | @dummy | ask=prefab:@prefabs ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players\n" +
+"6.3.1 | Dirt path start-end | op=path&type=dirt&from=coords&avoid=1 | shift=@6.3.2\n" +
+"6.3.2 | Stone path start-end | op=path&type=stone&from=coords&avoid=1\n" +
 "6.5 | Repair and refill | | sticky\n" +
-"6.5.1 | Repair (aim) | op=repair\n" +
-"6.5.2 | Refill (aim) | op=refill\n" +
-"6.5.3 | Repair r10 | op=repair&aim=0&radius=10 | pin=F4\n" +
-"6.5.4 | Refill r10 | op=refill&aim=0&radius=10\n" +
-"6.5.5 | Repair r50 | op=repair&aim=0&radius=50\n" +
-"6.5.6 | Refill r50 | op=refill&aim=0&radius=50\n" +
-"6.5.7 | Repair+refill r10 | op=repair&aim=0&radius=10 ;; op=refill&aim=0&radius=10\n" +
-"6.6 | Shield\n" +
-"# real form (W1-world-build): 6.6.1 | Start point | op=coord&set=start\n" +
-"6.6.1 | Start point (soon) | @dummy\n" +
-"# real form (W1-world-build): 6.6.2 | End point | op=coord&set=end\n" +
-"6.6.2 | End point (soon) | @dummy\n" +
-"# real form (W2-dome): 6.6.3 | Place shield | op=dome&from=coords\n" +
-"6.6.3 | Place shield (soon) | @dummy\n" +
-"# real form (W2-dome): 6.6.4 | List shields | op=dome&step=list\n" +
-"6.6.4 | List shields (soon) | @dummy\n" +
-"# real form (W2-dome): 6.6.5 | Remove shield | op=dome&step=remove\n" +
-"6.6.5 | Remove shield (soon) | @dummy\n" +
+"6.5.1 | Repair | op=repair&aim=0&radius=50\n" +
+"6.5.2 | Refill | op=refill&aim=0&radius=50\n" +
+"6.6 | Ward | op=dome&step=menu&cost=nearby\n" +
+"6.7 | Construct\n" +
+"6.7.1 | Construction... | op=construct&panel=1&cost=nearby\n" +
+"6.7.2 | Construction status | op=construct&step=status\n" +
+"6.8 | Despawn | op=despawn&others=1&tamed=1&boss=1&inloc=1\n" +
 "7 | Field\n" +
-"7.1 | Cultivate 3x5 | op=cultivate&rows=3&perrow=5 | pin=S1\n" +
-"7.2 | Carrots 3x5 | op=field&prefab=Pickable_Carrot&rows=3&perrow=5\n" +
-"7.3 | Oak grove | op=plant&prefab=Oak_Sapling&rows=3&perrow=5&scale=3\n" +
-"7.4 | Place wall | op=place&prefab=woodwall&perrow=3\n" +
-"7.5 | Place campfire | op=place&prefab=fire_pit\n" +
-"# real form (W2-world-field): 7.6 | Cultivate start-end | op=cultivate&area=coords\n" +
-"7.6 | Cultivate start-end (soon) | @dummy\n" +
-"# real form (W2-world-field): 7.7 | Plant food... | op=field&area={area}&prefab={crop} | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops\n" +
-"7.7 | Plant food... (soon) | @dummy | ask=area:Start-end=coords,This_patch=patch ask=crop:@crops\n" +
-"# real form (W2-world-field): 7.8 | Harvest patch | op=harvest\n" +
-"7.8 | Harvest patch (soon) | @dummy\n" +
-"# real form (W3-world-plant): 7.9 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1 | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20\n" +
-"7.9 | Plant trees... (soon) | @dummy | ask=area:Start-end=coords,Crosshair=aim ask=tree:@trees ask=size:1,3,5,10,20\n" +
-"8 | Construct\n";
+"7.1 | Cultivate... | op=cultivate&area={area}&rows={rows}&perrow={perrow} | ask=area:*From_me=self,Start-end=coords ask=rows:1,*3,5,7,9 ask=perrow/Items_in_row:1,3,*5,7,9\n" +
+"7.2 | Plant food... | op=field&area={area}&prefab={crop}&rows={rows}&perrow={perrow}&cost=nearby | ask=area:Start-end=coords,This_patch=patch,From_me=aim ask=crop:@crops ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9\n" +
+"7.3 | Harvest patch | op=harvest&collect=1\n" +
+"7.4 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1&rows={rows}&perrow={perrow}&cost=nearby | ask=area:Start-end=coords,From_me=self ask=tree:@trees ask=size:1,3,5,10,20 ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9\n" +
+"\n" +
+"8 | Spawn... | op=spawn&prefab={prefab}&quality=max&where={where}&count={count}&yaw={yaw}&pitch={pitch}&player={player}&cost=nearby | ask=prefab:@prefabs ask=where:Crosshair=crosshair,Inventory=inventory ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players\n" +
+"9 | Teleport\n" +
+"9.1 | Last death | op=teleport&to=death\n" +
+"9.2 | Map point | op=teleport&to=map\n" +
+"9.3 | Blink | op=blink&pvp=1 | pin=F6\n" +
+"9.4 | To player... | op=teleport&to=player&player={player} | ask=player:@players\n" +
+"9.5 | Last chance | op=lastchance&on=1 | shift=on=0 shiftlabel=Last_chance_off\n" +
+"10 | Chat commands\n" +
+"10.1 | Intro | op=chat&msg=intro\n";
 
         // spells-ui-test.txt: the same tree, every command @dummy. In placeholder mode a cast never runs any command anyway.
         const string TestText =
