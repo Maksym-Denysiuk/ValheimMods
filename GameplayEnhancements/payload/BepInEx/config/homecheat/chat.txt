@@ -1,0 +1,6 @@
+# Chat lines for the HomeCheat chat command (spell bar 10 "Chat commands"). One [section] per message set; one line = one message.
+# A line starting "/s " is sent as a shout, any other line as normal chat. Caps: 10 lines per section, 250 characters per line.
+# Send: op=chat&msg=<section>   List: op=chat&list=1
+[intro]
+/s Hi, that is my local server, it makes backups each 3 minutes so Im OK to do a restore any time. It stores enough backups to make me able to rollback anything within 24h
+/s Im ok if you use cheats. But keep in mind that players here just having Vanil;a-like fun. If you want some PvP - just tell

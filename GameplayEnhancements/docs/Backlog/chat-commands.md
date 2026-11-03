@@ -3,7 +3,7 @@ description: backlog card chat-commands (approved 2026-11-03) - a Chat commands 
 ---
 # chat-commands: a Chat commands group, /Intro sends two shouts
 
-Status: approved (2026-11-03) · Verdict: new `chat` in a new feature Chat · Nearest: none
+Status: built 2026-11-03 (hc-chat), in-game test pending; page [chat.md](../HomeCheat-plugin/chat.md) · Verdict: new `chat` in a new feature Chat · Nearest: none
 Fingerprint: system (message) / everyone in chat / none / `Chat.SendText`
 
 - `op=chat&msg=intro` sends each line of `[intro]` in `BepInEx/config/homecheat/chat.txt`, 1.5 s apart; a line starting `/s ` is sent as a shout, others as normal chat. G menu (spell bar) group 10 "Chat commands", 10.1 Intro. `chat&list=1` lists sections. New messages = new sections, no build.
