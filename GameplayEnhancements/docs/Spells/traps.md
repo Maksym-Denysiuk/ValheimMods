@@ -30,7 +30,7 @@ The same command lays a field (`perrow=3&rows=3`) and will lay other kinds: the 
 | # | Assumption | Instead of |
 |---|---|---|
 | T1 | your own mines hit you too (a real mine) | caster safe, as the target model asks |
-| T2 | tamed creatures are hit too | tamed safe |
+| T2 | tamed creatures are hit too (2026-11-03: not by a mine laid with `pvp=1`, see PvP below; Maksym: "Not mine = hit") | tamed safe |
 | T3 | bosses are hit like any creature | bosses excluded |
 | T4 | damage = the bow item's own damage x2 (`BowAshlands`, quality max), no arrow added | bow + best arrow, x2 |
 | T5 | trigger radius 1.5 m, blast radius 3 m | one radius for both |
@@ -113,7 +113,8 @@ World `ClaudeTest`, hosted on this PC. `op=cheatstate` before the first and afte
 14. Reload: lay a mine, `bash src/build.sh traps` + `op=reload`, then `list=1` -> the mine is still there with its time left, and still goes off.
 15. Logout with a mine laid, log back in -> `list=1` shows the time left that was left at logout; it goes off or expires as before.
 16. Spell bar: 2.11 Place mine and 2.12 Remove mines (section Attack).
-17. A tamed wolf steps on a mine -> it is hit (T2). A boss (only if one is at hand) -> hit (T3).
+17. A tamed wolf steps on a mine laid without `pvp=1` -> it is hit (T2). A boss (only if one is at hand) -> hit (T3).
+   Tamed rule (2026-11-03, built, not run in game; spell 2.7.1 passes `pvp=1`): your PvP on, lay mines: your own tamed boar walks over safely and survives a blast beside it, Claude2's tamed wolf sets one off and is hit. Your PvP off, lay mines: boar and wolf both walk over safely. `op=trap&detonate=1` follows the same rule.
 
 Record each first answer line and what was seen in the table below, then set the index status to V and review the design (T1-T8, B1-B7).
 
@@ -147,7 +148,7 @@ Result: **V**, "Mines are good" (place, random blast look, minefield in both lay
 | blast look (B4) | `fxboom=random` (default): each mine draws one of 10 sets when laid (dynamite, grenade, lava, siege, fireball, glacier, wrath, blue, shock, gas; `TrapFxSet` in `TrapFxSets.cs`, stored in the ZDO); `fxboom=<set>` fixes one; a prefab list still works | 10 sets picked with `/valheim-spell-fx`; ice sets at scale 0.5, speed 2 |
 | push (B7) | one hit of `SledgeStagbreaker` (attack force 150, read live); `push=` overrides, 0 = none | "small knockback like after one hammer" |
 | expiry | `vfx_odin_despawn` + `sfx_wood_destroyed` (the floor tile breaking), also on remove | "must expire and disappear with a breaking sound" |
-| PvP | `TrapCommand : AttackCommand`; `pvp=1` is taken when the mine is laid (ZDO `hc_trap_pvp`): with your PvP on other players are hit, off = they neither set it off nor take the blast; you, creatures and tamed are hit either way (T1-T3) | "all attacking spells inherit this logic" |
+| PvP | `TrapCommand : AttackCommand`; `pvp=1` is taken when the mine is laid (ZDO `hc_trap_pvp`): with your PvP on other players are hit, off = they neither set it off nor take the blast; tamed creatures (2026-11-03, `Spared`, built, not run in game): laid with PvP on = yours spared, others' hit, laid with PvP off = all spared; a spared one neither sets it off nor takes the blast; you and untamed creatures are hit either way (T1, T3) | "all attacking spells inherit this logic" |
 | minefield (new) | `field=1&safe=10&radius=30`: rings from `safe` to `radius` (cap 100), step 2 x the trigger half-width + 1 m, circumference / step mines per ring, every second ring shifted half a step, one random start angle, each mine facing the centre, none on water | passable, but no straight lane |
 | rows (new) | `scatter=1`: the matrix with the same step, every second row shifted half a step; `at=front`: the first row 5 m ahead, rows run away from you | "in front of the user, not around him" |
 | detonate (new) | `detonate=1[&radius=100]`: every live mine within the radius goes off as if stepped on (same hits, PvP rule), nearest first, waves of 25 every 0.1 s; look `fx_JotunWitch_LightningBolt_Explosion` + `vfx_spawn_small` + `sfx_staffthunderblood_cast` + `sfx_FireAddFuel`, `fxscale=2`; `fx=own` = each mine's own blast | picked from 10 previews ("3 + 10 together") |
@@ -158,4 +159,4 @@ Damage measured: 218 = 2 x `BowAshlands` at quality 4 (Pierce), push 25 x 2 befo
 
 Spell bar (2 Attack > 2.7 Mines): 2.7.1 Place mine (`type=random&pvp=1`, Shift tar), 2.7.2 Remove mine, 2.7.3 Place mine field (form: Layout Radius/Rows, Mine type with Fence greyed, Safe radius, Minefield radius above safe, Rows, Items in row, Mine effect, Mine texture; button Set mines), 2.7.4 Detonate mines.
 
-Still untested (B): the tar mine's slow on a creature and on Claude2; `pvp=1` at placement with Claude2 (their PvP off, yours on and off); a mine across `op=reload` and across logout (time left kept); frame rate while laying and with thousands of live mines, and Claude2's load; flying creatures. Known: `op=help&cmd=trap` still says "cap 50 live traps" (the cap is 6 000).
+Still untested (B): the tar mine's slow on a creature and on Claude2; `pvp=1` at placement with Claude2 (their PvP off, yours on and off); the tamed rule (test 17); a mine across `op=reload` and across logout (time left kept); frame rate while laying and with thousands of live mines, and Claude2's load; flying creatures. Known: `op=help&cmd=trap` still says "cap 50 live traps" (the cap is 6 000).
