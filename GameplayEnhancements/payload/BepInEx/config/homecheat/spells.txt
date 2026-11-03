@@ -96,8 +96,6 @@
 9.2 | Map point | op=teleport&to=map
 9.3 | Blink | op=blink&pvp=1 | pin=F6
 9.4 | To player... | op=teleport&to=player&player={player} | ask=player:@players
-# real form (hc-teleport): 9.5 | Last chance | op=lastchance&on=1 | shift=on=0 shiftlabel=Last_chance_off
-9.5 | Last chance (soon) | @dummy
+9.5 | Last chance | op=lastchance&on=1 | shift=on=0 shiftlabel=Last_chance_off
 10 | Chat commands
-# real form (hc-chat): 10.1 | Intro | op=chat&msg=intro
-10.1 | Intro (soon) | @dummy
+10.1 | Intro | op=chat&msg=intro

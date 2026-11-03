@@ -1,8 +1,8 @@
 # GameplayEnhancements: manifest
 
-Built 2026-11-03 14:22 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-11-03 20:28 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
-Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261025175610.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261103140104.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.teleport.v20261027215812.dll, HomeCheat.Cmd.transform.v20261025230546.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
+Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261103195028.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261103140104.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.teleport.v20261103195038.dll, HomeCheat.Cmd.transform.v20261103195037.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
@@ -10,13 +10,13 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | check.ps1 | 2271 | ef377005b0ad1b74 |
 | common.ps1 | 6198 | e01932f7436ce07e |
 | docs/Backlog/bow-charge.md | 1871 | 1b8860ee70a13d62 |
-| docs/Backlog/chat-commands.md | 1535 | 78f91a5881aa8cec |
-| docs/Backlog/despawn-anything.md | 1631 | 9fef5ccca4a0f7c9 |
+| docs/Backlog/chat-commands.md | 2859 | 2405b44229d20ead |
+| docs/Backlog/despawn-anything.md | 2302 | 749d9ed2d99191db |
 | docs/Backlog/hud-above.md | 3462 | f38c1b17eaf9df41 |
-| docs/Backlog/last-chance.md | 1717 | 18c766edc33e33ec |
+| docs/Backlog/last-chance.md | 3665 | 8ec5018ac9564d90 |
 | docs/Backlog/materials-nearby.md | 4656 | 613f72eb0a520c78 |
 | docs/Backlog/pvp-tamed.md | 5350 | 392e17ade0ec1e8e |
-| docs/Backlog/transform-toggle.md | 990 | 33faa935f32917f7 |
+| docs/Backlog/transform-toggle.md | 1174 | 9ea23b8bafc33b3f |
 | docs/FX/README.md | 9876 | 9ca1e6b2789476df |
 | docs/FX/fx_descriptions.md | 48415 | b2908a04c8db3844 |
 | docs/FX/images/fx_Fader_Roar.jpg | 93809 | 323faff117abaf90 |
@@ -29,10 +29,11 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 23343 | 7fce65e2c03b0a04 |
+| docs/HomeCheat-plugin/README.md | 25770 | 9c2cf3a223f88d98 |
 | docs/HomeCheat-plugin/build-terrain.md | 22627 | 6ea5e6608e9c83e5 |
+| docs/HomeCheat-plugin/chat.md | 4793 | ea9eefeaa8285032 |
 | docs/HomeCheat-plugin/construct.md | 48441 | b0fb835275e2d750 |
-| docs/HomeCheat-plugin/despawn.md | 6173 | af3e1209c9f57169 |
+| docs/HomeCheat-plugin/despawn.md | 10112 | b7b9c93fe203765f |
 | docs/HomeCheat-plugin/dome.md | 29987 | 9114b0ba374a7265 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3891 | 4b54d93e3ba15a47 |
 | docs/HomeCheat-plugin/plant-field-place.md | 19871 | 6e6799e42f6c8243 |
@@ -41,29 +42,30 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | docs/HomeCheat-plugin/tree-scale.md | 7387 | 5f0aa199ebf4a8a4 |
 | docs/Keybinds/README.md | 932 | de64f4a8395e06a3 |
 | docs/Keybinds/keybinds.md | 7458 | 0b016037d0f615d6 |
-| docs/Spells/README.md | 3887 | 9043a0fe20e03aa0 |
+| docs/Spells/README.md | 4063 | b7d252127a23d584 |
 | docs/Spells/earthquake.md | 11708 | 7a5cb7ebb1a4f2fe |
 | docs/Spells/slime.md | 10200 | 310ae4c52e31286c |
 | docs/Spells/spellbar-design.md | 39023 | cf26f03666530969 |
 | docs/Spells/spellbar.md | 15084 | c7b355b026e5cd5b |
 | docs/Spells/spellshot.md | 13951 | 1e84268ba193a1d8 |
-| docs/Spells/teleport.md | 14889 | d284626f301eb197 |
+| docs/Spells/teleport.md | 21408 | 92f8912377b016bb |
 | docs/Spells/traps.md | 17910 | f9599a66470300b3 |
-| docs/Transform/README.md | 1443 | e16785ab64ec53ee |
+| docs/Transform/README.md | 1766 | 2a83ee63524d002d |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
 | docs/Transform/hidebody.md | 3171 | 724fafabe53e8936 |
-| docs/Transform/transform.md | 10614 | db31b7849545c8f3 |
+| docs/Transform/transform.md | 11721 | fe0eba7b3ee3194a |
 | docs/architecture/diagrams/homecheat-core.svg | 162020 | c603c1e9e7b53874 |
-| docs/architecture/diagrams/homecheat-features.svg | 258245 | b236586ed8413b4d |
+| docs/architecture/diagrams/homecheat-features.svg | 265836 | 9aa168934880e129 |
 | docs/architecture/diagrams/homecheat-spells.svg | 85507 | 766f069ed9081efd |
-| docs/architecture/homecheat-architecture.md | 95481 | fc2b176eb1fcde5d |
-| docs/architecture/homecheat-commands.md | 37036 | 42cfb31400324793 |
+| docs/architecture/homecheat-architecture.md | 96862 | b61536070a5d27ea |
+| docs/architecture/homecheat-commands.md | 38905 | 1cbe0db8b274b2f7 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 9933 | cbba60354a96e300 |
 | install.ps1 | 5396 | 6f2056c02f530ecc |
 | payload/BepInEx/config/BepInEx.cfg | 5802 | 973c6f57fbdc00e2 |
+| payload/BepInEx/config/homecheat/chat.txt | 618 | b1644a3101c5b3d1 |
 | payload/BepInEx/config/homecheat/spells-ui-test.txt | 3193 | e8d424c76af30e2f |
-| payload/BepInEx/config/homecheat/spells.txt | 7636 | caddeaa552404c52 |
+| payload/BepInEx/config/homecheat/spells.txt | 7523 | 18a86ddd15952dc1 |
 | payload/BepInEx/core/0Harmony.dll | 204800 | 1a21cc03424fc82c |
 | payload/BepInEx/core/0Harmony.xml | 267107 | d1f02fc3ada3a13d |
 | payload/BepInEx/core/0Harmony20.dll | 112640 | 5708451a91eaecee |
@@ -82,8 +84,9 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | payload/BepInEx/core/MonoMod.RuntimeDetour.xml | 9414 | 54887808960d1565 |
 | payload/BepInEx/core/MonoMod.Utils.dll | 187904 | 9d1495f147ac93c4 |
 | payload/BepInEx/core/MonoMod.Utils.xml | 78973 | 0577b362023a3432 |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.chat.v20261103194832.dll | 8704 | db9b357a153c59e3 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.construction.v20261025214918.dll | 100864 | 39e5893537c4932b |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.despawn.v20261025175610.dll | 10752 | 75417eb080b0c774 |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.despawn.v20261103195028.dll | 14848 | 142e3f011819b705 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.diag.v20261025004825.dll | 10752 | c6993cb9c15c9885 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.dome.v20261025193104.dll | 61952 | 21e869884eb536b5 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.earthquake.v20261025161333.dll | 37376 | de6ccabd4ffe55e3 |
@@ -96,8 +99,8 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.slime.v20261025161333.dll | 23552 | 333fa57eb5959227 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spells.v20261103140104.dll | 120832 | b2f312c78cd9cef8 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.spellshot.v20261025161332.dll | 25088 | 4dbd902de84ebbac |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.teleport.v20261027215812.dll | 28672 | 24fceaa280260980 |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.transform.v20261025230546.dll | 44544 | f270b8bc0f6da4cd |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.teleport.v20261103195038.dll | 36864 | 37570eba18822738 |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.transform.v20261103195037.dll | 45056 | 948c9ab7c72c2f89 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.traps.v20261025165645.dll | 42496 | 6287afc6851aa5ad |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.visualeffect.v20261025161336.dll | 20480 | ed80c87f34607e14 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.world.v20261025225321.dll | 89088 | 7bf4636181b943c5 |
@@ -111,7 +114,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | skills/valheim-spell-fx/scripts/find-fx.js | 5969 | b1b1fe2c4e4dd114 |
 | skills/valheim-spells-craft/README.md | 3174 | 3ec9111d4ecf8282 |
 | skills/valheim-spells-craft/SKILL.md | 7309 | 4d694a84ab775938 |
-| skills/valheim-spells-craft/baseline.md | 1928 | 297f566e8bd258cb |
+| skills/valheim-spells-craft/baseline.md | 1928 | 80cfef5537303e11 |
 | skills/valheim-spells-craft/evals.md | 4309 | 99d5e1004f69c556 |
 | skills/valheim-spells-craft/instructions/done-gate.md | 8394 | a2eca1414c72ee82 |
 | skills/valheim-spells-craft/instructions/implement.md | 12607 | dbbd1f336d29b7e8 |
@@ -168,6 +171,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Core/Services/CommandRegistry.cs | 9593 | f42a2996f62acee8 |
 | src/Core/Services/FileInboxChannel.cs | 2374 | 4331e4dfe659244c |
 | src/Core/Services/Scheduler.cs | 2421 | ea28720042f0f96e |
+| src/Features/Chat/ChatCommand.cs | 5673 | 5152b6444a53e5c3 |
 | src/Features/Construction/Blueprint.cs | 528 | 8903802f413548cd |
 | src/Features/Construction/BlueprintEntry.cs | 1706 | 9748d9523afef2ff |
 | src/Features/Construction/BlueprintLibrary.cs | 5135 | 7a065c421f460442 |
@@ -183,7 +187,8 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Features/Construction/PreviewDoors.cs | 10748 | 8690dbd4b76521a9 |
 | src/Features/Construction/TerrainLevel.cs | 6314 | b486e0f2c96c0f0e |
 | src/Features/Construction/refs.txt | 328 | e0adadfd1e55a886 |
-| src/Features/Despawn/DespawnCommand.cs | 8015 | f5008133e660ada8 |
+| src/Features/Despawn/DespawnCommand.cs | 14213 | 8c619f8d01a75ea3 |
+| src/Features/Despawn/refs.txt | 159 | 1205b7655176002a |
 | src/Features/Diag/CheatInfoCommand.cs | 1489 | bfc3336345417073 |
 | src/Features/Diag/CheatStateCommand.cs | 7508 | c1cba61782242d31 |
 | src/Features/Dome/DomeCommand.cs | 47454 | 7a488469979559ef |
@@ -235,12 +240,14 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | src/Features/Spells/SpellsSettings.cs | 3772 | 18d157f7eab9b080 |
 | src/Features/Spells/refs.txt | 316 | 384a688abb2f5516 |
 | src/Features/Spellshot/SpellShotCommand.cs | 29932 | 7fd017a278a647ed |
-| src/Features/Teleport/BlinkCommand.cs | 15213 | 9f9c0981dd1d66ef |
+| src/Features/Teleport/BlinkCommand.cs | 16463 | ab63d33ef40f2856 |
+| src/Features/Teleport/LastChanceCommand.cs | 11587 | f3500828f9d48c4b |
+| src/Features/Teleport/LastChancePatch.cs | 977 | f7e144c7f42aa5c8 |
 | src/Features/Teleport/TeleportCommand.cs | 16568 | 301ebdadc99cd4b3 |
 | src/Features/Teleport/TeleportFx.cs | 2108 | ee2fee01895ca1e7 |
 | src/Features/Teleport/TeleportMapPatch.cs | 1171 | 0f33faad8e4e05e6 |
 | src/Features/Teleport/refs.txt | 378 | bf2e04b1c56a7b6f |
-| src/Features/Transform/TransformCommand.cs | 18912 | 33886ef7e3c237c8 |
+| src/Features/Transform/TransformCommand.cs | 19514 | 6f70b4aafc105400 |
 | src/Features/Transform/TransformFallPatch.cs | 1106 | a3f56976f8199b09 |
 | src/Features/Transform/TransformForm.cs | 13218 | 7e04c9ef7afcf7aa |
 | src/Features/Transform/TransformLanding.cs | 961 | 3aa052d2de0e2684 |
