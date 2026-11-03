@@ -63,7 +63,7 @@ Nothing is patched, no file is written.
 
 ## Verification
 
-See the test log below. Self-check grep for cheat members: nothing.
+Built 2026-11-03, not run in game yet: the test list is on the card [docs/Backlog/chat-commands.md](../Backlog/chat-commands.md) (the game was not running). Selftest 96 passed. Self-check grep for cheat members: nothing.
 
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
