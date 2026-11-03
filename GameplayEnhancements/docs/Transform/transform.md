@@ -1,5 +1,5 @@
 ---
-description: transform command for the HomeCheat plugin - crow, serpent and fish forms on our own player (model, flight, deep swimming, fist damage, sounds), parameters, how it works, verification on 2026-10-24 in world ClaudeTest, the forms refactor and in-game test of 2026-10-25 (other players see every form, share and hide on by default), limits and undo
+description: transform command for the HomeCheat plugin - crow, serpent and fish forms on our own player (model, flight, deep swimming, fist damage, sounds), parameters, toggle=1 (the same form again turns you back to human, spells 4.1.1-4.1.3), how it works, verification on 2026-10-24 in world ClaudeTest, the forms refactor and in-game test of 2026-10-25 (other players see every form, share and hide on by default), limits and undo
 ---
 # transform
 
@@ -11,7 +11,9 @@ Game: Valheim (Unity 6 build, BepInEx, HomeCheat plugin), machine `MDENYSIUK-PER
 
 ## Command
 
-`op=transform&type=human|raven|serpent|fish[&duration=<s>][&speed=<x>][&scale=<x>][&yoff=<m>][&hover=0][&lookdive=0][&share=1][&hide=1][&target=<nick>][&model=<prefab>][&humanoffset=<m>]`
+`op=transform&type=human|raven|serpent|fish[&duration=<s>][&speed=<x>][&scale=<x>][&yoff=<m>][&hover=0][&lookdive=0][&share=1][&hide=1][&target=<nick>][&model=<prefab>][&humanoffset=<m>][&toggle=1]`
+
+`toggle=1` (default 0, added 2026-11-03, Maksym: "Same form = human"): casting the form you already have turns you back to human (the `type=human` path, answer `human: restored (removed 1 transform state, toggle=1: same form again)`); another form switches as before. Spells 4.1.1-4.1.3 send it, so a second press of the same spell ends the form; 4.1.4 Human stays. A typed command without it is unchanged, and `target=<nick>` ignores it. Code: `TransformCommand.Execute` reads the form of your `TransformState` (`TransformForm.Name`) before it removes it.
 
 `humanoffset=<m>` (default 0 = off) moves your hidden human model that many metres up while the form lasts (`TransformState`); it does not hide the body from other players (`hide=1` does that).
 
@@ -68,5 +70,9 @@ Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC
 - Fish: no swim stamina drain while a fish (restored after).
 - **Forms refactor** (Maksym: the fish was seen as a human, "same mistake"; what other players see must be inherited): `TransformForm` (abstract: prefabs, flies or swims, stand-in preparation, begin, step, pose) with `RavenForm`, `SerpentForm`, `FishForm`, a new instance per cast. `TransformState` keeps what every form shares: the hidden human, a networked stand-in for every form (was raven and serpent only), hiding the body, stamina, movement modes, revert. `share` and `hide` default on (`share=0`, `hide=0` opt out). Fish stand-in: a networked `Fish1` with `Fish`, `ItemDrop`, `Destructible` stripped on the host; the fish jumps out of the water on block and flops on land.
 - Spells: 4.1.1 Raven, 4.1.2 Serpent, 4.1.3 Fish, 4.1.4 Human.
+
+## toggle=1 (2026-11-03)
+
+Built 2026-11-03 (`HomeCheat.Cmd.transform.v20261103195037`), selftest 96/0. Test list (B until run): 4.1.1 twice -> `transformed into raven`, then `human: restored (... toggle=1: same form again)`; 4.1.1 then 4.1.2 -> `transformed into serpent` (a switch, not human); 4.1.4 while human -> `human: restored (removed 0 ...)`; Claude2 sees the raven stand-in go after the second 4.1.1; `LogOutput.log` has no HomeCheat error after each.
 
 Still untested (B): Claude2 sees the fish; jump and splash; the flop on land; raven and serpent after the refactor.

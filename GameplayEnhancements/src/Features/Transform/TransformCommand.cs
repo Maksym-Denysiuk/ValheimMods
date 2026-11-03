@@ -19,7 +19,7 @@ namespace HomeCheat.Features.TransformCommands
         {
             get
             {
-                return "op=transform&type=human|raven|serpent|fish[&duration=<s, 0=until human>][&speed=<x, default 1>][&hover=0 (raven keeps gliding forward)][&lookdive=0 (altitude only with Space/Ctrl)][&share=1 (default, host only: a networked copy of the creature follows you so other players see it; 0 = only you see the form)][&hide=1 (default, with share: your human body is hidden from other players, op=hidebody, until you are human again)][&scale=<x>][&yoff=<m>][&model=<prefab>]"
+                return "op=transform&type=human|raven|serpent|fish[&duration=<s, 0=until human>][&speed=<x, default 1>][&hover=0 (raven keeps gliding forward)][&lookdive=0 (altitude only with Space/Ctrl)][&share=1 (default, host only: a networked copy of the creature follows you so other players see it; 0 = only you see the form)][&hide=1 (default, with share: your human body is hidden from other players, op=hidebody, until you are human again)][&scale=<x>][&yoff=<m>][&model=<prefab>][&toggle=1 (the form you already have turns you back to human, another form switches; default 0)]"
                     + " - raven flies (look up/down to climb/dive, shift = fast) and takes no fall damage, serpent/fish swim fast and crawl on land; other players see the form through share (default on, host only); type=human always restores; type=models lists candidate prefabs";
             }
         }
@@ -72,9 +72,17 @@ namespace HomeCheat.Features.TransformCommands
             if (type == "values") return Values(Prefabs.Get(a.Str("model", "Crow")), a.Str("comp", ""));
             if (type.Length == 0) return "ERROR: type required: human|raven|serpent|fish. " + Help;
 
+            // toggle=1 (spells 4.1.1-4.1.3, Maksym 2026-11-03 "Same form = human"): the form you already have turns you back to human
+            bool toggled = false;
+            if (a.Flag("toggle", false) && type != "human")
+            {
+                TransformState cur = p.GetComponent<TransformState>();
+                if (cur != null && cur.Form != null && cur.Form.Name == type) { type = "human"; toggled = true; }
+            }
+
             // always start clean, so repeated calls never stack models
             int removed = TransformState.RemoveAll(p);
-            if (type == "human") return "human: restored (removed " + removed + " transform state)";
+            if (type == "human") return "human: restored (removed " + removed + " transform state" + (toggled ? ", toggle=1: same form again" : "") + ")";
 
             TransformForm form = TransformForm.Get(type);
             if (form == null) return "ERROR: unknown type '" + type + "' (human|" + TransformForm.Names + ")";

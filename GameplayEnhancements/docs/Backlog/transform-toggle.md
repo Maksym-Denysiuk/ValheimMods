@@ -3,7 +3,7 @@ description: backlog card transform-toggle (approved 2026-11-03) - a second cast
 ---
 # transform-toggle: a second cast of the same form turns you back to human
 
-Status: approved (2026-11-03) · Verdict: extend `transform` with `toggle=1` · Nearest: transform (`TransformCommand.cs:60-111` read)
+Status: built 2026-11-03 (B, not run in game; `HomeCheat.Cmd.transform.v20261103195037`, selftest 96/0) · Verdict: extend `transform` with `toggle=1` · Nearest: transform (`TransformCommand.cs:60-111` read)
 Fingerprint: form/movement / self / on self / `TransformState`
 
 - Trigger: `op=transform&type=raven&toggle=1`; spells 4.1.1-4.1.3 get `&toggle=1`; 4.1.4 Human stays.
@@ -16,3 +16,5 @@ Fingerprint: form/movement / self / on self / `TransformState`
 
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
+
+Test list (run when the game is up): [transform.md, toggle=1](../Transform/transform.md#toggle1-2026-11-03).

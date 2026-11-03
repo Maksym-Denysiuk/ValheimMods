@@ -1,0 +1,4 @@
+# Utils.GetPrefabName (location own-object match)
+assembly_utils.dll
+# ZoneLocation.m_prefab (SoftReference: Load, Asset, Release)
+SoftReferenceableAssets.dll
