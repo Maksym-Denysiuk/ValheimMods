@@ -35,11 +35,13 @@
 2.7.2 | Remove mine | op=trap&remove=1 | shift=radius=50 shiftlabel=Remove_mines_r50
 2.7.3 | Place mine field | op=trap&type={kind}&field={field}&safe={safe}&radius={radius}&rows={rows}&perrow={perrow}&scatter=1&at=front&fxboom={fx}&prefab={look}&pvp=1 | button=Set_mines ask=field/Layout:*Radius=1,Rows=0 ask=kind/Mine_type:Random=random,Explosive=mine,Tar=tar,Fence_(soon)=@off ask=safe/Safe_radius?field=1:5,10,30,60 ask=radius/Minefield_radius>safe?field=1:10,20,30,40,50,60,70,80,90,100 ask=rows/Rows?field=0:1,2,*3,5,9 ask=perrow/Items_in_row?field=0:1,3,*5,7,9 ask=fx/Mine_effect:Random=random,Dynamite=dynamite,Grenade=grenade,Lava=lava,Siege=siege,Fireball=fireball,Glacier=glacier,Wrath=wrath,Blue=blue,Shock=shock,Gas=gas ask=look/Mine_texture:Floor_tile=wood_floor_1x1,Sapling=Beech_Sapling,Trap=piece_trap_troll
 2.7.4 | Detonate mines | op=trap&detonate=1&radius=100
+# real form (hc-bow): 2.8 | Bow charge | op=bowcharge&on=1&pvp=1 | shift=on=0 shiftlabel=Bow_charge_off
+2.8 | Bow charge (soon) | @dummy
 4 | Fun
 4.1 | Transform
-4.1.1 | Raven | op=transform&type=raven | pin=S4
-4.1.2 | Serpent | op=transform&type=serpent
-4.1.3 | Fish | op=transform&type=fish
+4.1.1 | Raven | op=transform&type=raven&toggle=1 | pin=S4
+4.1.2 | Serpent | op=transform&type=serpent&toggle=1
+4.1.3 | Fish | op=transform&type=fish&toggle=1
 4.1.4 | Human | op=transform&type=human | pin=S5
 4.2 | Trees
 4.2.1 | Tree normal size | op=scale&aim=1&factor=1
@@ -77,20 +79,25 @@
 6.5 | Repair and refill | | sticky
 6.5.1 | Repair | op=repair&aim=0&radius=50
 6.5.2 | Refill | op=refill&aim=0&radius=50
-6.6 | Ward | op=dome&step=menu
+6.6 | Ward | op=dome&step=menu&cost=nearby
 6.7 | Construct
-6.7.1 | Construction... | op=construct&panel=1
+6.7.1 | Construction... | op=construct&panel=1&cost=nearby
 6.7.2 | Construction status | op=construct&step=status
-6.8 | Despawn | op=despawn
+6.8 | Despawn | op=despawn&others=1&tamed=1&boss=1&inloc=1
 7 | Field
 7.1 | Cultivate... | op=cultivate&area={area}&rows={rows}&perrow={perrow} | ask=area:*From_me=self,Start-end=coords ask=rows:1,*3,5,7,9 ask=perrow/Items_in_row:1,3,*5,7,9
-7.2 | Plant food... | op=field&area={area}&prefab={crop}&rows={rows}&perrow={perrow} | ask=area:Start-end=coords,This_patch=patch,From_me=aim ask=crop:@crops ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9
+7.2 | Plant food... | op=field&area={area}&prefab={crop}&rows={rows}&perrow={perrow}&cost=nearby | ask=area:Start-end=coords,This_patch=patch,From_me=aim ask=crop:@crops ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9
 7.3 | Harvest patch | op=harvest&collect=1
-7.4 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1&rows={rows}&perrow={perrow} | ask=area:Start-end=coords,From_me=self ask=tree:@trees ask=size:1,3,5,10,20 ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9
+7.4 | Plant trees... | op=plant&area={area}&prefab={tree}&scale={size}&avoid=1&rows={rows}&perrow={perrow}&cost=nearby | ask=area:Start-end=coords,From_me=self ask=tree:@trees ask=size:1,3,5,10,20 ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9
 
-8 | Spawn... | op=spawn&prefab={prefab}&quality=max&where={where}&count={count}&yaw={yaw}&pitch={pitch}&player={player} | ask=prefab:@prefabs ask=where:Crosshair=crosshair,Inventory=inventory ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
+8 | Spawn... | op=spawn&prefab={prefab}&quality=max&where={where}&count={count}&yaw={yaw}&pitch={pitch}&player={player}&cost=nearby | ask=prefab:@prefabs ask=where:Crosshair=crosshair,Inventory=inventory ask=count:1,5,10,50 ask=yaw:0,90,180,270 ask=pitch:0,90 ask=player:@players
 9 | Teleport
 9.1 | Last death | op=teleport&to=death
 9.2 | Map point | op=teleport&to=map
 9.3 | Blink | op=blink&pvp=1 | pin=F6
 9.4 | To player... | op=teleport&to=player&player={player} | ask=player:@players
+# real form (hc-teleport): 9.5 | Last chance | op=lastchance&on=1 | shift=on=0 shiftlabel=Last_chance_off
+9.5 | Last chance (soon) | @dummy
+10 | Chat commands
+# real form (hc-chat): 10.1 | Intro | op=chat&msg=intro
+10.1 | Intro (soon) | @dummy
