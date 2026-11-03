@@ -1,5 +1,5 @@
 @startuml homecheat-core
-' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25 (wave 0 core pass: Host, Coords, Constructions, Caps, GridRoute, world exit; test pass: AttackCommand, PvpHits, Notify, PvpProjectilePatch).
+' HomeCheat core (HomeCheat.dll): contracts, services, Pure, Kit, built-ins. Checked against src/Core on 2026-10-25 (wave 0 core pass: Host, Coords, Constructions, Caps, GridRoute, world exit; test pass: AttackCommand, PvpHits, Notify, PvpProjectilePatch; 2026-11-03 wave 0-core: Materials, MaterialSplit, PvpTamedPatch).
 !pragma layout smetana
 skinparam classAttributeIconSize 0
 skinparam shadowing false
@@ -122,6 +122,15 @@ package "HomeCheat (Pure, no Unity; also in SelfTest)" {
     +ClearWorld(world) : int
     +Names(world) : List<string>
   }
+  class MaterialSplit <<static>> {
+    +Split(need, available, out free) : int[]
+    +Merge(needs) : List<KeyValuePair<string,int>>
+  }
+  class MaterialLedger <<sealed>> {
+    +Used(source, item) : int
+    +Add(source, item, count)
+    +Left(source, item, live) : int
+  }
 }
 
 package "HomeCheat.Services" {
@@ -167,6 +176,22 @@ package "HomeCheat.Kit (static helpers)" {
     +ArmAoe(aoe, hitPlayers)
     +ArmHit(hit, hitPlayers)
     +MarkProjectile(pr)
+    +HitsTamed(c) : bool
+    +IsOwnTamed(c, me) : bool
+  }
+  class Materials <<static>> {
+    +DefaultRadius = 50, MaxRadius = 100
+    +Begin(p, radius, checkOnly) : MaterialsRun
+    +Take(p, reqs, radius, [checkOnly,] out report) : int
+  }
+  class MaterialsRun <<sealed>> {
+    +Report : MaterialsReport
+    +CheckOnly : bool
+    +Take(reqs) : int
+  }
+  class MaterialsReport <<sealed>> {
+    +FromYou, FromChests, Free, Skipped : int
+    +Summary() : string
   }
   class Players <<static>>
   class Aim <<static>>
@@ -213,6 +238,8 @@ package "HomeCheat.Kit (static helpers)" {
 package "HomeCheat.Builtins" {
   class PvpProjectileHitPatch <<HarmonyPatch Projectile.OnHit>>
   class PvpProjectileDamagePatch <<HarmonyPatch Character.Damage>>
+  class PvpTamedAoePatch <<HarmonyPatch Aoe.ShouldHit>>
+  class PvpTamedProjectilePatch <<HarmonyPatch Projectile.IsValidTarget>>
   class TreeScalePatch <<HarmonyPatch ZNetView.Awake>>
   class WorldExitPatch <<HarmonyPatch ZNetScene.OnDestroy>> {
     ~OnExit : Action
@@ -243,6 +270,12 @@ AttackCommand <|-- HarmEffect
 AttackCommand ..> PvpHits : the rule
 PvpProjectileHitPatch ..> PvpHits : marked shots
 PvpProjectileDamagePatch ..> PvpHits : m_ignorePVP back on
+PvpTamedAoePatch ..> PvpHits : HitsTamed
+PvpTamedProjectilePatch ..> PvpHits : HitsTamed
+Materials ..> MaterialsRun : Begin
+MaterialsRun *-- MaterialsReport
+MaterialsRun ..> MaterialSplit : per requirement
+MaterialsRun *-- MaterialLedger : check-only
 CommandBase ..> Notify : ERROR answers on screen
 CommandBase *-- "0..1" PatchSet : lazy, com.homeos.homecheat.<name>
 CommandBase ..> Args : builds per Run

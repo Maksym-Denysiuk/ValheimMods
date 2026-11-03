@@ -3,7 +3,7 @@ description: backlog card materials-nearby (approved 2026-11-03) - build and pla
 ---
 # materials-nearby: build and plant take materials from you, then safe chests, then build free
 
-Status: approved (2026-11-03) · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
+Status: Kit helper B (built 2026-11-03, selftest; in-game test with its first user, hc-materials); the five command users: approved, wave 2 · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
 Fingerprint: give item (negative) / self, containers / radius 50 m / `Inventory`, `Container`
 
 - Helper: `Kit.Materials.Take(player, requirements, radius, out report)`: per requirement, your inventory first, then containers within `radius` nearest first, the rest free. Per piece, never all or nothing. Report: from you, from N chests, free.
