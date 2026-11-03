@@ -331,7 +331,7 @@ Shared helpers in `src/Core/Kit/` (namespace `HomeCheat.Kit`). Use them instead 
 From Git Bash. The game folder defaults to `/d/steam/steamapps/common/Valheim`; set `VALHEIM_DIR=/c/...` for another install path. Builds go to `${TMPDIR:-/tmp}/homecheat-build` first and are then copied into the game; csc's CS0618 (obsolete game API) warnings are hidden.
 
 ```bash
-bash src/build.sh selftest     # Core/Pure + SelfTest only, no game references: form parser, Args, build stamps, grid math, rectangles, routes, point store; exit 0 = all passed
+bash src/build.sh selftest     # Core/Pure + SelfTest only, no game references: form parser, Args, build stamps, grid math, rectangles, routes, point store, material split; exit 0 = all passed
 bash src/build.sh core         # BepInEx/plugins/HomeCheat.dll; refuses while valheim.exe runs
 bash src/build.sh <feature>    # e.g. heal (folder name, any case); stages HomeCheat.Cmd.heal.v<stamp>.dll, then op=reload
 bash src/build.sh all          # core (if the game is closed) and every feature
