@@ -29,6 +29,7 @@ namespace HomeCheat.SelfTest
             RectCellsTests();
             GridRouteTests();
             PointStoreTests();
+            MaterialSplitTests();
             Console.WriteLine("selftest: " + passed + " passed, " + failed + " failed");
             return failed == 0 ? 0 : 1;
         }
@@ -181,6 +182,49 @@ namespace HomeCheat.SelfTest
 
             st = GridRoute.Find(5, 5, null, new GridCell(0, 0), new GridCell(5, 0), out path);
             Eq(GridRouteStatus.Invalid, st, "route end outside the grid is invalid");
+        }
+
+        static void MaterialSplitTests()
+        {
+            int free;
+            // the card's example: 10 wood on you, 50 in a chest at 20 m, a 100-wood build -> 10 / 50 / 40 free
+            int[] t = MaterialSplit.Split(100, new int[] { 10, 50 }, out free);
+            Eq("10,50", t[0] + "," + t[1], "materials you first, then the chest");
+            Eq(40, free, "materials the rest is free");
+            t = MaterialSplit.Split(30, new int[] { 10, 50, 50 }, out free);
+            Eq("10,20,0", t[0] + "," + t[1] + "," + t[2], "materials nearest chest first, a far one untouched");
+            Eq(0, free, "materials nothing free when covered");
+            t = MaterialSplit.Split(5, new int[] { 0, -3, 9 }, out free);
+            Eq("0,0,5", t[0] + "," + t[1] + "," + t[2], "materials empty and negative sources give nothing");
+            t = MaterialSplit.Split(7, new int[0], out free);
+            Eq(7, free, "materials no sources: all free");
+            t = MaterialSplit.Split(0, new int[] { 4 }, out free);
+            Eq("0/0", t[0] + "/" + free, "materials need 0 takes nothing");
+            t = MaterialSplit.Split(5, null, out free);
+            Eq(5, free, "materials null sources: all free");
+
+            List<KeyValuePair<string, int>> needs = new List<KeyValuePair<string, int>>();
+            needs.Add(new KeyValuePair<string, int>("$item_wood", 4));
+            needs.Add(new KeyValuePair<string, int>("$item_stone", 2));
+            needs.Add(new KeyValuePair<string, int>("$item_wood", 6));
+            needs.Add(new KeyValuePair<string, int>("", 3));
+            needs.Add(new KeyValuePair<string, int>("$item_resin", 0));
+            List<KeyValuePair<string, int>> m = MaterialSplit.Merge(needs);
+            Eq(2, m.Count, "materials merge drops empty names and zero amounts");
+            Eq("$item_wood=10", m[0].Key + "=" + m[0].Value, "materials merge sums one item, first place kept");
+            Eq("$item_stone=2", m[1].Key + "=" + m[1].Value, "materials merge keeps the order");
+
+            // a check-only run of two pieces: the second sees what the first counted
+            MaterialLedger led = new MaterialLedger();
+            int[] avail = { led.Left(0, "w", 10), led.Left(1, "w", 50) };
+            t = MaterialSplit.Split(30, avail, out free);
+            led.Add(0, "w", t[0]); led.Add(1, "w", t[1]);
+            avail = new int[] { led.Left(0, "w", 10), led.Left(1, "w", 50) };
+            Eq("0,30", avail[0] + "," + avail[1], "materials ledger: what is left after piece 1");
+            t = MaterialSplit.Split(40, avail, out free);
+            Eq("0,30/10", t[0] + "," + t[1] + "/" + free, "materials ledger: piece 2 takes the rest, 10 free");
+            Eq(0, led.Left(0, "w", 5), "materials ledger never below 0");
+            Eq(4, led.Left(0, "stone", 4), "materials ledger per item");
         }
 
         static void PointStoreTests()

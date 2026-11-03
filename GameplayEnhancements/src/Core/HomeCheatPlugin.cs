@@ -51,6 +51,9 @@ namespace HomeCheat
             // the PvP rule of attack commands for projectiles (Kit.PvpHits): marked shots get HitData.m_ignorePVP back
             try { harmony.CreateClassProcessor(typeof(PvpProjectileHitPatch)).Patch(); harmony.CreateClassProcessor(typeof(PvpProjectileDamagePatch)).Patch(); }
             catch (Exception e) { Logger.LogError("Harmony PvpProjectilePatch: " + e); }
+            // the tamed rule of attack commands (Kit.PvpHits.HitsTamed): marked Aoes and shots spare your own tamed creatures
+            try { harmony.CreateClassProcessor(typeof(PvpTamedAoePatch)).Patch(); harmony.CreateClassProcessor(typeof(PvpTamedProjectilePatch)).Patch(); }
+            catch (Exception e) { Logger.LogError("Harmony PvpTamedPatch: " + e); }
 
             registry.RegisterBuiltin(new PingCommand());
             registry.RegisterBuiltin(new StatusCommand());
