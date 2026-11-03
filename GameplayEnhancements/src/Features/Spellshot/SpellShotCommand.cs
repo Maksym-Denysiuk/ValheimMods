@@ -31,7 +31,7 @@ namespace HomeCheat.Features.Spellshot
         string pvpNote = "";      // the pvp part of the first answer line
 
         // type -> candidate prefab names (a Projectile prefab, or an ammo item whose attack fires one), first existing wins
-        static string[] Candidates(string type)
+        internal static string[] Candidates(string type)
         {
             // verified in game 2026-10-24 with type=probe: ArrowNeedle -> bow_projectile_needle; TurretBoltFlametal (the siege ballista's
             // Flametal bolt) -> Turret_projectile; Eikthyr's own attacks are melee/AoE, the Projectile that carries his lightning is
@@ -45,7 +45,7 @@ namespace HomeCheat.Features.Spellshot
             return new string[0];
         }
 
-        static float DefaultSpeed(string type)
+        internal static float DefaultSpeed(string type)
         {
             if (type == "arrow") return 60f;
             if (type == "balistashot") return 90f;
@@ -84,31 +84,12 @@ namespace HomeCheat.Features.Spellshot
             if (Time.time - lastShot < 0.4f) return "ERROR: cooldown, wait a moment between volleys";
 
             // resolve projectile prefab and (optionally) the ammo item
-            GameObject projPrefab = null;
-            GameObject ammoPrefab = null;
+            GameObject projPrefab;
+            GameObject ammoPrefab;
             string given = a.Str("projectile", "");
             List<string> names = new List<string>();
             if (given.Length > 0) names.Add(given); else names.AddRange(Candidates(type));
-            string used = null;
-            foreach (string n in names)
-            {
-                GameObject g = Prefabs.Get(n);
-                if (g == null) continue;
-                used = n;
-                if (g.GetComponent<Projectile>() != null) projPrefab = g;
-                else
-                {
-                    ItemDrop id = g.GetComponent<ItemDrop>();
-                    if (id != null && id.m_itemData != null && id.m_itemData.m_shared != null
-                        && id.m_itemData.m_shared.m_attack != null && id.m_itemData.m_shared.m_attack.m_attackProjectile != null)
-                    {
-                        ammoPrefab = g;
-                        projPrefab = id.m_itemData.m_shared.m_attack.m_attackProjectile;
-                    }
-                    else projPrefab = g; // no Projectile: spawned as a strike at the aim point
-                }
-                break;
-            }
+            string used = Resolve(names, out projPrefab, out ammoPrefab);
             if (projPrefab == null)
                 return "ERROR: no prefab found for '" + type + "' (tried " + string.Join(", ", names.ToArray()) + "); use type=probe&filter=... and projectile=<name>";
 
@@ -351,7 +332,34 @@ namespace HomeCheat.Features.Spellshot
         }
 
 
-        static MethodInfo FindSetup()
+        // first existing name wins: a Projectile prefab, or an ammo item whose attack fires one (ammo = that item), else the
+        // prefab itself (spawned as a strike). Returns the name used, null when none exists. Also used by bowcharge.
+        internal static string Resolve(List<string> names, out GameObject projPrefab, out GameObject ammoPrefab)
+        {
+            projPrefab = null;
+            ammoPrefab = null;
+            foreach (string n in names)
+            {
+                GameObject g = Prefabs.Get(n);
+                if (g == null) continue;
+                if (g.GetComponent<Projectile>() != null) projPrefab = g;
+                else
+                {
+                    ItemDrop id = g.GetComponent<ItemDrop>();
+                    if (id != null && id.m_itemData != null && id.m_itemData.m_shared != null
+                        && id.m_itemData.m_shared.m_attack != null && id.m_itemData.m_shared.m_attack.m_attackProjectile != null)
+                    {
+                        ammoPrefab = g;
+                        projPrefab = id.m_itemData.m_shared.m_attack.m_attackProjectile;
+                    }
+                    else projPrefab = g; // no Projectile: spawned as a strike at the aim point
+                }
+                return n;
+            }
+            return null;
+        }
+
+        internal static MethodInfo FindSetup()
         {
             BindingFlags all = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             foreach (MethodInfo m in typeof(Projectile).GetMethods(all))
@@ -376,7 +384,7 @@ namespace HomeCheat.Features.Spellshot
         }
 
         // builds the Setup argument list from the parameter types, so a changed signature still works
-        static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul, int seHash, bool hitPlayers)
+        internal static void Fire(Player p, MethodInfo setup, GameObject projPrefab, GameObject ammoPrefab, Vector3 pos, Vector3 dir, float speed, float dmgMul, int seHash, bool hitPlayers)
         {
             GameObject go = (GameObject)UnityEngine.Object.Instantiate(projPrefab, pos, Quaternion.LookRotation(dir));
             Projectile pr = go.GetComponent<Projectile>();

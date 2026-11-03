@@ -94,6 +94,8 @@ package "slime" as sl {
 }
 package "spellshot" as ss {
   class SpellShotCommand
+  class BowChargeCommand
+  class BowChargePatch
 }
 package "spells  (see homecheat-spells)" as sp {
   class SpellsCommand
@@ -212,6 +214,9 @@ CommandBase <|-- BlessCommand
 HarmEffect <|-- EarthquakeEffect
 HarmEffect <|-- SlimeEffect
 AttackCommand <|-- SpellShotCommand
+AttackCommand <|-- BowChargeCommand
+BowChargePatch ..> BowChargeCommand : release adds spell arrows
+BowChargeCommand ..> SpellShotCommand : Fire (type=arrow)
 CommandBase <|-- SpellsCommand
 CommandBase <|-- TransformCommand
 CommandBase <|-- HideBodyCommand
