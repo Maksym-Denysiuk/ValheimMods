@@ -2,7 +2,9 @@
 // slope ahead (never below the terrain), a drop is left to fall as usual, the world edge refuses. The move copies Player.UpdateTeleport
 // (position, body, velocity zero, m_maxAirAltitude) without TeleportTo, so there is no fade, no wait and no portal.
 // Every character within width m of the line you cross is shoved to the side away from it and gets Tared (the tar slow), no damage:
-// one HitData each, built as TrapCommand.Boom builds its tar hit (two users: a Kit candidate). An attack: the PvP rule of AttackCommand.
+// one HitData each, built as TrapCommand.Boom builds its tar hit (two users: a Kit candidate). An attack: the PvP rule of AttackCommand,
+// tamed creatures by PvpHits.HitsTamed (pvp=1 and your PvP on: others' tamed are shoved, yours spared; tamed=1 shoves every tamed one).
+// Dash is also lastchance's blink (LastChanceCommand, same DLL).
 // Look: Hugin, the advice raven (Tutorial.m_ravenPrefab), poofs where you leave and where you appear (his despawn effect and the
 // animator trigger "poff", Raven.FlyAway 1.0.20); his model is local, so a networked smoke and crow call are added when his despawn
 // effect is not networked (probe=1 says which). Card: docs/Spells/teleport.md, Cards.
@@ -45,10 +47,16 @@ namespace HomeCheat.Features.TeleportCommands
             get
             {
                 return "blink [dist=10 (metres along your flat look direction, cap 20)] [width=2 (metres to each side of the line, cap 5)] [push=150 (cap 500)]"
-                    + " [tamed=0] [boss=0] " + PvpUsage + " [fx=1 (Hugin poofs where you leave and appear; 0 = none)]"
+                    + " [tamed=0 (0 = tamed creatures by the PvP rule: with pvp=1 and your PvP on others' are shoved, yours spared; 1 = every tamed one, yours too)] [boss=0] " + PvpUsage + " [fx=1 (Hugin poofs where you leave and appear; 0 = none)]"
                     + " - dash through walls and creatures; everyone on the line is shoved aside and tarred, no damage; the ground and the world edge are the limit";
             }
         }
+
+        // the blink of this build, for lastchance (same DLL): set while loaded
+        internal static BlinkCommand Current;
+
+        protected override void OnLoad() { Current = this; }
+        protected override void OnUnload() { if (Current == this) Current = null; }
 
         protected override string Execute(Args a)
         {
@@ -64,6 +72,13 @@ namespace HomeCheat.Features.TeleportCommands
             Vector3 dir = p.GetLookDir();
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.01f) { dir = p.transform.forward; dir.y = 0f; }
+            return Dash(p, dir, dist, width, push, a.Flag("tamed", false), a.Flag("boss", false), HitsPlayers(a), fx) + PvpNote(a);
+        }
+
+        // the dash itself along the flat direction 'dir' (blink, and lastchance with the spell 9.3 defaults); the world edge throws
+        internal string Dash(Player p, Vector3 dir, float dist, float width, float push, bool tamed, bool boss, bool hitPlayers, bool fx)
+        {
+            dir.y = 0f;
             dir.Normalize();
             Vector3 from = p.transform.position;
             Vector3 to = from + dir * dist;
@@ -71,14 +86,16 @@ namespace HomeCheat.Features.TeleportCommands
             to.y = Mathf.Max(from.y, Ground.Height(to) + 0.1f);
 
             Dictionary<string, int> shoved = new Dictionary<string, int>();
-            int n = Shove(p, from, to, dir, dist, width, push, a.Flag("tamed", false), a.Flag("boss", false), HitsPlayers(a), shoved);
+            int n = Shove(p, from, to, dir, dist, width, push, tamed, boss, hitPlayers, shoved);
             if (fx) Poof(p, from, dir);
             Move(p, to);
             TeleportFx.FallGuard(this, p, TeleportFx.FallGuardTime);
             if (fx) Poof(p, to, -dir);
             HomeApi.Log("blink: " + Fmt.Vec(from) + " -> " + Fmt.Vec(to) + ", " + n + " shoved");
-            return "blinked " + Fmt.F(dist, 1) + " m to " + Fmt.Vec(to) + ", shoved and tarred " + n + Counts(shoved) + PvpNote(a);
+            return "blinked " + Fmt.F(dist, 1) + " m to " + Fmt.Vec(to) + ", shoved and tarred " + n + Counts(shoved);
         }
+
+        internal const float SpellDist = DefaultDist, SpellWidth = DefaultWidth, SpellPush = DefaultPush;
 
         static int Shove(Player p, Vector3 from, Vector3 to, Vector3 dir, float dist, float width, float push,
             bool tamed, bool boss, bool hitPlayers, Dictionary<string, int> shoved)
@@ -92,7 +109,7 @@ namespace HomeCheat.Features.TeleportCommands
                 if (c == null || c == p || c.IsDead()) continue;
                 bool player = c is Player;
                 if (player && !hitPlayers) continue;
-                if (!player && !tamed && c.IsTamed()) continue;
+                if (!player && !tamed && c.IsTamed() && !(hitPlayers && PvpHits.HitsTamed(c))) continue;   // the PvP tamed rule: pvp=1 and your PvP on = others' tamed hit, yours spared
                 if (!boss && c.IsBoss()) continue;
                 Vector3 pos = c.transform.position;
                 if (pos.y < low || pos.y > high) continue;

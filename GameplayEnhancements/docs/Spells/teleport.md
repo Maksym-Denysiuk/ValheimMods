@@ -1,11 +1,13 @@
 ---
-description: teleport and blink commands of the HomeCheat Valheim plugin (built 2026-10-26, tuned in game with Maksym 2026-10-27) - teleport to your last death point, a spot you left-click on the large map, next to another player, typed coordinates or the crosshair (the game's own portal path; the ward's blue dome with its sound and a slow sphere of smoke when the screen clears, 3 s fall guard); blink, a 10 m dash along your flat look direction through walls and creatures that shoves everyone on the line aside with tar and no hit, Hugin the raven poofing at both ends; spell group 9 Teleport (flat), Blink on F6; cards, how it works, probes, test log, limits, undo
+description: teleport and blink commands of the HomeCheat Valheim plugin (built 2026-10-26, tuned in game with Maksym 2026-10-27) - teleport to your last death point, a spot you left-click on the large map, next to another player, typed coordinates or the crosshair (the game's own portal path; the ward's blue dome with its sound and a slow sphere of smoke when the screen clears, 3 s fall guard); blink, a 10 m dash along your flat look direction through walls and creatures that shoves everyone on the line aside with tar and no hit, Hugin the raven poofing at both ends; lastchance (built 2026-11-03, not yet run in game), a killing hit cancelled and turned into a blink in a random direction with a 60 s cooldown, on by default; spell group 9 Teleport (flat), Blink on F6, Last chance 9.5; cards, how it works, probes, test log, limits, undo
 ---
-# teleport and blink (feature Teleport)
+# teleport, blink and lastchance (feature Teleport)
 
 > **Tuned in game 2026-10-27.** Maksym ran Last death, Blink (enemies shoved and tarred), to=point, to=aim and the appear look in `ClaudeTest`; Map point and To player have not been confirmed by him yet, and what Claude2 sees is still to check ([test log](#test-log)).
+>
+> **lastchance: built 2026-11-03, not run in game yet** (status B): the test list is under [lastchance tests](#lastchance-tests). Blink's shove takes the PvP tamed rule since the same build (not run in game either).
 
-Valheim 1.0.20, BepInEx 5.4.2351, own game and own world only. Source: [src/Features/Teleport/](../../src/Features/Teleport/) (`TeleportCommand.cs`, `TeleportMapPatch.cs`, `BlinkCommand.cs`, `TeleportFx.cs`, `refs.txt`), DLL `HomeCheat.Cmd.teleport.v<stamp>.dll`, namespace `HomeCheat.Features.TeleportCommands` (the game has a type `Teleport`, the dungeon door).
+Valheim 1.0.20, BepInEx 5.4.2351, own game and own world only. Source: [src/Features/Teleport/](../../src/Features/Teleport/) (`TeleportCommand.cs`, `TeleportMapPatch.cs`, `BlinkCommand.cs`, `TeleportFx.cs`, `LastChanceCommand.cs`, `LastChancePatch.cs`, `refs.txt`), DLL `HomeCheat.Cmd.teleport.v<stamp>.dll`, namespace `HomeCheat.Features.TeleportCommands` (the game has a type `Teleport`, the dungeon door).
 
 ## Goal
 
@@ -14,7 +16,8 @@ Before: the only ways to move far were portals and walking; nothing dashes. Afte
 - `op=teleport&to=map` opens the large map, and the next left click on it takes you there;
 - `op=teleport&to=player&player=<nick>` puts you 2 to 5 m from that player;
 - `op=teleport&to=point&at=x,y,z` and `op=teleport&to=aim` take you to typed coordinates or the spot under your crosshair;
-- `op=blink` moves you 10 m forward at once, through walls and creatures, shoving everyone on the line aside and tarring them.
+- `op=blink` moves you 10 m forward at once, through walls and creatures, shoving everyone on the line aside and tarring them;
+- `lastchance` (on by default) turns a hit that would kill you into such a blink in a random direction, once per 60 s.
 
 ## Cards
 
@@ -33,11 +36,22 @@ Before: the only ways to move far were portals and walking; nothing dashes. Afte
 - Verdict: **new** (nearest `trap` tar kind: `Tared` and no damage).
 - Fingerprint: form/movement + push + status / self + enemies / a line ahead / `AttackCommand`.
 - Maksym: "it should pushback enemies to the sides and give them tar effect. no damage"; flat direction, follows the terrain; the look is "the crow that gives advice" (Hugin); 2026-10-27: twice the distance (10 m), no red hit flash on enemies ("use tar effect and make a knockback if enemy was on the user path, to the side"), smoke at a quarter size, the appear pop as its sound.
-- Targets: enemies; tamed with `tamed=1`, bosses with `boss=1` (target model: excluded unless asked); other players only through the shared PvP rule (`pvp=1`, which the spell line passes); never you.
+- Targets: enemies; bosses with `boss=1` (target model: excluded unless asked); other players only through the shared PvP rule (`pvp=1`, which the spell line passes); never you. Tamed creatures (2026-11-03, the core tamed rule, Maksym: "Not mine = hit"): with `pvp=1` and your PvP on, others' tamed creatures are shoved and yours spared (`PvpHits.HitsTamed` in the shove's filter); PvP off spares them all; `tamed=1` shoves every tamed one, yours too (unchanged).
 - Look: Hugin, the advice raven, poofs where you leave and where you appear: a local copy of the Hugin child of `Tutorial.m_ravenPrefab` (`Ravens`: Hugin and Munin, one `Raven` each) with the animator trigger `poff`, and his despawn effect `fx_raven_despawn` (local). Every player gets the networked fallback `vfx_odin_despawn` at a quarter size and the pop `sfx_cooking_station_take`. No portal.
 - Safeguard: the 3 s fall guard as teleport.
 - Persists: nothing. Caps: `dist` 20, `width` 5, `push` 500.
 - Pin: F6, so it can be cast in a fight without opening the radial.
+
+### lastchance
+
+- Verdict: **new** in feature Teleport, reuses blink's dash (`BlinkCommand.Dash`); card `docs/Backlog/last-chance.md` (approved 2026-11-03).
+- Fingerprint: form/movement + push / self (and whoever is on the line) / a line in a random direction / damage-path patch + blink.
+- Maksym (2026-11-03): "on lethal hit, should make stardant blink to random direction 360, no healing"; "Always on, 60 s cooldown".
+- Behaviour: a hit that would bring your health to 0 is cancelled (no damage, no healing: health stays as it was, no stagger, no hit effect) and you blink as spell 9.3 does (10 m, width 2, push 150, shove and tar on the line, the `pvp=1` rule: your PvP on = other players and others' tamed creatures on the line are shoved too, yours spared) in a random flat direction (0-360 degrees). Then the cooldown, during which a killing hit kills as normal. If the blink is refused (the world edge), the hit goes through and no cooldown starts.
+- Default: **on** while HomeCheat is loaded (Maksym's choice, plan finding 6: an exception to opt-in, stated here and on the card); 9.5 Last chance turns it on, its Shift version off.
+- Persists: on/off, the cooldown and when it ends (world time), per world, in `BepInEx/config/homecheat/teleport.state` (this PC only); written on a change and once per save. Nothing in the world.
+- Gate 6: no god mode, ghost or cheat field is written; the hit is skipped before the game applies it.
+- Caps: `cooldown` 10-3600 s (outside refused).
 
 ## Use
 
@@ -51,10 +65,13 @@ Before: the only ways to move far were portals and walking; nothing dashes. Afte
 | `op=teleport&preview=1` | test aid: the appear look where you stand, no teleport |
 | `op=blink` | `dist=10` (cap 20), `width=2` (metres to each side of the line, cap 5), `push=150` (cap 500), `tamed=0`, `boss=0`, `pvp=0`, `fx=1` |
 | `op=blink&probe=1` | read-only: Hugin's prefab and its children, whether his despawn effect is networked, the fallback prefabs |
+| `op=lastchance` | `on=1` or `on=0` (on by default), `cooldown=60` (seconds, 10-3600); no parameter = the status |
+| `op=lastchance&status=1` | read-only: on or off, the cooldown, how much of it is left (or `ready`), whether blink is loaded |
+| `op=lastchance&probe=1` | read-only: the damage method the guard patches with its parameters, whether it is patched, `Game.m_localDamgeTakenRate`, whether blink is loaded, your health |
 
-Spell bar (`spells.txt`), group 9 Teleport, flat (Maksym 2026-10-27: no "To coordinates" submenu): 9.1 Last death (`to=death`), 9.2 Map point (`to=map`), 9.3 Blink (`op=blink&pvp=1`, `pin=F6`), 9.4 To player... (`to=player&player={player}`, form `ask=player:@players`). Maksym's own pins: F7 = 9.1, F8 = 9.2, F9 = 9.4. The root is 1, 2, 4, 5, 6, 7, 8, 9: one ring; id 3 (the removed Protect) is not reused. `to=point` and `to=aim` have no spell line.
+Spell bar (`spells.txt`), group 9 Teleport, flat (Maksym 2026-10-27: no "To coordinates" submenu): 9.1 Last death (`to=death`), 9.2 Map point (`to=map`), 9.3 Blink (`op=blink&pvp=1`, `pin=F6`), 9.4 To player... (`to=player&player={player}`, form `ask=player:@players`), 9.5 Last chance (`op=lastchance&on=1`, Shift `on=0` "Last chance off"; swapped from its "(soon)" placeholder 2026-11-03). Maksym's own pins: F7 = 9.1, F8 = 9.2, F9 = 9.4. The root is 1, 2, 4, 5, 6, 7, 8, 9: one ring; id 3 (the removed Protect) is not reused. `to=point` and `to=aim` have no spell line.
 
-Answers (first line): `teleporting to your death point at x,y,z (n m)`, `map armed: left-click a spot to teleport there (closing the map cancels)`, `teleporting to <name>: 3.4 m from them at x,y,z`, `teleporting to x,y,z (n m)`, `teleporting to the crosshair at x,y,z (n m)`, `appear effect at x,y,z`, `blinked 10.0 m to x,y,z, shoved and tarred 4 (Greydwarf=4)` + the PvP note. Errors: `no death point in this world`, `player '<nick>' is not online`, `that is you: pick another player`, `at=<v>: write x,y,z or x,z`, `at=<v> is outside the world`, `nothing under the crosshair within 60 m`, `the world ends there: blink refused`, `the game refused the teleport (already teleporting?)`, `click inside the map to teleport`.
+Answers (first line): `teleporting to your death point at x,y,z (n m)`, `map armed: left-click a spot to teleport there (closing the map cancels)`, `teleporting to <name>: 3.4 m from them at x,y,z`, `teleporting to x,y,z (n m)`, `teleporting to the crosshair at x,y,z (n m)`, `appear effect at x,y,z`, `blinked 10.0 m to x,y,z, shoved and tarred 4 (Greydwarf=4)` + the PvP note, `last chance on, cooldown 60 s, ready` (or `, 42 s of it left`). A saved hit has no answer (no command ran): it is logged `lastchance: killing hit of 87.0 (health 12.0) by Troll cancelled; blinked 10.0 m to x,y,z, shoved and tarred 0 at 213 deg; other players spared (your PvP off); cooldown 60 s`; a hit in the cooldown `... in the cooldown (42 s left): it goes through`. Errors: `no death point in this world`, `player '<nick>' is not online`, `that is you: pick another player`, `at=<v>: write x,y,z or x,z`, `at=<v> is outside the world`, `nothing under the crosshair within 60 m`, `the world ends there: blink refused`, `the game refused the teleport (already teleporting?)`, `click inside the map to teleport`, `on=<v>: write on=1 or on=0`, `cooldown must be at least 10 s`, and the cap refusal above 3600.
 
 ## How it works
 
@@ -68,6 +85,8 @@ Answers (first line): `teleporting to your death point at x,y,z (n m)`, `map arm
 - **blink** moves you the way `UpdateTeleport` does, without `TeleportTo` (no fade, no wait): transform and body position, velocity zero, `m_maxAirAltitude`, then the fall guard. Target = your position + your flat look direction x `dist`; height = the higher of your own and the terrain there + 0.1 m (`Ground.Height`). Past 10 400 m from the world centre it is refused.
 - **The shove**: before the move, every character within `width` of the line (and within 3 m above or below it) is pushed away from the line (a random side for one standing on it). A creature this PC owns gets `Tared` straight into its `SEMan` (`AddStatusEffect(hash, true, 0, 0)`) and the game's own push `Character.ApplyPushback(dir, push)` (private, by reflection): no hit, so no red flash, no hit sound, no damage number. Players (`pvp=1`) and creatures another peer owns get the zero-damage `HitData` (push, `m_statusEffectHash` Tared, `PvpHits.ArmHit`), whose owner applies both.
 - **Smoke at a quarter** (`TeleportFx.Shrink`): blink's `vfx_odin_despawn` and `fx_raven_despawn` get the root scale (also the ZDO scale) with particles in Hierarchy scaling mode; a third copy of `TrapFxSets.Tune`, see Known defects in the architecture doc. Teleport's puffs stay full size (a quarter was not visible).
+- **lastchance** (`LastChancePatch`): a prefix on `Character.ApplyDamage(HitData, ...)`, the damage path in this game version (probed 2026-11-03 with il-reader after the update past 1.0.20): `RPC_Damage` applies blocking, armour and resistances and calls `ApplyDamage`, which returns early while dead, teleporting, debug flying or in a cutscene, scales a player's damage by `Game.m_localDamgeTakenRate`, drops a total below 0.1, then sets the health (god and ghost mode keep 1). The prefix runs only for `Player.m_localPlayer` and only while the command is loaded (`Current`); it computes the same total (damage x rate) and, when health - total <= 0, the setting is on and the cooldown is over, calls `BlinkCommand.Dash` with a random flat direction and returns false: the game's `ApplyDamage` is skipped for that hit. Fall, drowning and burning damage take the same path, so they are saved too. An exception inside lets the hit through (logged).
+- **Cooldown** in world time (`ZNet.GetTimeSeconds`, stops while the world is not running), so a relog does not reset it.
 - Messages: failures only (an armed map click that fails shows its error through `Kit.Notify`); landings, appears and blinks are logged.
 
 ## Probes
@@ -77,6 +96,8 @@ Answers (first line): `teleporting to your death point at x,y,z (n m)`, `map arm
 | P1 | `op=inspect&prefab=vfx_Place_HildirClothesRack`, `op=inspect&prefab=sfx_cooking_station_take` | both exist with a `ZNetView` (the puff also carries a sound: `ZSFX`, `AudioSource`) |
 | P2 | `op=blink&probe=1` | `Hugin: prefab Ravens, ZNetView False, Animator True, Raven True; children: Hugin Raven Animator Munin Raven Animator; raven Hugin name=$npc_hugin visual=model; raven Munin ...; despawn effect: fx_raven_despawn (local); local only: fallback added` - the first build read `Raven` on the root and copied both birds with their brains: fixed (copy the Hugin child only) |
 | P3 | `op=teleport&to=player&player=Claude2` with Claude2 indoors | not run (do you land on the roof? if yes: `distant=false` when the target is loaded here) |
+| P5 | il-reader `Character` `ApplyDamage` (2026-11-03, offline, the updated game) | one method, no `Player` override; player branch `HitData.ApplyModifier(Game.m_localDamgeTakenRate)`, below 0.1 = no damage, `SetHealth(health - total)`: the guard's prefix target |
+| P6 | `op=lastchance&probe=1` (in game) | not run yet |
 | P4 | `op=spawn&prefab=Greydwarf&count=5&dist=5&where=ahead`, then Blink through them | `shoved and tarred 4 (Greydwarf=4)`, then `3 (Boar=3)`; Maksym: pushed aside and tarred, no flash ("works good") |
 
 ## Test log
@@ -99,6 +120,20 @@ World `ClaudeTest`, 2026-10-27. `op=cheatstate` before: `Achievements.IsWorldChe
 
 Still to run: Map point and To player with the final look (P3 indoors), the fall guard after a high drop, Esc on the armed map, Claude2 watching (dome, smoke size, puff sounds, Hugin or fallback), `op=cheatstate` after.
 
+### lastchance tests
+
+Built 2026-11-03 (`HomeCheat.Cmd.teleport.v20261103195038.dll`), not run in game: the game was closed. Test list (world `ClaudeTest`, `op=cheatstate` before and after, `LogOutput.log` after each line):
+
+| # | Command | Expected |
+|---|---|---|
+| L1 | `op=reload`, then `op=lastchance&probe=1` | `damage method Character.ApplyDamage(HitData hit, ...); patched True; Game.m_localDamgeTakenRate 1.00; blink loaded; your health ...` |
+| L2 | `op=lastchance&status=1` | `last chance on, cooldown 60 s, ready` |
+| L3 | low health (let a Greydwarf hit you down to about 15), `op=spawn&prefab=Troll&count=1&dist=6&where=ahead`, take the Troll's hit | log `lastchance: killing hit ... by Troll cancelled; blinked 10.0 m ...`; you stand 10 m away, health unchanged, Hugin poofs at both ends |
+| L4 | within 60 s, take a second killing hit | log `... in the cooldown (n s left): it goes through`; you die (then `op=teleport&to=death`) |
+| L5 | `op=lastchance&on=0`, a killing hit | you die; `op=lastchance&on=1` after |
+| L6 | `op=spawn&prefab=Boar&tamed=1&dist=4&where=ahead`, make it follow you, PvP on, F6 Blink over it | log `blink: ... 0 shoved` (yours spared); a tamed boar that does not follow you: shoved and tarred |
+| L7 | `op=killmobs` | arena clear |
+
 ## Limits
 
 - The teleports keep the game's black screen (2 s fade plus the area wait, 8 to 15 s); the look plays when it clears. Only blink is instant.
@@ -106,7 +141,8 @@ Still to run: Map point and To player with the final look (P3 indoors), the fall
 - On other players' screens the smoke runs at normal speed and every puff plays its own poof sound (slowing and muting are done on this PC); Hugin's model and his despawn effect are drawn on this PC only, others see the fallback smoke.
 - A creature another peer owns, and a player, are shoved through a zero-damage hit, so they still show the hit flash.
 - A map point on deep water drops you into the water.
+- lastchance: a hit that kills through a path other than `ApplyDamage` (none known in this game version) is not saved; a random direction may face a wall (blink goes through it) or a cliff (the fall guard holds 3 s, a longer fall counts after it); several killing hits in one frame: the first is saved, the rest come in the cooldown and kill.
 
 ## Undo
 
-- Nothing is saved in the world. Remove the feature: delete `BepInEx/homecheat-commands/HomeCheat.Cmd.teleport.*.dll`, restart the game, and remove the 9.x lines from `spells.txt` and `F6=9.3` (and Maksym's F7-F9) from `spells.txt.pins`. Backups in the game folder: `spells.txt.pre-teleport.bak` (before the group), `spells.txt.pre-flat-teleport.bak` and `spells.txt.pins.pre-flat-teleport.bak` (before the flat group).
+- Nothing is saved in the world. Remove the feature: delete `BepInEx/homecheat-commands/HomeCheat.Cmd.teleport.*.dll`, restart the game, and remove the 9.x lines from `spells.txt` (lastchance: also `BepInEx/config/homecheat/teleport.state`; `op=lastchance&on=0` switches it off without removing anything) and `F6=9.3` (and Maksym's F7-F9) from `spells.txt.pins`. Backups in the game folder: `spells.txt.pre-teleport.bak` (before the group), `spells.txt.pre-flat-teleport.bak` and `spells.txt.pins.pre-flat-teleport.bak` (before the flat group).
