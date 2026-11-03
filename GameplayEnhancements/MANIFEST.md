@@ -1,6 +1,6 @@
 # GameplayEnhancements: manifest
 
-Built 2026-10-28 14:19 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-11-03 13:17 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
 Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll, HomeCheat.Cmd.despawn.v20261025175610.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261025193104.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261025173212.dll, HomeCheat.Cmd.spellshot.v20261025161332.dll, HomeCheat.Cmd.teleport.v20261027215812.dll, HomeCheat.Cmd.transform.v20261025230546.dll, HomeCheat.Cmd.traps.v20261025165645.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261025225321.dll.
 
@@ -103,7 +103,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.construction.v20261025214918.dll
 | skills/valheim-spell-fx/scripts/find-fx.js | 5969 | b1b1fe2c4e4dd114 |
 | skills/valheim-spells-craft/README.md | 3174 | 3ec9111d4ecf8282 |
 | skills/valheim-spells-craft/SKILL.md | 7309 | 4d694a84ab775938 |
-| skills/valheim-spells-craft/baseline.md | 1928 | 667592cf4c6ce4a1 |
+| skills/valheim-spells-craft/baseline.md | 1928 | aefcc3e952231f7f |
 | skills/valheim-spells-craft/evals.md | 4309 | 99d5e1004f69c556 |
 | skills/valheim-spells-craft/instructions/done-gate.md | 8394 | a2eca1414c72ee82 |
 | skills/valheim-spells-craft/instructions/implement.md | 12607 | dbbd1f336d29b7e8 |

@@ -114,6 +114,13 @@ node scripts/valheim/kick-ban-patch.js check
 
 Another machine that hosts needs the same script run there. The patch covers only the PC it was applied on.
 
+### It happened: 2026-11-03
+
+- A Valheim update on 2026-10-28 replaced `assembly_valheim.dll` (2,575,360 -> 2,577,920 bytes). Nobody ran `check` afterwards.
+- On 2026-11-01 a player was kicked and came straight back: `Player.log` had `Kicking <name>` and no `Banning user`, and `bannedlist.txt` had not changed since 2026-10-22.
+- `check` reported `original` at both sites. `apply` found both by meaning in the new build (tokens `ZNet::Kick` 0x060011de -> `ZNet::Ban` 0x060011e4; the 1.0.20 tokens were 0x060011DA / 0x060011E0), made a new backup `D:\ValheimBackups\2026-11-03-kick-ban\`, and `check` reported `patched`.
+- Lesson 7: the warning in the README is not enough on its own. Whoever hosts must run `check` after every game update. Maksym chose to keep it a manual step (2026-11-03).
+
 ## Lessons
 
 1. **Find every caller before you promise a behaviour.** The plan covered the console `kick`; the user's real flow was a button that calls the same method from somewhere else. Scanning all method bodies for the callee token took seconds and would have found both on day one.
