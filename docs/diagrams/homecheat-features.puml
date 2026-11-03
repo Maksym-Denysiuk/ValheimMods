@@ -175,6 +175,11 @@ package "teleport" as tl {
   class BlinkCommand
   class TeleportMapPatch
   class TeleportFx
+  class LastChanceCommand
+  class LastChancePatch
+}
+package "chat" as ch {
+  class ChatCommand
 }
 package "traps" as tp {
   class TrapCommand
@@ -230,6 +235,10 @@ AttackCommand <|-- BlinkCommand
 TeleportMapPatch ..> TeleportCommand : armed map click
 TeleportCommand ..> TeleportFx : fall guard
 BlinkCommand ..> TeleportFx : fall guard, smoke size
+CommandBase <|-- LastChanceCommand
+LastChancePatch ..> LastChanceCommand : killing hit becomes a blink
+LastChanceCommand ..> BlinkCommand : random blink
+CommandBase <|-- ChatCommand
 CommandBase <|-- ConstructCommand
 ConstructCommand ..> BlueprintLibrary : blueprints (a folder = versions)
 ConstructCommand ..> TerrainLevel : one TerrainOp per vertex
