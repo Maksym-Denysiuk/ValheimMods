@@ -124,7 +124,7 @@ Still to run: Map point and To player with the final look (P3 indoors), the fall
 
 Run in game 2026-11-04 (Maksym: ok). Log, a Boar's hit: `lastchance: killing hit of 19.8 (health 17.4) by Boar cancelled; blinked 10.0 m ..., shoved and tarred 1 (Boar=1) at 52 deg; ... cooldown 60 s`, then a second killing hit: `in the cooldown (43 s left): it goes through`. So L2, L3 and L4 passed; L1, L5 and L6 (the tamed rule) not recorded.
 
-What failed first: the guard called the dash from inside the damage path, which an animation event starts, and there Unity refuses `DestroyImmediate`: two log errors `Destroying components immediately is not permitted`, and Hugin's copy kept its `Raven` for its life. Fixed the same day (`HomeCheat.Cmd.teleport.v20261104210538.dll`): `BlinkCommand.Dash` plays the look at the next scheduler tick; a killing hit with the new build has not been taken yet.
+What failed first: the guard called the dash from inside the damage path, which an animation event starts, and there Unity refuses `DestroyImmediate`: two log errors `Destroying components immediately is not permitted`, and Hugin's copy kept its `Raven` for its life. Fixed the same day (`HomeCheat.Cmd.teleport.v20261104210538.dll`): `BlinkCommand.Dash` plays the look at the next scheduler tick; verified the same day: a Boar's killing hit of 17.4 at health 6.8 blinked 10.0 m at 305 deg (log `lastchance: ... cancelled`), with no Unity error around it.
 
 Test list (world `ClaudeTest`, `op=cheatstate` before and after, `LogOutput.log` after each line):
 
