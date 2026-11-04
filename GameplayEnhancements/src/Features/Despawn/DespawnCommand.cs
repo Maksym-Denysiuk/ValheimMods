@@ -8,7 +8,7 @@
 // everything else inside a location radius may go (your items at the spawn, other locations' runestones and altars).
 // A boss stone in a kept location, or an altar, runestone or vegvisir of a name its prefab holds, stays wherever it stands: an older world
 // can hold them away from today's prefab position (2026-11-04: BossStone_Fader and BossStone_TheQueen passed the 0.5 m check and went).
-// restore=<prefab>&pos=x,y,z[&euler=x,y,z]: puts one object back at an exact spot read from a world backup; remove=1 takes one away again
+// restore=<prefab>&at=x,y,z[&euler=x,y,z]: puts one object back at an exact spot read from a world backup; remove=1 takes one away again
 // (a wrong restore).
 // undo=<n> (Maksym 2026-11-04): every despawn first writes the object's whole ZDO to a journal per world; undo brings them back newest first,
 // with their saved state (a chest's items, a stand's trophy, health). File: BepInEx/config/homecheat/despawn-journal.state, last 500 objects.
@@ -83,7 +83,7 @@ namespace HomeCheat.Features.Despawn
                 return "despawn [range=60 (cap 100)] [tamed=1] [boss=1] [others=1 (pieces another player built)]"
                     + " [inloc=1 (inside a location radius only the start temple's and trader camps' own objects and the traders stay; default 0: nothing in a location goes)]"
                     + " [undo=<n> (brings back the last n despawned objects, newest first, with their saved state; default 1, cap " + UndoMax + ")]"
-                    + " [restore=<prefab> pos=x,y,z [euler=x,y,z] (puts one object back at that exact spot, refused when the same prefab already stands within 0.5 m; remove=1 takes one such object away again)]"
+                    + " [restore=<prefab> at=x,y,z [euler=x,y,z] (puts one object back at that exact spot, refused when the same prefab already stands within 0.5 m; remove=1 takes one such object away again)]"
                     + " - removes the object under the crosshair for everyone (creature, item, piece, tree, rock, ship); never players, tombstones, traders or location objects; no drops, no undo; host only";
             }
         }
@@ -109,7 +109,7 @@ namespace HomeCheat.Features.Despawn
             if (prefab == null) throw new CommandException("restore: no prefab " + name);
             if (prefab.GetComponent<ZNetView>() == null) throw new CommandException("restore: " + name + " is not a networked object");
             if (prefab.GetComponent<Character>() != null) throw new CommandException("restore: creatures are not restored");
-            Vector3 pos = ParseVec(a.Str("pos", ""), "pos");
+            Vector3 pos = ParseVec(a.Str("at", ""), "at");
             Vector3 euler = a.Has("euler") ? ParseVec(a.Str("euler", ""), "euler") : Vector3.zero;
             List<ZDO> same = SameAt(prefab, pos);
             if (a.Flag("remove", false))

@@ -11,7 +11,7 @@ Maksym: "add despawn command. It should use croshair parameter and despawn selec
 
 ## Use
 
-`op=despawn[&range=60][&tamed=1][&boss=1][&others=1][&inloc=1]`, `op=despawn&look=1[&inloc=1]` (read-only), `op=despawn&undo=<n>`, `op=despawn&restore=<prefab>&pos=x,y,z[&euler=x,y,z][&remove=1]`. Spell bar: Build tab, 6.8 "Despawn", which sends `op=despawn&others=1&tamed=1&boss=1&inloc=1` (since 2026-11-03); Shift + 6.8 = undo the last one (since 2026-11-04).
+`op=despawn[&range=60][&tamed=1][&boss=1][&others=1][&inloc=1]`, `op=despawn&look=1[&inloc=1]` (read-only), `op=despawn&undo=<n>`, `op=despawn&restore=<prefab>&at=x,y,z[&euler=x,y,z][&remove=1]`. Spell bar: Build tab, 6.8 "Despawn", which sends `op=despawn&others=1&tamed=1&boss=1&inloc=1` (since 2026-11-03); Shift + 6.8 = undo the last one (since 2026-11-04).
 
 | Parameter | Default | Meaning |
 |---|---|---|
@@ -99,7 +99,7 @@ What failed first (2026-11-04): spell 6.8 refused `BossStone_Eikthyr` but remove
 
 `op=despawn&undo=<n>` (Maksym 2026-11-04; default 1, cap 50), or Shift + spell 6.8: brings back the last despawned objects, newest first, with their saved state (a chest's items, a stand's trophy, health). Every despawn first writes the object's whole ZDO (`ZDO.Serialize`) to `BepInEx/config/homecheat/despawn-journal.state`, one line per object per world, last 500 objects, kept across restarts; undo creates a new ZDO there (`ZDOMan.CreateNewZDO` + `ZDO.Deserialize`) and the game draws it. If the record cannot be written, nothing is despawned. Status V: run in game 2026-11-04 with Shift + 6.8: a wall back at its spot; three pieces despawned (`wood_wall_roof_top_67`, `wood_gate`, `wood_pole2`) came back in reverse order (`2 left`, `1 left`, `0 left`); an empty journal answers `undo: nothing in the despawn journal of this world`; no errors in the log. A chest came back too, but the log does not show its items: the saved state is not proven by a recorded answer.
 
-What went before that build has no record. `op=despawn&restore=<prefab>&pos=x,y,z[&euler=x,y,z]` puts one object back at an exact spot read from a world backup (a new, empty object: no saved state); it is refused when the same prefab already stands within 0.5 m (it searches the ZDOs, not the colliders), and `&remove=1` takes one such object away again (a wrong restore). Run 2026-11-04 on the two boss stones of the failure above. A full world rollback is the last resort: `AdminPanelEnchancements` backups only start after 20 minutes of a session. To remove the command: delete `HomeCheat.Cmd.despawn.*.dll` from `BepInEx/homecheat-commands/` and restart the game.
+What went before that build has no record. `op=despawn&restore=<prefab>&at=x,y,z[&euler=x,y,z]` puts one object back at an exact spot read from a world backup (a new, empty object: no saved state); it is refused when the same prefab already stands within 0.5 m (it searches the ZDOs, not the colliders), and `&remove=1` takes one such object away again (a wrong restore). Run 2026-11-04 on the two boss stones of the failure above. A full world rollback is the last resort: `AdminPanelEnchancements` backups only start after 20 minutes of a session. To remove the command: delete `HomeCheat.Cmd.despawn.*.dll` from `BepInEx/homecheat-commands/` and restart the game.
 
 ## Card: despawn-anything (approved 2026-11-03)
 
