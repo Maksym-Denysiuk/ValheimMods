@@ -11,7 +11,7 @@ Maksym: "add despawn command. It should use croshair parameter and despawn selec
 
 ## Use
 
-`op=despawn[&range=60][&tamed=1][&boss=1][&others=1][&inloc=1]`, `op=despawn&look=1[&inloc=1]` (read-only). Spell bar: Build tab, 6.8 "Despawn", which sends `op=despawn&others=1&tamed=1&boss=1&inloc=1` (since 2026-11-03).
+`op=despawn[&range=60][&tamed=1][&boss=1][&others=1][&inloc=1]`, `op=despawn&look=1[&inloc=1]` (read-only), `op=despawn&undo=<n>`, `op=despawn&restore=<prefab>&pos=x,y,z[&euler=x,y,z][&remove=1]`. Spell bar: Build tab, 6.8 "Despawn", which sends `op=despawn&others=1&tamed=1&boss=1&inloc=1` (since 2026-11-03); Shift + 6.8 = undo the last one (since 2026-11-04).
 
 | Parameter | Default | Meaning |
 |---|---|---|
@@ -76,7 +76,9 @@ Nothing is patched, no timer runs, nothing is kept between casts.
 
 No HomeCheat errors in `BepInEx/LogOutput.log` after any of them. Not yet run: a creature, a dropped item, a ship or cart, the tamed, boss, tombstone and location refusals, and a piece with the build without the confirm step (v20261025175610).
 
-### inloc=1 test list (built 2026-11-03, `HomeCheat.Cmd.despawn.v20261103195028`, not run in game: B)
+### inloc=1 test list (built 2026-11-03; run in game 2026-11-04, Maksym: ok)
+
+What failed first (2026-11-04): spell 6.8 refused `BossStone_Eikthyr` but removed `BossStone_Fader` and `BossStone_TheQueen`. The check wants an own object within 0.5 m of its position in today's `StartTemple` prefab; the likely reason is a world older than that prefab (not proven: the prefab position was not read). Since `HomeCheat.Cmd.despawn.v20261104210956` and later, a boss stone in a kept location, and an altar, runestone or vegvisir of a name its prefab holds, stay wherever they stand. Not yet cast at a stone with the fix (B): `look=1&inloc=1` at `BossStone_Fader` must say `own object by kind`.
 
 `op=cheatstate` before and after. At the start temple:
 1. `op=despawn&look=1&inloc=1` at a start temple stone (a boss stone or runestone) -> `would refuse ...: own object of StartTemple: kept with inloc=1`, second line `location: StartTemple (kept), own object, 0.0x m from its spawn point`; `LogOutput.log` has the `own networked objects` line with a count above 0.
@@ -95,4 +97,21 @@ No HomeCheat errors in `BepInEx/LogOutput.log` after any of them. Not yet run: a
 
 ## Undo
 
-None: the ZDO is gone from the world. Restore a world backup (`AdminPanelEnchancements` keeps one every 3 minutes), or rebuild the piece. To remove the command: delete `HomeCheat.Cmd.despawn.*.dll` from `BepInEx/homecheat-commands/` and restart the game.
+`op=despawn&undo=<n>` (Maksym 2026-11-04; default 1, cap 50), or Shift + spell 6.8: brings back the last despawned objects, newest first, with their saved state (a chest's items, a stand's trophy, health). Every despawn first writes the object's whole ZDO (`ZDO.Serialize`) to `BepInEx/config/homecheat/despawn-journal.state`, one line per object per world, last 500 objects, kept across restarts; undo creates a new ZDO there (`ZDOMan.CreateNewZDO` + `ZDO.Deserialize`) and the game draws it. If the record cannot be written, nothing is despawned. Status B: built 2026-11-04, cast only on an empty journal so far (`undo: nothing in the despawn journal of this world`). Test: despawn a wall, Shift + 6.8, the wall is back; a chest with items, the items are back; three objects, three undos in reverse order.
+
+What went before that build has no record. `op=despawn&restore=<prefab>&pos=x,y,z[&euler=x,y,z]` puts one object back at an exact spot read from a world backup (a new, empty object: no saved state); it is refused when the same prefab already stands within 0.5 m (it searches the ZDOs, not the colliders), and `&remove=1` takes one such object away again (a wrong restore). Run 2026-11-04 on the two boss stones of the failure above. A full world rollback is the last resort: `AdminPanelEnchancements` backups only start after 20 minutes of a session. To remove the command: delete `HomeCheat.Cmd.despawn.*.dll` from `BepInEx/homecheat-commands/` and restart the game.
+
+## Card: despawn-anything (approved 2026-11-03)
+
+Status: built 2026-11-03 (B, not run in game; `HomeCheat.Cmd.despawn.v20261103195028`, selftest 96/0) · Verdict: extend `despawn` with `inloc=1`; preset 6.8 passes `others=1&tamed=1&boss=1&inloc=1` · Nearest: despawn (`DespawnCommand.cs:100-152` read)
+Fingerprint: remove object / any object / crosshair / `ZNetScene.Destroy`
+
+- Why your items are refused: an object without a creator falls to `Location.GetLocation(pos)`, and inside the spawn area (or any location radius) that refuses everything. Others' pieces need `others=1`, which 6.8 does not send.
+- With `inloc=1` only these stay refused: players, tombstones, the start temple's own objects, trader camps' own objects and the traders themselves (Haldor, Hildir, the Bog Witch; prefab names from the probe). "Own objects" = matches a `ZNetView` child of that location's prefab by prefab name and position (0.5 m), so Maksym's items inside the spawn area are allowed. Other locations' objects (runestones, altars, dungeons elsewhere) are allowed.
+- Defaults: a typed `op=despawn` keeps today's rules (gate 4); 6.8 sends the four flags.
+- Probes: `despawn&look=1&inloc=1` on a spawn stone, Maksym's item at spawn, a Claude2 wall, Haldor (the second answer line names the location rule). Location prefab names read from the game's asset data 2026-11-03: `StartTemple`, `Vendor_BlackForest`, `Hildir_camp`, `BogWitch_Camp`; traders refused by their `Trader` component, so their names need no list. Own objects: `ZoneSystem.m_locations` prefab, its `ZNetView` children at `location position + rotation * child position` (`ZoneSystem.SpawnLocation` IL read 2026-11-03).
+- Docs: `HomeCheat-plugin/despawn.md`, index, catalog.
+- Test: your item at spawn → gone; Claude2's wall → gone; spawn runestone, Haldor, a tombstone → refused.
+
+
+Test list (run when the game is up): [despawn.md, inloc=1 test list](../HomeCheat-plugin/despawn.md#inloc1-test-list-built-2026-11-03-homecheatcmddespawnv20261103195028-not-run-in-game-b).

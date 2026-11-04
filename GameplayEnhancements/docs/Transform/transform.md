@@ -73,6 +73,20 @@ Maksym's test pass of the phase 4 commands, world `ClaudeTest` hosted on this PC
 
 ## toggle=1 (2026-11-03)
 
-Built 2026-11-03 (`HomeCheat.Cmd.transform.v20261103195037`), selftest 96/0. Test list (B until run): 4.1.1 twice -> `transformed into raven`, then `human: restored (... toggle=1: same form again)`; 4.1.1 then 4.1.2 -> `transformed into serpent` (a switch, not human); 4.1.4 while human -> `human: restored (removed 0 ...)`; Claude2 sees the raven stand-in go after the second 4.1.1; `LogOutput.log` has no HomeCheat error after each.
+Verified in game 2026-11-04 (Maksym: ok; log: `Raven -> transformed into raven`, then `human: restored (removed 1 transform state, toggle=1: same form again)`). Built 2026-11-03 (`HomeCheat.Cmd.transform.v20261103195037`). The test list: 4.1.1 twice -> `transformed into raven`, then `human: restored (... toggle=1: same form again)`; 4.1.1 then 4.1.2 -> `transformed into serpent` (a switch, not human); 4.1.4 while human -> `human: restored (removed 0 ...)`; Claude2 sees the raven stand-in go after the second 4.1.1; `LogOutput.log` has no HomeCheat error after each.
 
 Still untested (B): Claude2 sees the fish; jump and splash; the flop on land; raven and serpent after the refactor.
+
+## Card: transform-toggle (approved 2026-11-03)
+
+Status: built 2026-11-03 (B, not run in game; `HomeCheat.Cmd.transform.v20261103195037`, selftest 96/0) · Verdict: extend `transform` with `toggle=1` · Nearest: transform (`TransformCommand.cs:60-111` read)
+Fingerprint: form/movement / self / on self / `TransformState`
+
+- Trigger: `op=transform&type=raven&toggle=1`; spells 4.1.1-4.1.3 get `&toggle=1`; 4.1.4 Human stays.
+- With `toggle=1`, a `TransformState` of the same form on you runs the `type=human` path; another form switches as today. `target=<nick>` ignores it.
+- Defaults: `toggle=0` (typed commands unchanged). Probes, Measure: none.
+- Docs: `Transform/` page, index, catalog.
+- Test: 4.1.1 twice → raven, then `human: restored`; 4.1.1 then 4.1.2 → serpent; Claude2 sees the stand-in go.
+
+
+Test list (run when the game is up): [transform.md, toggle=1](../Transform/transform.md#toggle1-2026-11-03).

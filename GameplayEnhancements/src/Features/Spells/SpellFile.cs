@@ -103,7 +103,7 @@ namespace HomeCheat.Features.Spells
 "6.7 | Construct\n" +
 "6.7.1 | Construction... | op=construct&panel=1&cost=nearby\n" +
 "6.7.2 | Construction status | op=construct&step=status\n" +
-"6.8 | Despawn | op=despawn&others=1&tamed=1&boss=1&inloc=1\n" +
+"6.8 | Despawn | op=despawn&others=1&tamed=1&boss=1&inloc=1 | shift=undo=1 shiftlabel=Undo_despawn\n" +
 "7 | Field\n" +
 "7.1 | Cultivate... | op=cultivate&area={area}&rows={rows}&perrow={perrow} | ask=area:*From_me=self,Start-end=coords ask=rows:1,*3,5,7,9 ask=perrow/Items_in_row:1,3,*5,7,9\n" +
 "7.2 | Plant food... | op=field&area={area}&prefab={crop}&rows={rows}&perrow={perrow}&cost=nearby | ask=area:Start-end=coords,This_patch=patch,From_me=aim ask=crop:@crops ask=rows:1,3,5,7,9 ask=perrow:1,3,5,7,9\n" +

@@ -5,7 +5,7 @@ description: teleport and blink commands of the HomeCheat Valheim plugin (built 
 
 > **Tuned in game 2026-10-27.** Maksym ran Last death, Blink (enemies shoved and tarred), to=point, to=aim and the appear look in `ClaudeTest`; Map point and To player have not been confirmed by him yet, and what Claude2 sees is still to check ([test log](#test-log)).
 >
-> **lastchance: built 2026-11-03, not run in game yet** (status B): the test list is under [lastchance tests](#lastchance-tests). Blink's shove takes the PvP tamed rule since the same build (not run in game either).
+> **lastchance: verified in game 2026-11-04** (status V, see [lastchance tests](#lastchance-tests)). Blink's shove takes the PvP tamed rule since the same build: not run in game yet (test L6, status B).
 
 Valheim 1.0.20, BepInEx 5.4.2351, own game and own world only. Source: [src/Features/Teleport/](../../src/Features/Teleport/) (`TeleportCommand.cs`, `TeleportMapPatch.cs`, `BlinkCommand.cs`, `TeleportFx.cs`, `LastChanceCommand.cs`, `LastChancePatch.cs`, `refs.txt`), DLL `HomeCheat.Cmd.teleport.v<stamp>.dll`, namespace `HomeCheat.Features.TeleportCommands` (the game has a type `Teleport`, the dungeon door).
 
@@ -44,7 +44,7 @@ Before: the only ways to move far were portals and walking; nothing dashes. Afte
 
 ### lastchance
 
-- Verdict: **new** in feature Teleport, reuses blink's dash (`BlinkCommand.Dash`); card `docs/Backlog/last-chance.md` (approved 2026-11-03).
+- Verdict: **new** in feature Teleport, reuses blink's dash (`BlinkCommand.Dash`); card at the end of this page (approved 2026-11-03).
 - Fingerprint: form/movement + push / self (and whoever is on the line) / a line in a random direction / damage-path patch + blink.
 - Maksym (2026-11-03): "on lethal hit, should make stardant blink to random direction 360, no healing"; "Always on, 60 s cooldown".
 - Behaviour: a hit that would bring your health to 0 is cancelled (no damage, no healing: health stays as it was, no stagger, no hit effect) and you blink as spell 9.3 does (10 m, width 2, push 150, shove and tar on the line, the `pvp=1` rule: your PvP on = other players and others' tamed creatures on the line are shoved too, yours spared) in a random flat direction (0-360 degrees). Then the cooldown, during which a killing hit kills as normal. If the blink is refused (the world edge), the hit goes through and no cooldown starts.
@@ -97,7 +97,7 @@ Answers (first line): `teleporting to your death point at x,y,z (n m)`, `map arm
 | P2 | `op=blink&probe=1` | `Hugin: prefab Ravens, ZNetView False, Animator True, Raven True; children: Hugin Raven Animator Munin Raven Animator; raven Hugin name=$npc_hugin visual=model; raven Munin ...; despawn effect: fx_raven_despawn (local); local only: fallback added` - the first build read `Raven` on the root and copied both birds with their brains: fixed (copy the Hugin child only) |
 | P3 | `op=teleport&to=player&player=Claude2` with Claude2 indoors | not run (do you land on the roof? if yes: `distant=false` when the target is loaded here) |
 | P5 | il-reader `Character` `ApplyDamage` (2026-11-03, offline, the updated game) | one method, no `Player` override; player branch `HitData.ApplyModifier(Game.m_localDamgeTakenRate)`, below 0.1 = no damage, `SetHealth(health - total)`: the guard's prefix target |
-| P6 | `op=lastchance&probe=1` (in game) | not run yet |
+| P6 | `op=lastchance&status=1` (in game, 2026-11-04) | `last chance on, cooldown 60 s, ready`; `probe=1` not run |
 | P4 | `op=spawn&prefab=Greydwarf&count=5&dist=5&where=ahead`, then Blink through them | `shoved and tarred 4 (Greydwarf=4)`, then `3 (Boar=3)`; Maksym: pushed aside and tarred, no flash ("works good") |
 
 ## Test log
@@ -122,7 +122,11 @@ Still to run: Map point and To player with the final look (P3 indoors), the fall
 
 ### lastchance tests
 
-Built 2026-11-03 (`HomeCheat.Cmd.teleport.v20261103195038.dll`), not run in game: the game was closed. Test list (world `ClaudeTest`, `op=cheatstate` before and after, `LogOutput.log` after each line):
+Run in game 2026-11-04 (Maksym: ok). Log, a Boar's hit: `lastchance: killing hit of 19.8 (health 17.4) by Boar cancelled; blinked 10.0 m ..., shoved and tarred 1 (Boar=1) at 52 deg; ... cooldown 60 s`, then a second killing hit: `in the cooldown (43 s left): it goes through`. So L2, L3 and L4 passed; L1, L5 and L6 (the tamed rule) not recorded.
+
+What failed first: the guard called the dash from inside the damage path, which an animation event starts, and there Unity refuses `DestroyImmediate`: two log errors `Destroying components immediately is not permitted`, and Hugin's copy kept its `Raven` for its life. Fixed the same day (`HomeCheat.Cmd.teleport.v20261104210538.dll`): `BlinkCommand.Dash` plays the look at the next scheduler tick; a killing hit with the new build has not been taken yet.
+
+Test list (world `ClaudeTest`, `op=cheatstate` before and after, `LogOutput.log` after each line):
 
 | # | Command | Expected |
 |---|---|---|
@@ -146,3 +150,32 @@ Built 2026-11-03 (`HomeCheat.Cmd.teleport.v20261103195038.dll`), not run in game
 ## Undo
 
 - Nothing is saved in the world. Remove the feature: delete `BepInEx/homecheat-commands/HomeCheat.Cmd.teleport.*.dll`, restart the game, and remove the 9.x lines from `spells.txt` (lastchance: also `BepInEx/config/homecheat/teleport.state`; `op=lastchance&on=0` switches it off without removing anything) and `F6=9.3` (and Maksym's F7-F9) from `spells.txt.pins`. Backups in the game folder: `spells.txt.pre-teleport.bak` (before the group), `spells.txt.pre-flat-teleport.bak` and `spells.txt.pins.pre-flat-teleport.bak` (before the flat group).
+
+## Card: last-chance (approved 2026-11-03)
+
+Status: **built 2026-11-03, not run in game** (B; hc-teleport) · Verdict: new `lastchance` in feature Teleport (reuses `BlinkCommand`) · Nearest: blink (catalog, page read)
+Fingerprint: form/movement + push / self / a line in a random direction / damage-path patch + blink
+
+- Behaviour: when a hit would bring your health to 0, the hit is cancelled (no damage, no healing: health stays as it was) and you blink as spell 9.3 does (10 m, shove and tar on the line, `pvp=1` rule) in a random direction (0-360 degrees, flat). Then 60 s cooldown, during which a killing hit kills as normal.
+- On by default while HomeCheat is loaded (Maksym's choice). Spell 9.5 Last chance: `op=lastchance&on=1`, Shift = `on=0`; `status=1` shows on/off and the cooldown left. State per world in `teleport.state`.
+- The blink's line avoids nothing; the world edge refuses as blink does, and then the hit goes through.
+- Mechanism: a prefix on the local player's damage application (probe decides `Character.ApplyDamage` vs `RPC_Damage`), gated on `Current`, local player only.
+- Gate 6: no god mode or cheat field is written; one save per 60 s.
+- Probes: the damage path in this game version; blink from a patch without a spell-bar cast.
+- Defaults: on; `cooldown=60` s (10-3600). Docs: `Spells/teleport.md`, index, catalog, Extension points (a guard on the local player's damage).
+- Test: low health, `spawn prefab=Troll`, the killing hit → blink, health unchanged; a second killing hit within 60 s kills.
+- Also (wave 0 Known defect): blink's shove takes `PvpHits.HitsTamed(c)` in its target filter.
+
+### What was built (2026-11-03)
+
+- Probe (offline, il-reader on the updated game): `Character.ApplyDamage` is the method that sets the health after `RPC_Damage`'s blocking, armour and resistances; one method, no `Player` override; a player's total is damage x `Game.m_localDamgeTakenRate`, below 0.1 = no damage. So the guard is a prefix on `ApplyDamage` (`LastChancePatch`), not `RPC_Damage`.
+- `LastChanceCommand` (`on=`, `cooldown=`, `status=1`, `probe=1`; state in `teleport.state`, cooldown in world time), `LastChancePatch`; `BlinkCommand.Dash` split out of blink's `Execute` (same dash, also called by the guard), `BlinkCommand.Current`.
+- Blink's tamed filter: `!tamed && c.IsTamed() && !(hitPlayers && PvpHits.HitsTamed(c))` skips; `tamed=1` unchanged (all, yours too).
+- Spell 9.5: the "(soon)" placeholder swapped for its real form (`op=lastchance&on=1`, Shift `on=0`), no other line changed.
+- Build `HomeCheat.Cmd.teleport.v20261103195038.dll`; `build.sh selftest` 96 passed; hygiene grep clean; `commands-check.js` rows agree (only the expected "knowledge-sha behind": refresh R13).
+- ASSUMPTION: the guard saves every killing hit through `ApplyDamage`, fall, drowning and burning included (the card says "a hit"; all take the same path). Change if Maksym wants enemy hits only.
+- ASSUMPTION: the blink always follows the `pvp=1` rule of 9.3 (no `pvp=` key on lastchance), as the card says "as spell 9.3 does".
+
+### Test list (not run: the game was closed)
+
+Page: [teleport.md, lastchance tests](../Spells/teleport.md#lastchance-tests), L1-L7: probe, status, the Troll's killing hit -> blink with health unchanged, a second killing hit within 60 s kills, `on=0` kills, blink over your own tamed creature with PvP on spares it (and shoves one that is not yours), clean-up.

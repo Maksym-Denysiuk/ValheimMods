@@ -37,7 +37,7 @@ Keys: `name=<construction>` or `<folder>/<version>`; `at=aim` (default) `|self|x
 
 ## Materials: cost=nearby (since 2026-11-03)
 
-Opt-in, built 2026-11-03 (card [materials-nearby](../Backlog/materials-nearby.md), Maksym: "Our commands only", "Safe chests, menu"), **not yet run in game**: the test list is on the card.
+Opt-in, built 2026-11-03, verified 2026-11-04 by Maksym's ok (page [materials.md](materials.md), Maksym: "Our commands only", "Safe chests, menu"): the test list is on that page.
 
 | Key | Default | Meaning |
 |---|---|---|

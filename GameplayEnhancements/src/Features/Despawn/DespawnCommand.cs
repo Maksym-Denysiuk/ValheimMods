@@ -6,7 +6,17 @@
 // inloc=1 (Maksym 2026-11-03, spell 6.8): the location rule shrinks to the start temple's and the trader camps' own objects
 // (a ZNetView child of that location's prefab, same prefab name as Utils.GetPrefabName gives, within 0.5 m of where the game spawned it) and the traders;
 // everything else inside a location radius may go (your items at the spawn, other locations' runestones and altars).
+// A boss stone in a kept location, or an altar, runestone or vegvisir of a name its prefab holds, stays wherever it stands: an older world
+// can hold them away from today's prefab position (2026-11-04: BossStone_Fader and BossStone_TheQueen passed the 0.5 m check and went).
+// restore=<prefab>&pos=x,y,z[&euler=x,y,z]: puts one object back at an exact spot read from a world backup; remove=1 takes one away again
+// (a wrong restore).
+// undo=<n> (Maksym 2026-11-04): every despawn first writes the object's whole ZDO to a journal per world; undo brings them back newest first,
+// with their saved state (a chest's items, a stand's trophy, health). File: BepInEx/config/homecheat/despawn-journal.state, last 500 objects.
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using BepInEx;
 using HomeCheat.Kit;
 using UnityEngine;
 
@@ -20,6 +30,10 @@ namespace HomeCheat.Features.Despawn
 
         // locations whose own objects stay with inloc=1 (prefab names read from the game's asset data 2026-11-03)
         static readonly string[] KeptLocations = new string[] { "StartTemple", "Vendor_BlackForest", "Hildir_camp", "BogWitch_Camp" };
+
+        const int JournalMax = 500;   // objects kept in the journal, all worlds together
+        const int UndoMax = 50;       // objects per undo cast
+        static string JournalPath { get { return Path.Combine(Path.Combine(Paths.ConfigPath, "homecheat"), "despawn-journal.state"); } }
 
         static int mask = -1;
 
@@ -68,17 +82,143 @@ namespace HomeCheat.Features.Despawn
             {
                 return "despawn [range=60 (cap 100)] [tamed=1] [boss=1] [others=1 (pieces another player built)]"
                     + " [inloc=1 (inside a location radius only the start temple's and trader camps' own objects and the traders stay; default 0: nothing in a location goes)]"
+                    + " [undo=<n> (brings back the last n despawned objects, newest first, with their saved state; default 1, cap " + UndoMax + ")]"
+                    + " [restore=<prefab> pos=x,y,z [euler=x,y,z] (puts one object back at that exact spot, refused when the same prefab already stands within 0.5 m; remove=1 takes one such object away again)]"
                     + " - removes the object under the crosshair for everyone (creature, item, piece, tree, rock, ship); never players, tombstones, traders or location objects; no drops, no undo; host only";
             }
         }
 
         protected override string Execute(Args a)
         {
+            if (a.Has("undo")) return Undo(a);
+            if (a.Has("restore")) return Restore(a);
             Found f = Find(a);
             if (f.Refusal != null) throw new CommandException("refused " + f.Name + " at " + Fmt.F(f.Distance, 1) + " m: " + f.Refusal);
+            Remember(f.View);   // before the destroy: no record, no despawn
             f.View.ClaimOwnership();
             ZNetScene.instance.Destroy(f.View.gameObject);
             return "despawned " + Describe(f);
+        }
+
+        // one object back at an exact spot (position and rotation read from a world backup); a new ZDO, so saved state such as a trophy is not back
+        string Restore(Args a)
+        {
+            Host.RequireServer();
+            string name = a.Str("restore", "");
+            GameObject prefab = Prefabs.Get(name);
+            if (prefab == null) throw new CommandException("restore: no prefab " + name);
+            if (prefab.GetComponent<ZNetView>() == null) throw new CommandException("restore: " + name + " is not a networked object");
+            if (prefab.GetComponent<Character>() != null) throw new CommandException("restore: creatures are not restored");
+            Vector3 pos = ParseVec(a.Str("pos", ""), "pos");
+            Vector3 euler = a.Has("euler") ? ParseVec(a.Str("euler", ""), "euler") : Vector3.zero;
+            List<ZDO> same = SameAt(prefab, pos);
+            if (a.Flag("remove", false))
+            {
+                if (same.Count == 0) throw new CommandException("restore: no " + name + " within " + Fmt.F(OwnMatch, 1) + " m of " + Fmt.Vec(pos));
+                RemoveZdo(same[same.Count - 1]);
+                HomeApi.Log("despawn: restore removed one " + name + " at " + Fmt.Vec(pos) + ", " + (same.Count - 1) + " left");
+                return "removed one " + name + " at " + Fmt.Vec(pos) + ", " + (same.Count - 1) + " left there";
+            }
+            if (same.Count > 0) throw new CommandException("restore: " + name + " already stands at " + Fmt.Vec(same[0].GetPosition()));
+            GameObject made = Object.Instantiate(prefab, pos, Quaternion.Euler(euler));
+            HomeApi.Log("despawn: restored " + name + " at " + Fmt.Vec(pos) + " euler " + Fmt.Vec(euler));
+            return "restored " + Prefabs.BaseName(made) + " at " + Fmt.Vec(made.transform.position);
+        }
+
+        // the saved objects of this prefab at that spot, loaded on this PC or not (a collider search misses what is out of range)
+        static List<ZDO> SameAt(GameObject prefab, Vector3 pos)
+        {
+            List<ZDO> all = new List<ZDO>();
+            int index = 0;
+            while (!ZDOMan.instance.GetAllZDOsWithPrefabIterative(prefab.name, all, ref index)) { }
+            List<ZDO> same = new List<ZDO>();
+            foreach (ZDO z in all) if (z != null && z.IsValid() && Vector3.Distance(z.GetPosition(), pos) <= OwnMatch) same.Add(z);
+            return same;
+        }
+
+        static void RemoveZdo(ZDO z)
+        {
+            ZNetView v = ZNetScene.instance.FindInstance(z);
+            if (v != null) { v.ClaimOwnership(); ZNetScene.instance.Destroy(v.gameObject); return; }
+            z.SetOwner(ZDOMan.GetSessionID());
+            ZDOMan.instance.DestroyZDO(z);
+        }
+
+        static Vector3 ParseVec(string s, string key)
+        {
+            string[] p = s.Split(',');
+            float x, y, z;
+            if (p.Length != 3
+                || !float.TryParse(p[0], NumberStyles.Float, CultureInfo.InvariantCulture, out x)
+                || !float.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out y)
+                || !float.TryParse(p[2], NumberStyles.Float, CultureInfo.InvariantCulture, out z))
+                throw new CommandException(key + " must be x,y,z");
+            return new Vector3(x, y, z);
+        }
+
+        // ---- the journal: one line per object: world <tab> prefab name <tab> x,y,z <tab> the ZDO's data in base64 -------------------
+
+        static void Remember(ZNetView view)
+        {
+            try
+            {
+                ZDO z = view.GetZDO();
+                ZPackage pkg = new ZPackage();
+                z.Serialize(pkg);
+                Vector3 p = z.GetPosition();
+                CultureInfo inv = CultureInfo.InvariantCulture;
+                string line = ZNet.instance.GetWorldName() + "	" + Prefabs.BaseName(view.gameObject) + "	"
+                    + p.x.ToString("R", inv) + "," + p.y.ToString("R", inv) + "," + p.z.ToString("R", inv) + "	" + System.Convert.ToBase64String(pkg.GetArray());
+                List<string> lines = ReadJournal();
+                lines.Add(line);
+                if (lines.Count > JournalMax) lines.RemoveRange(0, lines.Count - JournalMax);
+                WriteJournal(lines);
+            }
+            catch (System.Exception e) { throw new CommandException("no undo record could be written, nothing despawned: " + e.Message); }
+        }
+
+        static List<string> ReadJournal()
+        {
+            return File.Exists(JournalPath) ? new List<string>(File.ReadAllLines(JournalPath, Encoding.UTF8)) : new List<string>();
+        }
+
+        static void WriteJournal(List<string> lines)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(JournalPath));
+            File.WriteAllLines(JournalPath, lines.ToArray(), new UTF8Encoding(false));
+        }
+
+        string Undo(Args a)
+        {
+            Host.RequireServer();
+            string raw = a.Str("undo", "1");
+            int want;
+            if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out want) || want < 1) want = 1;   // the flag form undo=1, or a word
+            if (want > UndoMax) want = UndoMax;
+            string world = ZNet.instance.GetWorldName();
+            List<string> lines = ReadJournal();
+            StringBuilder said = new StringBuilder();
+            int done = 0, left = 0;
+            for (int i = lines.Count - 1; i >= 0; i--)
+            {
+                string[] c = lines[i].Split('	');
+                if (c.Length != 4 || c[0] != world) continue;
+                if (done >= want) { left++; continue; }
+                GameObject prefab = Prefabs.Get(c[1]);
+                if (prefab == null) { HomeApi.LogError("despawn: undo: no prefab " + c[1] + " in this game version, kept in the journal"); left++; continue; }
+                Vector3 pos = ParseVec(c[2], "journal position");
+                ZDO z = ZDOMan.instance.CreateNewZDO(pos, prefab.name.GetStableHashCode());
+                z.Deserialize(new ZPackage(System.Convert.FromBase64String(c[3])));
+                z.DataRevision = z.DataRevision + 1u;
+                lines.RemoveAt(i);
+                done++;
+                if (said.Length > 0) said.Append(", ");
+                said.Append(c[1]).Append(" at ").Append(Fmt.Vec(pos));
+            }
+            if (done == 0) throw new CommandException("undo: nothing in the despawn journal of this world");
+            WriteJournal(lines);
+            HomeApi.Log("despawn: undo restored " + done + ": " + said + "; " + left + " left");
+            return "restored " + done + " (newest first): " + said + "; " + left + " left to undo";
         }
 
         string Look(Args a)
@@ -208,6 +348,12 @@ namespace HomeCheat.Features.Despawn
                 if (dist < best) best = dist;
             }
             if (best <= OwnMatch) { f.Note = "location: " + locName + " (kept), own object, " + Fmt.F(best, 2) + " m from its spawn point"; return locName; }
+            // a boss stone, or a story object of a name the prefab holds, stays wherever this world has it
+            if (go.GetComponentInParent<BossStone>() != null || (best != float.MaxValue && LocationPart(go) != null))
+            {
+                f.Note = "location: " + locName + " (kept), own object by kind, " + (best == float.MaxValue ? "no " + key + " in its prefab" : Fmt.F(best, 2) + " m from the prefab's position");
+                return locName;
+            }
             f.Note = "location: " + locName + " (kept), not its own object ("
                 + (best == float.MaxValue ? "no " + key + " in its prefab" : "nearest " + key + " of the prefab " + Fmt.F(best, 2) + " m away") + ")";
             return null;

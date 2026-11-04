@@ -87,10 +87,12 @@ namespace HomeCheat.Features.TeleportCommands
 
             Dictionary<string, int> shoved = new Dictionary<string, int>();
             int n = Shove(p, from, to, dir, dist, width, push, tamed, boss, hitPlayers, shoved);
-            if (fx) Poof(p, from, dir);
+            // the look waits for the next scheduler tick: lastchance calls Dash from inside the game's damage path, which an animation
+            // event can start, and there Unity refuses HuginModel's DestroyImmediate (first in-game test 2026-11-04: the copy kept its Raven)
+            if (fx) Later(0f, delegate { Poof(p, from, dir); });
             Move(p, to);
             TeleportFx.FallGuard(this, p, TeleportFx.FallGuardTime);
-            if (fx) Poof(p, to, -dir);
+            if (fx) Later(0f, delegate { Poof(p, to, -dir); });
             HomeApi.Log("blink: " + Fmt.Vec(from) + " -> " + Fmt.Vec(to) + ", " + n + " shoved");
             return "blinked " + Fmt.F(dist, 1) + " m to " + Fmt.Vec(to) + ", shoved and tarred " + n + Counts(shoved);
         }

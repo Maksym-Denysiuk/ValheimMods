@@ -1,9 +1,9 @@
 ---
-description: backlog card materials-nearby (approved 2026-11-03) - build and plant take materials from you, then safe chests, then build free
+description: materials of the HomeCheat build and plant commands (cost=nearby, 2026-11-03, verified in game 2026-11-04) - construct, spawn, dome, plant and field take materials from you, then safe chests within 50 m, the rest free; cost=check says what would be taken; card, probes, how it was built, test list M1-M14
 ---
-# materials-nearby: build and plant take materials from you, then safe chests, then build free
+# Materials: build and plant take materials from you, then safe chests, then build free
 
-Status: B: Kit helper and the five users built 2026-11-03 (selftest, feature builds), not run in game: test list below · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
+Status: V (Maksym 2026-11-04: ok). Recorded: spell Spawn..., `built 1 portal_wood at the crosshair ...; materials (radius 50 m): 21 from you, 11 from 3 chest(s), 0 free (GreydwarfEye 5/5/0, FineWood 15/5/0, SurtlingCore 1/1/0), no undo`. The log of that launch holds no materials line of `construct`, `dome`, `plant` or `field`: those four rest on Maksym's word · Verdict: Kit helper (0-core) + extend five commands with `cost=nearby` · Nearest: dome `cost=1` (read)
 Fingerprint: give item (negative) / self, containers / radius 50 m / `Inventory`, `Container`
 
 - Helper: `Kit.Materials.Take(player, requirements, radius, out report)`: per requirement, your inventory first, then containers within `radius` nearest first, the rest free. Per piece, never all or nothing. Report: from you, from N chests, free.
@@ -47,7 +47,7 @@ Pages: [construct.md](../HomeCheat-plugin/construct.md#materials-costnearby-sinc
 
 ## Test list
 
-Not run: the game was not running on 2026-11-03 (hc-materials waited 10 minutes). World `ClaudeTest`; Claude2 is Maksym's own account. `op=reload` first (the staged world, dome and construction DLLs), `op=cheatstate` before and after; read `BepInEx/LogOutput.log` after each line.
+World `ClaudeTest`; Claude2 is Maksym's own account. `op=reload` first (the staged world, dome and construction DLLs), `op=cheatstate` before and after; read `BepInEx/LogOutput.log` after each line.
 
 | # | Setup | Command | Expected (first answer line) | Look at |
 |---|---|---|---|---|
@@ -65,8 +65,3 @@ Not run: the game was not running on 2026-11-03 (hc-materials waited 10 minutes)
 | M12 | spell lines 7.2, 7.4, 8 | one cast each | the answer ends with a materials part | no `cost` error from a form |
 | M13 | typed, no `cost=` | `op=plant&prefab=Birch_Sapling` | no materials part, nothing taken (default unchanged) | inventory unchanged |
 | M14 | none | `op=plant&prefab=Birch_Sapling&cost=1` | `ERROR: cost must be 0, nearby or check ...` | nothing planted |
-
-## Test log
-
-| Time | Command | Answer (first line) | Observation | Verdict |
-|---|---|---|---|---|

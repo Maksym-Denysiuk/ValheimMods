@@ -1,9 +1,9 @@
 ---
-description: bowcharge command of the HomeCheat Valheim plugin (built 2026-11-03, not yet run in game) - hold a vanilla bow past its full draw and every whole second adds one spell arrow (cap 25, a 5x5 grid) fired on release with the normal arrow, from the crosshair centre along the crosshair; on by default, spell 2.8 (Shift = off), the pvp=1 rule; card, the bow draw probe, how it works, test list, limits, undo
+description: bowcharge command of the HomeCheat Valheim plugin (built 2026-11-03, verified in game 2026-11-04) - hold a vanilla bow past its full draw and every whole second adds one spell arrow (cap 25, a 5x5 grid) fired on release with the normal arrow, from the crosshair centre along the crosshair; on by default, spell 2.8 (Shift = off), the pvp=1 rule; card, the bow draw probe, how it works, test list, limits, undo
 ---
 # bowcharge (feature Spellshot)
 
-> **Built 2026-11-03, not run in game yet** (status B): the test list is under [Tests](#tests).
+> **Verified in game 2026-11-04** (status V): T1 passed; the PvP rows T6-T7 and the rest of the list are under [Tests](#tests).
 
 Valheim after 1.0.20 (probed 2026-11-03), BepInEx 5.4.2351, own game and own world only. Source: [src/Features/Spellshot/](../../src/Features/Spellshot/) (`BowChargeCommand.cs`, `BowChargePatch.cs`; the arrow fire is `SpellShotCommand.Fire`), DLL `HomeCheat.Cmd.spellshot.v<stamp>.dll`.
 
@@ -44,7 +44,7 @@ Success goes to `BepInEx/LogOutput.log` only: `bowcharge: held 3.2 s past full d
 
 1. While the attack is held and the draw time is above 0, the prefix starts the timer (`FullAt = Time.time`) the first time `Humanoid.GetAttackDrawPercentage()` reaches 1.
 2. A call with the attack released and the draw time above 0 is the release: the prefix hands the postfix the seconds held past full (the Harmony `__state`) and clears the timer. Anything else (not drawing, blocking, a minor action, stamina gone mid-draw: the game resets the draw time) also clears it.
-3. The postfix fires only when the game's own shot started (`InAttack()` after the game's `StartAttack`): `floor(seconds past full)` arrows, `Caps.Clamp` to 25, the grid from `GridOffsets(n)`, each through `SpellShotCommand.Fire` with `PvpHits.ArmHit`/`MarkProjectile` when the PvP rule says other players are hit.
+3. The postfix fires only when the game's own shot started: `m_currentAttack` holds a new object (`Humanoid.StartAttack` stores its clone there only when `Attack.Start` succeeds, so no ammo = no new object): `floor(seconds past full)` arrows, `Caps.Clamp` to 25, the grid from `GridOffsets(n)`, each through `SpellShotCommand.Fire` with `PvpHits.ArmHit`/`MarkProjectile` when the PvP rule says other players are hit.
 
 ## Probes
 
@@ -56,7 +56,7 @@ Success goes to `BepInEx/LogOutput.log` only: `bowcharge: held 3.2 s past full d
 
 ## Tests
 
-Not run yet. ClaudeTest, a vanilla bow and arrows in the inventory; `op=cheatstate` before and after; read the new `bowcharge:` lines of `BepInEx/LogOutput.log` after each test.
+ClaudeTest, a vanilla bow and arrows in the inventory; `op=cheatstate` before and after; read the new `bowcharge:` lines of `BepInEx/LogOutput.log` after each test.
 
 | # | Steps | Expect |
 |---|---|---|
@@ -74,9 +74,12 @@ Not run yet. ClaudeTest, a vanilla bow and arrows in the inventory; `op=cheatsta
 
 | Time | Command | Answer (first line) | Observation | Verdict |
 |---|---|---|---|---|
+| 2026-11-04, first build | release at full draw, twice | `released without a shot (no ammo, stamina or eitr): no extra arrows` | the check `InAttack()` reads the animator state, which changes only at a later animator update, so it said no shot on every release | fail, fixed |
+| 2026-11-04, `HomeCheat.Cmd.spellshot.v20261104210347` | hold 3.4 s, 1.0 s, 4.2 s, 14.8 s past full | `held 14.8 s past full draw = 14 extra arrows (prefab bow_projectile_needle) ...; other players spared (your PvP off)` | Maksym: "the bow works" | pass |
 
 ## Limits
 
+- Holding drains stamina at half the draw rate; when it runs out the game drops the draw without a shot and the charge is lost, so a long charge needs the stamina for it.
 - The local player only; a player without the mod has a vanilla bow.
 - Settings in memory: a restart or a reload gives on, `pvp=1`.
 - Spell arrows use the needle arrow's damage, whatever arrow the bow fires.

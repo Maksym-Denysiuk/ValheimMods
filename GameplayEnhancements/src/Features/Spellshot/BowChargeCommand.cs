@@ -24,6 +24,7 @@ namespace HomeCheat.Features.Spellshot
 
         internal static readonly FieldInfo fDrawTime = typeof(Humanoid).GetField("m_attackDrawTime", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         internal static readonly FieldInfo fHold = typeof(Character).GetField("m_attackHold", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        internal static readonly FieldInfo fCurrentAttack = typeof(Humanoid).GetField("m_currentAttack", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         static readonly MethodInfo mBowDraw = typeof(Player).GetMethod("UpdateAttackBowDraw", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         // for BowChargePatch: set while this build is loaded
@@ -93,7 +94,7 @@ namespace HomeCheat.Features.Spellshot
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("release method ").Append(mBowDraw != null ? "Player.UpdateAttackBowDraw found" : "Player.UpdateAttackBowDraw NOT found (game update?)");
-            sb.Append("; fields m_attackDrawTime ").Append(fDrawTime != null ? "ok" : "NOT found").Append(", m_attackHold ").Append(fHold != null ? "ok" : "NOT found");
+            sb.Append("; fields m_attackDrawTime ").Append(fDrawTime != null ? "ok" : "NOT found").Append(", m_attackHold ").Append(fHold != null ? "ok" : "NOT found").Append(", m_currentAttack ").Append(fCurrentAttack != null ? "ok" : "NOT found");
             sb.Append("; patched ").Append(Patches.IsActive);
             Player p = Player.m_localPlayer;
             if (p != null)

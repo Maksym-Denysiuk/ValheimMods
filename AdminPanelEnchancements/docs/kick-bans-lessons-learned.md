@@ -119,7 +119,7 @@ Another machine that hosts needs the same script run there. The patch covers onl
 - A Valheim update on 2026-10-28 replaced `assembly_valheim.dll` (2,575,360 -> 2,577,920 bytes). Nobody ran `check` afterwards.
 - On 2026-11-01 a player was kicked and came straight back: `Player.log` had `Kicking <name>` and no `Banning user`, and `bannedlist.txt` had not changed since 2026-10-22.
 - `check` reported `original` at both sites. `apply` found both by meaning in the new build (tokens `ZNet::Kick` 0x060011de -> `ZNet::Ban` 0x060011e4; the 1.0.20 tokens were 0x060011DA / 0x060011E0), made a new backup `D:\ValheimBackups\2026-11-03-kick-ban\`, and `check` reported `patched`.
-- Rejoin test (kicked player refused on rejoin, `unban <id>` lets them back) still not run: planned for 2026-11-03 with Claude2, the game was not running. Steps: GameplayEnhancements `docs/Backlog/chat-commands.md`, Test list.
+- Rejoin test (kicked player refused on rejoin, `unban <id>` lets them back) still not run: planned for 2026-11-03 with Claude2, the game was not running; not run on 2026-11-04 either. Steps: Claude2 joins ClaudeTest; Escape > players list > Kick Claude2 -> `Banning user` in `Player.log` and one new line in `bannedlist.txt`; Claude2's rejoin refused; F5 `unban <id>` -> Claude2 joins again; then `bannedlist.txt` back to the comment line only.
 - Lesson 7: the warning in the README is not enough on its own. Whoever hosts must run `check` after every game update. Maksym chose to keep it a manual step (2026-11-03).
 
 ## Lessons

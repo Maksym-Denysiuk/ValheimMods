@@ -90,3 +90,13 @@ Moves `HomeCheat.dll`, the command DLLs and `config\homecheat\` to `<BackupRoot>
 | `skills\valheim-spell-fx\`, `skills\valheim-spells-craft\` | the two Claude skills (`SKILL.md`, `README.md` setup, `evals.md`, `scripts\`; spells-craft also `instructions\`, `baseline.md`) |
 | `docs\` | the documentation folders |
 | `MANIFEST.md` | every file with size and sha256 |
+
+<!-- index:generated -->
+<!-- folder:start -->
+| Item | What it's about | Last modified |
+|---|---|---|
+| [check.ps1](check.ps1) | GameplayEnhancements: check (read-only). | 2026-10-24 |
+| [install.ps1](install.ps1) | GameplayEnhancements: install the HomeCheat plugin, its command DLLs and the key settings. | 2026-10-25 |
+| [send-command.ps1](send-command.ps1) | Sends one HomeCheat command to the running game and prints the answer. | 2026-10-24 |
+| [uninstall.ps1](uninstall.ps1) | GameplayEnhancements: uninstall. | 2026-10-25 |
+<!-- folder:end -->

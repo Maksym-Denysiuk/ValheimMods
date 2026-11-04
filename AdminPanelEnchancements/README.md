@@ -60,3 +60,12 @@ Restores the original DLL from its backup (only if it is the same game version; 
 | `MANIFEST.md` | every file with size and sha256 |
 
 In the docs, `scripts/valheim/kick-ban-patch.js` means `kickban\kick-ban-patch.js` here, and `D:\ValheimBackups` is the default `-BackupRoot`.
+
+<!-- index:generated -->
+<!-- folder:start -->
+| Item | What it's about | Last modified |
+|---|---|---|
+| [check.ps1](check.ps1) | AdminPanelEnchancements: check (read-only). | 2026-10-24 |
+| [install.ps1](install.ps1) | AdminPanelEnchancements: install | 2026-10-24 |
+| [uninstall.ps1](uninstall.ps1) | AdminPanelEnchancements: uninstall. | 2026-10-24 |
+<!-- folder:end -->
