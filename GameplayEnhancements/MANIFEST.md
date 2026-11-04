@@ -1,8 +1,8 @@
 # GameplayEnhancements: manifest
 
-Built 2026-11-04 21:16 UTC by `scripts/valheim/packages/build.js` (HomeOS).
+Built 2026-11-04 21:33 UTC by `scripts/valheim/packages/build.js` (HomeOS).
 
-Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCheat.Cmd.construction.v20261103203705.dll, HomeCheat.Cmd.despawn.v20261104211226.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261103203542.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261104211643.dll, HomeCheat.Cmd.spellshot.v20261104210347.dll, HomeCheat.Cmd.teleport.v20261104210538.dll, HomeCheat.Cmd.transform.v20261103195037.dll, HomeCheat.Cmd.traps.v20261103221501.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261103203416.dll.
+Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCheat.Cmd.construction.v20261103203705.dll, HomeCheat.Cmd.despawn.v20261104212733.dll, HomeCheat.Cmd.diag.v20261025004825.dll, HomeCheat.Cmd.dome.v20261103203542.dll, HomeCheat.Cmd.earthquake.v20261025161333.dll, HomeCheat.Cmd.fxdump.v20261024235633.dll, HomeCheat.Cmd.heal.v20261024235500.dll, HomeCheat.Cmd.hidebody.v20261024235501.dll, HomeCheat.Cmd.keybinds.v20261025171549.dll, HomeCheat.Cmd.killmobs.v20261024235500.dll, HomeCheat.Cmd.ship.v20261025111116.dll, HomeCheat.Cmd.slime.v20261025161333.dll, HomeCheat.Cmd.spells.v20261104211643.dll, HomeCheat.Cmd.spellshot.v20261104210347.dll, HomeCheat.Cmd.teleport.v20261104210538.dll, HomeCheat.Cmd.transform.v20261103195037.dll, HomeCheat.Cmd.traps.v20261103221501.dll, HomeCheat.Cmd.visualeffect.v20261025161336.dll, HomeCheat.Cmd.world.v20261103203416.dll.
 
 | File | Bytes | sha256 (first 16) |
 |---|---|---|
@@ -22,11 +22,11 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | docs/FX/images/fx_icicle_destruction.jpg | 29959 | db08e3d9221369a3 |
 | docs/FX/sfx_descriptions.md | 79832 | a21a155bce3d4c03 |
 | docs/FX/vfx_descriptions.md | 67034 | e933fafdf60a8392 |
-| docs/HomeCheat-plugin/README.md | 28554 | 788f27298d7ce18f |
+| docs/HomeCheat-plugin/README.md | 28626 | 1db0ba325f8f2c4d |
 | docs/HomeCheat-plugin/build-terrain.md | 24400 | 2a93719e76ac74be |
 | docs/HomeCheat-plugin/chat.md | 7009 | 369e61f80f5a7109 |
 | docs/HomeCheat-plugin/construct.md | 50892 | 1db628c0011a85f0 |
-| docs/HomeCheat-plugin/despawn.md | 14092 | 920c41c25a544af8 |
+| docs/HomeCheat-plugin/despawn.md | 14255 | 7d6c48f27cf51eba |
 | docs/HomeCheat-plugin/dome.md | 32267 | 50145a2dbf188285 |
 | docs/HomeCheat-plugin/heal-cleanse-bless.md | 3891 | 4b54d93e3ba15a47 |
 | docs/HomeCheat-plugin/materials.md | 11270 | c4469bf2fe804be7 |
@@ -43,7 +43,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | docs/Spells/spellbar-design.md | 39023 | cf26f03666530969 |
 | docs/Spells/spellbar.md | 18345 | 8cd68b9d79eb91b4 |
 | docs/Spells/spellshot.md | 13951 | 1e84268ba193a1d8 |
-| docs/Spells/teleport.md | 25598 | c8dd5e2cb052ea31 |
+| docs/Spells/teleport.md | 25518 | 33960486efecbe16 |
 | docs/Spells/traps.md | 18568 | 34419465de820bfa |
 | docs/Transform/README.md | 1766 | 2a83ee63524d002d |
 | docs/Transform/body-hiding-research.md | 21357 | da3a116488cca11f |
@@ -52,8 +52,8 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | docs/architecture/diagrams/homecheat-core.svg | 162020 | c603c1e9e7b53874 |
 | docs/architecture/diagrams/homecheat-features.svg | 272574 | 121a704b47b8d5c3 |
 | docs/architecture/diagrams/homecheat-spells.svg | 87937 | 09b8a043bea9cd05 |
-| docs/architecture/homecheat-architecture.md | 101793 | efc96a34a5cbc897 |
-| docs/architecture/homecheat-commands.md | 41864 | db156aa1ad9cd4d6 |
+| docs/architecture/homecheat-architecture.md | 102261 | 01782adf8a0c51cf |
+| docs/architecture/homecheat-commands.md | 42121 | 1cc984de5ef0a203 |
 | docs/architecture/homecheat-test-run-2026-10-25.md | 65168 | 8db4b1b64760c975 |
 | docs/architecture/packaging.md | 9933 | cbba60354a96e300 |
 | install.ps1 | 5396 | 6f2056c02f530ecc |
@@ -81,7 +81,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | payload/BepInEx/core/MonoMod.Utils.xml | 78973 | 0577b362023a3432 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.chat.v20261103194832.dll | 8704 | db9b357a153c59e3 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.construction.v20261103203705.dll | 105984 | 007625e3d0ba2d3b |
-| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.despawn.v20261104211226.dll | 21504 | 5d5899066331320b |
+| payload/BepInEx/homecheat-commands/HomeCheat.Cmd.despawn.v20261104212733.dll | 21504 | 31281a59124d6d3c |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.diag.v20261025004825.dll | 10752 | c6993cb9c15c9885 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.dome.v20261103203542.dll | 65024 | a13d0fff27e127d5 |
 | payload/BepInEx/homecheat-commands/HomeCheat.Cmd.earthquake.v20261025161333.dll | 37376 | de6ccabd4ffe55e3 |
@@ -109,10 +109,10 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | skills/valheim-spell-fx/scripts/find-fx.js | 5969 | b1b1fe2c4e4dd114 |
 | skills/valheim-spells-craft/README.md | 3174 | 3ec9111d4ecf8282 |
 | skills/valheim-spells-craft/SKILL.md | 7309 | 4d694a84ab775938 |
-| skills/valheim-spells-craft/baseline.md | 1928 | aaf7202f8b27349c |
+| skills/valheim-spells-craft/baseline.md | 1928 | 552ea6e6186e1801 |
 | skills/valheim-spells-craft/evals.md | 4309 | 99d5e1004f69c556 |
 | skills/valheim-spells-craft/instructions/done-gate.md | 8394 | a2eca1414c72ee82 |
-| skills/valheim-spells-craft/instructions/implement.md | 12607 | c618c57c20ca8e47 |
+| skills/valheim-spells-craft/instructions/implement.md | 12909 | 47db415137ca0997 |
 | skills/valheim-spells-craft/instructions/plan.md | 5328 | 52a42b0f8841d19d |
 | skills/valheim-spells-craft/instructions/spec-card.md | 6441 | e5608315d784c802 |
 | skills/valheim-spells-craft/scripts/commands-check.js | 15374 | 8a5ede93cb83838d |
@@ -182,7 +182,7 @@ Feature DLLs (newest build each): HomeCheat.Cmd.chat.v20261103194832.dll, HomeCh
 | src/Features/Construction/PreviewDoors.cs | 10748 | 8690dbd4b76521a9 |
 | src/Features/Construction/TerrainLevel.cs | 6314 | b486e0f2c96c0f0e |
 | src/Features/Construction/refs.txt | 328 | e0adadfd1e55a886 |
-| src/Features/Despawn/DespawnCommand.cs | 23002 | 17ff5752d20a3a11 |
+| src/Features/Despawn/DespawnCommand.cs | 22998 | ca0ffb793a6001bd |
 | src/Features/Despawn/refs.txt | 159 | 1205b7655176002a |
 | src/Features/Diag/CheatInfoCommand.cs | 1489 | bfc3336345417073 |
 | src/Features/Diag/CheatStateCommand.cs | 7508 | c1cba61782242d31 |

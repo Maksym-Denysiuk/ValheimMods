@@ -41,7 +41,7 @@ Pin every visual or game reference in the request ("like Eikthyr") to a prefab b
 bash <pkg>/src/build.sh <feature>      # Git Bash; core must be installed (bash src/build.sh core once, game closed)
 ```
 - Shell safety: the feature name on the command line is letters only (`[A-Za-z]+`, the folder name); a command form from chat goes to `send-command.ps1` as one single-quoted argument with no `'`, `;`, `|`, `` ` `` or `$` in it (forms only need letters, digits, `=`, `&`, `.`, `,`, `-`, `_`).
-- A compile error stops the flow with csc's message (only CS0618 is hidden). Fix and rebuild.
+- A compile error stops the flow with csc's message (only CS0618 is hidden). Fix and rebuild. Check the build's own `built and staged` line before anything goes to the game, and that `op=reload` names the new stamp before the next form: a chain through a pipe hides the failure, and the old DLL ignores a key it does not know, so a form with a new safety key can do the opposite of what it says.
 - Then `op=reload` (through `send-command.ps1`); the answer must name the new `HomeCheat.Cmd.<feature>.v<stamp>.dll`. A `FAILED` line means a name clash or an `OnLoad` exception: read it, fix.
 - `op=help&cmd=<name>` shows the new `Usage`.
 - A core change, a renamed patch target or a hang at start needs a game restart: say so plainly and wait; never close or start the game yourself.
